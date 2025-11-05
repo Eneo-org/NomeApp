@@ -1,0 +1,218 @@
+\documentclass[11pt]{extarticle}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{float}
+\usepackage[italian]{babel}
+\usepackage[a4paper, left=3cm, right=3cm]{geometry}
+\usepackage{titlesec}
+\usepackage{hyperref}
+
+
+\title{\Huge PROGETTO DI INGEGNERIA DEL SOFTWARE}
+\author{\LARGE D'Angiò Enea, Mattarolo Alessandro, Nedeljkovic Ivan}
+\date{September 2025}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Il nostro progetto}%scritte da alessandro
+I principali problemi che ci siamo posti di risolvere sono la 
+frammentazione delle raccolte firme tra le varie piattaforme (Change.org ecc.) e lo scarso coinvolgimento della popolazione nella vita politica. Attualmente nel Comune di Trento non esiste uno strumento unico e dedicato che raccolga tutte le richieste dei cittadini, e questo genera svantaggi sia per il Comune che per i cittadini.
+
+\paragraph*{Problemi per l'amministrazione -}
+Essendo le richieste dei cittadini sparse su svariati canali di comunicazione, risulta facile perderne il controllo. L'analisi dei dati ricavabili da queste richieste risulta difficile, perché questa frammentazione complica la visione d'insieme, ostacolando l'individuazione di temi importanti e la valutazione dell'efficacia dei canali di partecipazione. Inoltre, una richiesta su una piattaforma potrebbe non essere visibile su un'altra, portando a ritardi o mancate risposte. 
+
+\paragraph*{Problemi per i cittadini -}
+Questa dispersione dei canali di comunicazione genera confusione nei cittadini, che non hanno ben chiaro dove debbano inviare una richiesta affinché questa venga accolta e presa in considerazione. Inoltre, una volta inviata una petizione o una richiesta è difficile seguirne lo stato di avanzamento. Spesso la popolazione non viene coinvolta direttamente nelle decisioni di gestione della città, e questo sfavorisce la propulsione alla partecipazione e riduce il senso di comunità. \\
+
+Il nostro progetto consiste nello sviluppo di una piattaforma per il bilancio partecipativo, che permetta un coinvolgimento diretto della popolazione nelle scelte amministrative del Comune. In quest'applicazione verranno aggregati dati già pubblici e ufficiali provenienti da fonti selezionate come ParteciPa, Change.org e i portali open data del Comune, in modo tale da avere una vista integrata delle richieste, delle petizioni, delle raccolte firme e dello stato di avanzamento di ciascuna iniziativa.
+
+\subsection*{Limiti dell'applicazione} %scritte da Ivan
+
+\paragraph{Dipendenza da internet}
+Poiché la piattaforma si fonda su dati provenienti da fonti esterne (che siano API ufficiali, dataset in formato aperto o sistemi di scraping) il corretto funzionamento richiede una connessione stabile e continua. In assenza di connettività, o in presenza di rallentamenti significativi, il sistema non è in grado di aggiornare le informazioni in tempo reale e rischia di mostrare dati obsoleti o incompleti.
+
+\paragraph{Accessibilità limitata per utenti non digitali}
+Cittadini con scarsa familiarità con le tecnologie o privi di dispositivi adeguati potrebbero incontrare difficoltà nell’utilizzo della piattaforma, rischiando così di escludere alcune fasce della popolazione meno tecnologicamente esperte.
+
+\paragraph{Manutenzione continua}
+Questo limite, strettamente collegato alla natura delle fonti, riguarda la manutenzione necessaria per garantire l’accesso costante ai dati: \\
+- Nei casi in cui vengano adottate tecniche di scraping per recuperare informazioni da siti che non dispongono di API ufficiali, l’intero processo è estremamente fragile. È sufficiente una minima modifica alla struttura HTML di una pagina affinché l’algoritmo di raccolta smetta di funzionare. \\
+- Nel caso di integrazione con API apparentemente più stabili si presentano comunque dei rischi. Molte piattaforme, infatti, offrono servizi sperimentali, non documentati in modo esaustivo o soggetti a cambiamenti improvvisi. Un endpoint può essere dismesso, spostato o reso disponibile solo in parte, con l’effetto di interrompere improvvisamente un flusso dati su cui la piattaforma si fondava. \\
+Ciò implica un’attività continua di monitoraggio e correzione del codice, con conseguenti costi di gestione non trascurabili.
+
+\paragraph{Dipendenza da infrastruttura server}
+Le prestazioni e l’affidabilità del servizio dipendono dalla qualità dei server, dalla loro capacità di gestione del carico e dalla continuità delle risorse messe a disposizione. Eventuali problemi hardware, vulnerabilità software non risolte o mancanza di aggiornamenti di sicurezza possono compromettere la disponibilità e l’integrità dei dati. La perdita di informazioni sensibili o un’interruzione prolungata del servizio ridurrebbero drasticamente la fiducia sia degli utenti interni sia dei cittadini.
+
+\paragraph{Scalabilità}
+Una soluzione progettata per gestire un numero limitato di utenti e di dataset può funzionare correttamente nelle fasi iniziali, ma rischia di non reggere quando cresce la quantità di dati da elaborare o aumenta la pressione delle richieste simultanee.
+
+\paragraph{Costi iniziali per il Comune} % Ho copiato dall'esempio che ci hanno dato loro perché mi sembra importante da sottolineare, indipendentemente dal progetto che si sta facendo
+L'implementazione dell'applicazione potrebbe richiedere investimenti iniziali significativi per la configurazione, formazione degli operatori e integrazione con i sistemi esistenti, anche se i benefici si vedranno a lungo termine.
+
+\section{Requisiti Funzionali}%scritte da enea
+
+\subsection*{Requisiti funzionali comuni}
+\paragraph{RF1: Registrazione.}  
+\hypertarget{RF1}{Il} sistema deve consentire agli utenti di registrarsi e autenticarsi. Essendo l'applicativo una potenziale costola del sito web del comune di Trento, l'accesso è gestito tramite SPID, CIE o CNS. In mancanza di una possibile integrazione, ci sarà una pagina dedicata all'accesso, utilizzando gli stessi metodi di accesso. 
+Gli utenti che risulteranno non avere il comune di Trento come residenza, avranno privilegi minori, così come gli utenti senza log-in. Gli utenti dell'amministrazione avranno una pagina dedicata, a cui è possibile accedere tramite credenziali predisposte, ed avranno privilegi differenti.
+Se la verifica mediante uno degli strumenti sopracitati va a buon fine, viene richiesto all'utente, in una nuova pagina, di inserire un recapito (email e/o numero di telefono) e di creare una nuova password per il suo account. \\
+La password, lunga almeno 12 caratteri alfanumerici, deve avere almeno una lettera maiuscola e un carattere speciale. Deve essere inserita una seconda volta in un box di conferma.
+In caso venga inserita la mail, deve essere un indirizzo valido per poi essere confermato cliccando su un link inviato sulla stessa.
+In caso venga inserito il numero di telefono bisogna confermarlo con un codice inviato tramite SMS.
+Se nessuna di queste verifiche va a buon fine, la registrazione fallisce e bisogna riprendere il procedimento da capo.
+ 
+\paragraph{RF2: Login.}
+\hypertarget{RF2}{Il} sistema deve consentire sia agli utenti che agli operatori di effettuare il login tramite due modalità: attraverso le piattaforme SPID, CIE o CNS oppure tramite autenticazione con le credenziali fornite in RF1 (codice fiscale/indirizzo email/numero di telefono e password). L'utente può quindi scegliere una delle due modalità di accesso attraverso due pulsanti appositi. Una volta completato l'accesso, il sistema reindirizzerà l'utente alla rispettiva dashboard in base al ruolo.
+
+\paragraph{RF3: Consultazione delle iniziative.}  
+\hypertarget{RF3}{Il} sistema deve consentire a tutti gli utenti, inclusi i non registrati, di consultare un catalogo pubblico delle petizioni presenti. Ogni iniziativa deve mostrare informazioni di base (piattaforma, titolo, autore, descrizione breve, numero di firme raccolte, stato attuale). L'applicativo permette di visualizzare sia petizioni create attraverso l'applicativo stesso, sia petizioni presenti su altre piattaforme, sempre riguardanti il comune di Trento. 
+Queste ultime saranno raggiungibili grazie a un link. %% da specificare meglio
+Gli utenti registrati devono avere a disposizione strumenti di filtro e ordinamento (per categoria, piattaforma, stato, data, popolarità), oltre a una funzione di ricerca libera per parole chiave. Sarà possibile anche visualizzare una serie di petizioni passate riguardanti problematiche che il comune si è impegnato a risolvere. 
+
+\paragraph{RF4: Creazione di una iniziativa.}  
+\hypertarget{RF4}{Il} sistema deve permettere ai cittadini registrati di proporre una nuova iniziativa, specificandone il titolo, il luogo preciso riguardante l'iniziativa (se possibile), una descrizione ed una categoria di appartenenza (es. ambiente, mobilità, cultura); l'utente potrà inoltre aggiungere eventuali allegati (come immagini o PDF).
+Per ogni iniziativa pubblicata verrà impostata automaticamente una data di scadenza di 60 giorni perché venga presa in considerazione, che può essere prorogata a 120 da un operatore in caso di esigenze dell'Amministrazione, come indicato dal comune di Trento. Una volta raggiunta tale data, essa passerà nell'archivio storico. 
+Durante la creazione, l’utente deve poter visualizzare un’anteprima con tutti i dati inseriti prima della pubblicazione. Una volta registrata nel database, l'iniziativa sarà visibile a tutta la comunità e potrà ricevere firme e/o commenti da parte degli altri utenti ugualmente registrati.
+Ogni utente, una volta pubblicata un'iniziativa, avrà un periodo di cool-down di 14 giorni. %% perché
+Prima della creazione, il sistema confronta l'iniziativa con quelle già esistenti tramite algoritmi di similarità testuale e moderazione manuale da parte di operatori, per evitare petizioni duplicate o troppo simili, che rischierebbero di sovraccaricare il server e frammentare i contributi dei firmatari.
+
+\paragraph{RF5: Importazione dati esterni.}  
+\hypertarget{RF5}{La} piattaforma deve permettere l’integrazione automatica con fonti esterne come ParteciPa, Change.org e i portali open data del Comune. Vengono estratti i dati relativi a: titolo, descrizione, categoria, data creazione, stato, fonte di provenienza. L'importazione viene eseguita quotidianamente in base alla periodicità di aggiornamento delle piattaforme esterne. Le iniziative importate devono essere chiaramente etichettate come provenienti da fonti esterne, per distinguerle dalle petizioni create direttamente in piattaforma. %% descrivere come fare quando si adotta lo scraping
+
+\paragraph{RF6: Tracciamento stato.}  
+Ogni utente deve poter seguire lo stato di avanzamento di una iniziativa aggiungendola alla dashboard personale (si veda \hyperlink{RF11}{RF11}). Il sistema deve aggiornare automaticamente lo stato della petizione (in corso, approvata, respinta, archiviata) indipendentemente dal sito di provenienza. Seguendo lo stato di una iniziativa, l'utente potrà ricevere notifiche all’interno della piattaforma ed eventualmente tramite il recapito fornito in fase di registrazione \hyperlink{RF1}{RF1}.
+%% IDEA: creare impostazioni utente per gestione notifiche
+
+\paragraph{RF7: Firma e supporto.}  
+Gli utenti registrati, e cittadini del comune di Trento, devono poter sostenere le iniziative già pubblicate tramite un sistema di raccolta firme. Una volta espresso il supporto, il sistema deve aggiornare in tempo reale il numero totale di adesioni e rendere visibile il contributo dell’utente nella sua area personale. Per prevenire abusi, ogni cittadino può sostenere una specifica iniziativa una sola volta.
+
+\subsection*{Requisiti funzionali per l’amministrazione}
+\paragraph{RF8: Analisi delle richieste.}  
+Il sistema deve fornire ai funzionari comunali strumenti di analisi  sui dati raccolti. Le richieste devono essere aggregate per categoria, quartiere di provenienza, tempo medio di presa in carico. Tali informazioni devono essere visualizzabili tramite tabelle e grafici interattivi. L’obiettivo è supportare decisioni basate su evidenze, permettendo all’amministrazione di individuare priorità e temi emergenti.
+
+\paragraph{RF9: Gestione iniziative.}  
+Il personale autorizzato deve poter aggiornare lo stato delle richieste e aggiungere note ufficiali o documenti di risposta. Ad esempio, un’iniziativa può passare dallo stato “in corso” ad “approvata”, “respinta” (con relativa motivazione visibile ai cittadini). 
+L'operatore deve poter prorogare la scadenza delle iniziative in casi particolari.
+Gli amministratori devono inoltre poter chiudere un'iniziativa in caso di irregolarità.  
+
+\subsection*{Requisiti funzionali per i cittadini}
+\paragraph{RF10: Interazione sociale.}  
+Gli utenti registrati, e residenti nel comune di Trento, devono poter commentare le iniziative, partecipando a discussioni pubbliche. I commenti devono supportare un formato testuale arricchito (grassetto, link, citazioni) e devono essere moderati per prevenire abusi o linguaggi offensivi. Il sistema deve consentire agli utenti di segnalare contenuti inappropriati, che verranno revisionati da un moderatore.
+
+\paragraph{RF11: Dashboard personale.}  
+\hypertarget{RF11}{Ogni} cittadino autenticato deve avere a disposizione una dashboard personale che riepiloghi tutte le attività: petizioni create, petizioni supportate (esclusivamente create dal nostro sito), stato delle iniziative seguite. La dashboard deve includere anche un sistema di notifiche recenti (ad esempio “La tua petizione è stata presa in carico dal Comune”) e la possibilità di gestire le preferenze di comunicazione.  
+
+\section{Requisiti Non Funzionali}
+\paragraph{RNF1: Compatibilità.}  
+Il sistema deve essere pienamente utilizzabile sia da desktop che da dispositivi mobili (smartphone, tablet), con un design responsivo che adatti automaticamente le interfacce alle diverse dimensioni dello schermo. Deve essere garantito il supporto ai principali browser: Chrome (versione 80 o superiore), Firefox (versione 75 o superiore), Safari (versione 13 o superiore), Microsoft Edge (versione 85 o superiore).  
+
+\paragraph{RNF2: Prestazioni.}  
+Le operazioni più comuni, come login, caricamento della lista di iniziative e votazione, devono completarsi entro un tempo massimo di 2.5 secondi nel 90\% dei casi. Il sistema deve essere in grado di gestire contemporaneamente almeno 300 richieste al secondo senza degradare l’esperienza utente.  
+
+\paragraph{RNF3: Scalabilità.}  
+L’architettura deve essere progettata per supportare un aumento progressivo del numero di utenti. Il sistema deve scalare fino a 20.000 utenti simultanei, mantenendo tempi di risposta conformi al requisito RNF2. Devono essere previste politiche di bilanciamento del carico e possibilità di aggiungere risorse hardware senza modificare la logica applicativa.  
+
+\paragraph{RNF4: Affidabilità e disponibilità.}  
+La piattaforma deve garantire un’affidabilità elevata, con una disponibilità minima del 99.5\% annuo (pari a circa 1 giorno e 20 ore di downtime massimo). Devono essere implementati sistemi di backup automatico giornaliero e procedure di disaster recovery in grado di ripristinare i dati entro 2 ore in caso di guasto critico.
+
+\paragraph{RNF5: Sicurezza.}  
+Il sistema deve rispettare le normative GDPR per la protezione dei dati personali. Le comunicazioni tra client e server devono essere cifrate tramite protocollo HTTPS. Le password devono essere salvate con hashing e salting sicuri (es. bcrypt). Le sessioni utente devono scadere automaticamente dopo un periodo di inattività configurabile. L’integrazione con SPID deve rispettare i protocolli di sicurezza stabiliti a livello nazionale.  
+
+\paragraph{RNF6: Usabilità.}  %riferimento a Limite d'applicazione 2
+L’interfaccia deve essere intuitiva e utilizzabile da un cittadino medio senza necessità di formazione. Deve essere possibile comprendere le principali funzionalità (creare una richiesta, votare, commentare) entro un tempo massimo di 15 minuti di utilizzo autonomo. Devono essere adottate linee guida di design coerenti (colori, pulsanti, icone) per garantire un’esperienza uniforme.  
+
+\paragraph{RNF7: Accessibilità.}  
+Il sistema deve essere conforme alle linee guida WCAG 2.1 livello AA, garantendo l’accesso anche a utenti con disabilità. Ciò include il supporto per screen reader, testi alternativi per immagini, contrasto elevato, navigazione da tastiera e font leggibili.  
+
+\paragraph{RNF8: Manutenibilità.}  
+Il software deve essere sviluppato seguendo principi di modularità e documentazione del codice, in modo da permettere futuri aggiornamenti e correzioni senza compromettere la stabilità del sistema. Devono essere previste procedure di test automatici per ridurre il rischio di regressioni.  
+
+%% vantaggi per comune e vantaggi per utenti
+
+\newpage
+\titleformat{\paragraph}[block]{\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+
+\section{Use Case Diagram}
+%Gli attori sono gli utenti o i sistemi che interagiscono con la piattaforma: Utente anonimo, Cittadino / Utente registrato, Operatore, Fonti Esterne, sistema SPID/CIE
+\paragraph{Use Case RF1: registrare nuovo utente}
+
+% Schema del primo use case diagram
+
+\noindent Questo use case descrive come l’utente anonimo effettua il login nel software.\vspace{1em}
+Descrizione:\\
+1. Il cittadino accede alla pagina di registrazione.\\
+2. Seleziona la modalità di autenticazione: SPID o CIE.\\
+3. Il sistema reindirizza il cittadino al provider SPID o CIE per l’autenticazione.\\
+4. Dopo il login, vengono restituiti al sistema i dati identificativi (nome, cognome, codice fiscale, indirizzo di residenza, ecc.).\\
+5. La piattaforma verifica automaticamente che la residenza sia nel territorio del Comune di Trento.\\
+6. Una volta eseguita la verifica viene richiesto all'utente di fornire gli altri dati come specificato in \hyperlink{RF1}{RF1}. \\
+7. Il server verifica nuovamente la validità dei dati inseriti. \\
+8. Se la verifica va a buon fine viene generato un nuovo account con i propri dati personali. \\
+
+\paragraph{Eccezioni}
+\noindent
+1. Se l'utente non risiede nel Comune di Trento, la fase di verifica della piattaforma fallisce e viene mostrato all'utente un messaggio di errore con scritto che non soddisfa i requisiti necessari a registrarsi.
+
+\paragraph{Use Case RF2: log-in dell'utente registrato}
+\noindent
+1. L'utente inizialmente visualizza l'interfaccia di default dell'applicativo (quella dell'user con meno privilegi).\\
+2. Per fare log-in, clicca su un pulsante apposito.\\
+3. Viene richiesto l'inserimento delle credenziali d'accesso come determinato in \hyperlink{RF1}{RF1}. \\
+4. Se le credenziali sono valide, l'utente accede alla propria dashboard.
+
+\paragraph{Eccezioni}
+\noindent
+1. Se le credenziali sono errate bisogna ripetere l'operazione.
+
+\paragraph{Use case RF3: Consultazione delle iniziative}
+\noindent
+1. L'utente visualizza come default la home page.\\
+2. Nella barra di ricerca, una volta inserito il titolo, viene premuto il pulsante RICERCA. Il sistema, collegandosi al database, mostra le iniziative con titoli simili come spiegato in \hyperlink{RF3}{RF3}.\\
+3. Se viene selezionata una casella, essa mostra le informazioni principali. 
+
+\paragraph{Eccezioni} \noindent
+1. Se non viene trovata nessuna iniziativa con titolo simile, viene visualizzato un apposito messaggio.
+
+\paragraph{Use case RF4: }
+\noindent
+1. L'utente, dalla home page, seleziona il tasto "Crea".\\
+2. Il sistema mostra il form di compilazione con i campi richiesti in \hyperref[RF4]{RF4}.\\
+3. Il sistema genera un'anteprima della proposta.\\
+4. L'utente conferma la creazione.\\
+5. Il sistema esegue il controllo automatico di duplicati.
+6. Se non esistono iniziative simili, essa viene registrata nel database e resa visibile nella piattaforma con lo stato "in corso".
+
+\paragraph{Eccezioni:}
+\noindent
+1. Se l'utente non inserisce tutti i dati obbligatori, il sistema segnala i campi mancanti.\\
+2. Se viene rilevata una similarità elevata, il sistema mostra un avviso con le iniziative simili già presenti.
+
+\paragraph{Use case RF5:}
+\noindent
+1. Un processo pianificato avvia periodicamente la procedura di importazione. \\
+2. Il sistema si connette alle API pubbliche o agli endpoint open data delle piattaforme esterne configurate.\\
+3. Vengono estratti i dati elencati in \hyperref[RF5]{RF5}. \\
+4. Il sistema controlla la validità dei dati importati.\\
+5. Il sistema uniforma il formato dei dati a quello usato nella piattaforma aggiungendo anche un attributo di origine esterna.\\
+6. Le iniziative importate vengono rese visibili sulla piattaforma.
+
+\paragraph{Eccezioni}
+\noindent
+1. In caso di mancata connessione a una fonte, il sistema segnala l'errore e riprova al ciclo successivo.\\
+2. Se i dati sono incompleti, i record vengono temporaneamente scartati e segnalati all'amministrazione.
+
+\paragraph{Use case RF6: }
+\noindent
+1. L'utente aggiunge alla sua dashboard personale la petizione di cui vuole seguire l'avanzamento, tramite un pulsante. \\
+2. L'aggiunta viene segnalata al server, che salva l'aggiornamento della dashboard. \\
+3. Ogni qualvolta cambi lo stato della petizione (ad esempio, da "in corso" ad "approvata"), ogni utente che ne segue l'avanzamento riceve una notifica in piattaforma o via recapito. 
+
+\paragraph{Eccezioni}
+\noindent
+
+
+\end{document}
