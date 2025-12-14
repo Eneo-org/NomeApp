@@ -1,0 +1,33 @@
+\section{Il nostro progetto}%scritte da alessandro
+I principali problemi che ci siamo posti di risolvere sono la 
+frammentazione delle raccolte firme tra le varie piattaforme (Change.org ecc.) e lo scarso coinvolgimento della popolazione nella vita politica. Attualmente nel Comune di Trento non esiste uno strumento unico e dedicato che raccolga tutte le richieste dei cittadini, e questo genera svantaggi sia per il Comune che per i cittadini.
+
+\paragraph*{Problemi per l'amministrazione -}
+Essendo le richieste dei cittadini sparse su svariati canali di comunicazione, risulta facile perderne il controllo. L'analisi dei dati ricavabili da queste richieste risulta difficile, perché questa frammentazione complica la visione d'insieme, ostacolando l'individuazione di temi importanti e la valutazione dell'efficacia dei canali di partecipazione. Inoltre, una richiesta su una piattaforma potrebbe non essere visibile su un'altra, portando a ritardi o mancate risposte. 
+
+\paragraph*{Problemi per i cittadini -}
+Questa dispersione dei canali di comunicazione genera confusione nei cittadini, che non hanno ben chiaro dove debbano inviare una richiesta affinché questa venga accolta e presa in considerazione. Inoltre, una volta inviata una petizione o una richiesta è difficile seguirne lo stato di avanzamento. Spesso la popolazione non viene coinvolta direttamente nelle decisioni di gestione della città, e questo sfavorisce la propulsione alla partecipazione e riduce il senso di comunità. \\
+Il nostro progetto consiste nello sviluppo di una piattaforma per il bilancio partecipativo, che permetta un coinvolgimento diretto della popolazione nelle scelte amministrative del Comune. In quest'applicazione verranno aggregati dati già pubblici e ufficiali provenienti da fonti selezionate come ParteciPa, Change.org e i portali open data del Comune, in modo tale da avere una vista integrata delle richieste, delle petizioni, delle raccolte firme e dello stato di avanzamento di ciascuna iniziativa.
+
+\subsection*{Limiti dell'applicazione} %scritte da Ivan
+
+\paragraph{Dipendenza da internet}
+Poiché la piattaforma si fonda su dati provenienti da fonti esterne (che siano API ufficiali, dataset in formato aperto o sistemi di scraping) il corretto funzionamento richiede una connessione stabile e continua. In assenza di connettività, o in presenza di rallentamenti significativi, il sistema non è in grado di aggiornare le informazioni in tempo reale e rischia di mostrare dati obsoleti o incompleti.
+
+\paragraph{Accessibilità limitata per utenti non digitali}
+Cittadini con scarsa familiarità con le tecnologie o privi di dispositivi adeguati potrebbero incontrare difficoltà nell’utilizzo della piattaforma, rischiando così di escludere alcune fasce della popolazione meno tecnologicamente esperte.
+
+\paragraph{Manutenzione continua}
+Questo limite, strettamente collegato alla natura delle fonti, riguarda la manutenzione necessaria per garantire l’accesso costante ai dati: \\
+- Nei casi in cui vengano adottate tecniche di scraping per recuperare informazioni da siti che non dispongono di API ufficiali, l’intero processo è estremamente fragile. È sufficiente una minima modifica alla struttura HTML di una pagina affinché l’algoritmo di raccolta smetta di funzionare. \\
+- Nel caso di integrazione con API apparentemente più stabili si presentano comunque dei rischi. Molte piattaforme, infatti, offrono servizi sperimentali, non documentati in modo esaustivo o soggetti a cambiamenti improvvisi. Un endpoint può essere dismesso, spostato o reso disponibile solo in parte, con l’effetto di interrompere improvvisamente un flusso dati su cui la piattaforma si fondava. \\
+Ciò implica un’attività continua di monitoraggio e correzione del codice, con conseguenti costi di gestione non trascurabili.
+
+\paragraph{Dipendenza da infrastruttura server}
+Le prestazioni e l’affidabilità del servizio dipendono dalla qualità dei server, dalla loro capacità di gestione del carico e dalla continuità delle risorse messe a disposizione. Eventuali problemi hardware, vulnerabilità software non risolte o mancanza di aggiornamenti di sicurezza possono compromettere la disponibilità e l’integrità dei dati. La perdita di informazioni sensibili o un’interruzione prolungata del servizio ridurrebbero drasticamente la fiducia sia degli utenti interni sia dei cittadini.
+
+\paragraph{Scalabilità}
+Una soluzione progettata per gestire un numero limitato di utenti e di dataset può funzionare correttamente nelle fasi iniziali, ma rischia di non reggere quando cresce la quantità di dati da elaborare o aumenta la pressione delle richieste simultanee.
+
+\paragraph{Costi iniziali per il Comune} % Ho copiato dall'esempio che ci hanno dato loro perché mi sembra importante da sottolineare, indipendentemente dal progetto che si sta facendo
+L'implementazione dell'applicazione potrebbe richiedere investimenti iniziali significativi per la configurazione, formazione degli amministratori e integrazione con i sistemi esistenti, anche se i benefici si vedranno a lungo termine.

@@ -1,0 +1,218 @@
+\section{Requisiti Funzionali}%scritte da enea
+
+\subsection{Requisiti funzionali degli utenti}
+
+\RF{Accesso utente (Login).} \label{rf:login}
+Il sistema deve consentire l’accesso esclusivamente tramite i sistemi di identità digitale riconosciuti dallo Stato (SPID o CIE).
+L'autenticazione tramite SPID/CIE è richiesta per ogni sessione di un utente già profilato.
+
+
+
+\RF{Creazione profilo al primo accesso.} \label{rf:creazione_profilo}
+Il sistema gestisce il primo accesso di un utente non ancora registrato. Al momento dell'autenticazione tramite SPID/CIE, il sistema recupera il Codice Fiscale dell'utente e procede alla verifica dei requisiti per la creazione del profilo, distinguendo due casistiche:
+
+\subRF{Registrazione Cittadini Residenti.} \label{subRf:reg_cittadini}
+
+Il sistema verifica automaticamente se l'utente risiede nel Comune di Trento.
+Se la verifica è positiva, il sistema richiede all'utente l'inserimento di un indirizzo e-mail valido e crea un nuovo profilo assegnando il \textbf{ruolo di ``Cittadino''}.
+Questo ruolo abilita l'utente a tutte le funzionalità partecipative (Sezione \ref{sec:RF_cittadini}).
+
+\subRF{Registrazione Amministratori Non Residenti.} \label{subRf:reg_admin}
+Se l'utente non risulta residente a Trento, il sistema verifica se il suo Codice Fiscale è presente nella lista di amministratori pre-autorizzati (inseriti da un altro amministratore come definito in RF\ref{rf:ruoli_amministrativi}).
+\begin{itemize}
+    \item \textbf{Esito Positivo:} Se il Codice Fiscale è presente nella lista, il sistema richiede l'inserimento di un'e-mail e crea un profilo con il solo \textbf{ruolo di ``Amministratore''}. Questo utente avrà accesso agli strumenti di gestione amministrativa (Sezione \ref{sec:RF_amministrazione}) ma non alle funzionalità partecipative riservate ai cittadini (Sezione \ref{sec:RF_cittadini}).
+    \item \textbf{Esito Negativo:} Se il Codice Fiscale non è presente nella lista dei pre-autorizzati, il sistema nega la registrazione e mostra un messaggio di errore specificando che l'accesso alla piattaforma è riservato ai residenti del comune di Trento (questo poiché l'utente non è nè residente a Trento, nè un amministratore).
+\end{itemize}
+
+
+
+\RF{Consultazione della lista di iniziative.}  \label{rf:consultazione_iniziative}
+Il sistema deve consentire a tutti gli utenti, inclusi i non registrati, di consultare un catalogo pubblico delle iniziative presenti. Ogni iniziativa deve mostrare informazioni di base (piattaforma di provenienza, titolo, autore, breve descrizione, numero di firme raccolte, stato attuale, ecc.). L'applicativo permette di visualizzare sia iniziative create attraverso l'applicativo stesso, sia iniziative presenti su altre piattaforme, sempre riguardanti il comune di Trento. 
+Queste ultime saranno raggiungibili grazie a un link. %% da specificare meglio
+Gli utenti devono avere a disposizione strumenti di filtro e ordinamento (in base a luogo, categoria, stato - vedi RF\ref{rf:ciclo_vita_stati} -, numero di firme raccolte e indice di tendenza), oltre a una funzione di ricerca libera per parole chiave.
+
+
+\RF{Consultazione di una singola iniziativa}
+\label{rf:consultazione_singola_iniz}
+Il sistema deve permettere a tutti gli utenti, inclusi i non registrati, di accedere alla pagina di dettaglio di una singola iniziativa (cliccando su di essa dalla lista definita in RF\ref{rf:consultazione_iniziative}, o dalla Home).
+
+La pagina di dettaglio deve mostrare tutte le informazioni associate all'iniziativa, organizzate in modo chiaro. In particolare:
+
+\begin{itemize}
+    \item \textbf{Dati della proposta:}
+    \textbf{titolo},
+    \textbf{descrizione} completa,
+    \textbf{autore} (se l'iniziativa è creata in piattaforma),
+    \textbf{categoria} di appartenenza (es. "ambiente", "mobilità"),
+    \textbf{luogo} (se specificato),
+    eventuali \textbf{allegati} (immagini o PDF) resi disponibili dall'autore.
+
+    \item \textbf{Dati sullo stato e avanzamento:}
+     \textbf{stato attuale} del ciclo di vita (RF\ref{rf:ciclo_vita_stati}),
+    \textbf{numero totale di firme raccolte} (aggiornato in tempo reale se l'iniziativa è interna),
+     \textbf{data di scadenza} (per le iniziative non importate nello stato "In corso"),
+    \textbf{piattaforma di provenienza} (se l'iniziativa è importata).
+    
+    \item \textbf{Dati di risposta (se presenti):}
+     eventuali \textbf{note ufficiali} o documenti di risposta pubblicati dall'amministrazione.
+    
+\end{itemize}
+
+
+\subsubsection{Requisiti funzionali per l’amministrazione}
+\label{sec:RF_amministrazione}
+\RF{Analisi delle richieste.}   \label{rf:analisi_richieste} %ancora da discutere
+Il sistema deve fornire agli amministratori strumenti di analisi sui dati raccolti. Le richieste devono essere aggregate per categoria, quartiere di provenienza, tempo medio di presa in carico. Tali informazioni devono essere visualizzabili tramite tabelle e grafici interattivi. L’obiettivo è supportare decisioni basate su evidenze, permettendo all’amministrazione di individuare priorità e temi emergenti.
+
+\RF{Gestione iniziative.}  \label{rf:gestione_iniziative}
+L'amministratore deve poter aggiornare lo stato delle richieste e aggiungere note ufficiali o documenti di risposta. Ad esempio, un’iniziativa può passare dallo stato “in corso” ad “approvata” o “respinta” (con relativa motivazione visibile ai cittadini). 
+L'amministratore deve poter prorogare la scadenza delle iniziative in casi particolari.
+Gli amministratori devono poter chiudere un'iniziativa in caso di irregolarità. 
+
+\RF{Creazione bilancio partecipativo}
+\label{rf:creazione_bilancio_partecipativo}
+Il sistema deve permettere al personale dell'amministrazione (utenti amministratori) di creare e pubblicare un nuovo bilancio partecipativo. L'interfaccia di creazione richiederà all'amministratore di definire una domanda e un numero di possibili risposte compreso tra un minimo di 2 e un massimo di 5. L'amministratore dovrà inoltre impostare obbligatoriamente 
+%una data di inizio e 
+una data di scadenza per la votazione, assicurando il periodo di apertura non sia inferiore a 14 giorni. Il sistema deve impedire la pubblicazione di un nuovo bilancio qualora un altro risultasse già attivo, garantendo che non possano coesistere più bilanci partecipativi attivi simultaneamente.
+
+\RF{Consultazione Archivio Bilanci Partecipativi}
+\label{rf:consultazione_archivio_bilancio_partecipativo}
+Il sistema deve fornire al personale dell'Amministrazione una sezione dedicata alla consultazione dell'archivio storico di tutti i bilanci partecipativi conclusi. Tale interfaccia deve essere accessibile esclusivamente agli utenti "amministratore". Per ogni bilancio archiviato, il sistema deve visualizzare in modo chiaro i dettagli della consultazione passata, includendo la domanda che era stata proposta, l'elenco delle opzioni disponibili e il relativo periodo di votazione. La vista dovrà riportare anche i risultati finali, specificando il numero totale di votanti e la distribuzione dei voti, sia in numero assoluto che in percentuale, per ciascuna opzione.
+
+\RF{Gestione Ruoli Amministrativi} 
+\label{rf:ruoli_amministrativi}
+Il sistema deve fornire agli utenti Amministratori un'interfaccia dedicata per la gestione dei privilegi amministrativi della piattaforma.
+
+\subRF{Visualizzazione e Ricerca Utenti.}
+    \label{subRf:ricerca_utenti}
+Il sistema deve permettere a un Amministratore di visualizzare un elenco completo di tutti gli utenti che attualmente possiedono il ruolo di ``Amministratore'' ed utilizzare una funzione di ricerca tramite \textbf{Codice Fiscale} per identificare un utente da promuovere o pre-autorizzare.
+
+\subRF{Assegnazione Privilegi e Pre-Autorizzazione.}
+    \label{subRf:assegnazione_privilegi}
+Una volta inserito un Codice Fiscale (tramite RF\ref{subRf:ricerca_utenti}), il sistema verifica l'esistenza dell'utente nel database:
+\begin{itemize}
+    \item Caso Utente Residente Esistente: Se il Codice Fiscale appartiene a un utente già registrato con ruolo ``Cittadino'' (come da RF\ref{subRf:reg_cittadini}), l'Amministratore può assegnargli il ruolo aggiuntivo di ``Amministratore''.
+    \item Caso Utente Non Esistente (Non Residente): Se il Codice Fiscale non è presente nel sistema, l'Amministratore può \textbf{pre-autorizzarlo} inserendolo in un'apposita lista. Questo Codice Fiscale sarà utilizzato per la successiva registrazione dell'amministratore non residente (come definito in RF\ref{subRf:reg_admin}).
+\end{itemize}
+L'utente promosso (o l'utente pre-autorizzato che effettua il primo accesso) ottiene immediatamente accesso a tutte le funzionalità riservate agli Amministratori (definite nella sezione: \ref{sec:RF_amministrazione}).
+
+\subRF{Revoca Privilegi.}
+    \label{subRf:revoca_previlegi}
+L'Amministratore deve poter selezionare un utente dall'elenco degli amministratori (RF\ref{subRf:ricerca_utenti}) e revocare il suo ruolo di ``Amministratore''.
+\begin{itemize}
+    \item Se l'utente era anche ``Cittadino'', manterrà solo quel ruolo e i relativi permessi (sezione \ref{sec:RF_cittadini}).
+    \item Se l'utente era solo ``Amministratore'' (non residente), perderà l'accesso al sistema (poiché non soddisfa più i requisiti di RF\ref{subRf:reg_admin}).
+    \item L'Amministratore deve poter anche annullare una pre-autorizzazione (rimuovendo un CF dalla lista) prima che l'utente non residente effettui il primo accesso.
+\end{itemize}
+Per ragioni di sicurezza, un Amministratore non può revocare i privilegi a sé stesso.
+
+\subRF{Bootstrapping Amministratore.}
+    \label{subRf:bootstrapping_amministratore}
+L'esistenza del primo utente Amministratore ("super-utente") è garantita dalla configurazione manuale nel database al momento dell'installazione della piattaforma.
+Questo utente sarà il primo a poter utilizzare RF\ref{subRf:assegnazione_privilegi} per nominare altri amministratori.
+
+\subsubsection{Requisiti funzionali per i cittadini autenticati}
+\label{sec:RF_cittadini}
+
+\RF{Firma.}  \label{rf:firma}
+Gli utenti autenticati con il ruolo di "cittadini" devono poter sostenere le iniziative già pubblicate tramite un sistema di raccolta firme.
+\begin{description}
+    \item[Iniziative create nella piattaforma] Una volta espresso il supporto, il sistema deve aggiornare in tempo reale il numero totale di adesioni e rendere visibile il contributo dell’utente nella sua area personale. Per prevenire abusi, ogni cittadino può sostenere una specifica iniziativa una sola volta.
+    \item[Iniziative esterne] Tramite un link, l'utente può essere indirizzato alla pagina riguardante l'iniziativa a cui vuole partecipare. La partecipazione all'iniziativa viene demandata alla piattaforma esterna. Il nostro sistema deve essere capace di aggiornare in tempo reale il numero totale di adesioni.
+\end{description}
+
+%bisogna aggiungere i requisiti funzionali che riguardano il caricamento delle iniziative esterne.
+\RF{Dashboard personale.}  \label{rf:dashboard_personale}
+Ogni cittadino autenticato deve avere a disposizione una dashboard personale che riepiloghi tutte le sue attività: petizioni create, petizioni supportate (esclusivamente create dal nostro sito), stato delle iniziative seguite. La dashboard deve includere anche un sistema di notifiche (ad esempio “La tua petizione è stata presa in carico dal Comune”).
+
+\RF{Creazione di una iniziativa.}  
+\label{rf:creazione_iniziativa}
+Il sistema deve permettere agli utenti con ruolo "Cittadino" di proporre una nuova iniziativa, specificandone il titolo, il luogo (se possibile), una descrizione ed una categoria di appartenenza (ad esempio "ambiente", "mobilità", "cultura", ecc.).
+L'utente potrà inoltre aggiungere eventuali allegati (come immagini o PDF).
+Durante la creazione, l’utente deve poter visualizzare un’anteprima con tutti i dati inseriti prima della sottomissione.
+Ogni utente, una volta sottomessa un'iniziativa, avrà un periodo di cool-down di 14 giorni prima di poterne creare un'altra.
+Viene effettuato un controllo dei duplicati (RF \ref{rf:controllo_duplicati}): in caso di esito positivo l'iniziativa viene registrata, resa visibile alla comunità e le viene impostata una data di scadenza automatica di 60 giorni.
+
+\RF{Tracciamento stato.}  \label{rf:tracciamento_stato}
+Ogni utente autenticato deve poter seguire lo stato di avanzamento di un'iniziativa aggiungendola alla dashboard personale (si veda RF\ref{rf:dashboard_personale}).
+Il sistema deve riflettere tempestivamente ogni cambiamento di stato (come definito in RF\ref{rf:ciclo_vita_stati}) dell'iniziativa, indipendentemente dal sito di provenienza.
+
+\RF{Votazione del bilancio partecipativo.}
+\label{rf:voto}
+Ogni utente deve essere in grado di visualizzare i sondaggi di bilancio partecipativo proposti dal comune. Se autenticato, deve essere anche in grado di votare una delle opzioni. L'utente può votare una sola opzione, e una volta confermata la sua scelta non potrà più cambiarla. Al termine del periodo di votazioni, l'utente firmatario riceverà una notifica inerente i risultati del bilancio partecipativo a cui ha preso parte (RF\ref{rf:notifiche}).
+
+\subsection{Requisiti funzionali del sistema}
+
+\RF{Controllo duplicati.} 
+\label{rf:controllo_duplicati}
+Prima della pubblicazione, ogni iniziativa sottomessa (RF\ref{rf:creazione_iniziativa}) deve passare un controllo automatico anti-duplicati.
+Il sistema confronta la proposta con quelle già esistenti tramite algoritmi di similarità testuale, per evitare petizioni duplicate o troppo simili che rischierebbero di sovraccaricare il server e frammentare i contributi dei firmatari.
+Se viene rilevata una similarità elevata, il sistema impedisce la pubblicazione e notifica all'utente le iniziative simili già presenti.
+%Bisogna dopo decidere quali algoritmi di similarità useremo
+
+
+\RF{Importazione dati esterni.}  \label{rf:import_dati_esterni}
+La piattaforma deve permettere l’integrazione automatica con fonti esterne (come ParteciPa, Change.org). 
+Vengono estratti i dati relativi all'iniziativa (gli stessi che vengono mostrati in RF\ref{rf:consultazione_singola_iniz}).
+Le iniziative importate devono essere chiaramente etichettate come provenienti da fonti esterne, per distinguerle dalle petizioni create direttamente in piattaforma. 
+%% descrivere come fare quando si adotta lo scraping
+
+\RF{Aggiornamento iniziative esterne.} \label{rf:aggiornamento_dati_esterni}
+Il sistema deve garantire che i dati delle iniziative importate (RF\ref{rf:import_dati_esterni}) vengano mantenuti aggiornati attraverso due modalità:
+    \subRF{Aggiornamento standard.} Il sistema deve eseguire un controllo e un aggiornamento (batch) \textbf{giornaliero} per tutte le iniziative esterne presenti nel database, al fine di recepire nuovi stati o variazioni nel numero di firme.
+    
+    \subRF{Aggiornamento prioritario.} Se un utente compie un'interazione significativa con un'iniziativa esterna (ad esempio, aggiungendola alla propria dashboard per il tracciamento, come da RF\ref{rf:tracciamento_stato}), il sistema deve "monitorare" tale iniziativa. Le iniziative monitorate devono essere aggiornate con una \textbf{frequenza maggiore} rispetto all'aggiornamento standard (es. a intervalli di poche ore), per riflettere tempestivamente i cambiamenti rilevanti per l'utente.
+
+
+\RF{Definizione e ciclo di vita degli stati.} \label{rf:ciclo_vita_stati}
+Ogni iniziativa, che sia stata creata sulla piattaforma o importata da fonti esterne, deve essere associata a uno stato che ne definisca la fase corrente nel ciclo di vita. 
+Gli stati gestiti dal sistema sono:
+\begin{itemize}
+    \item \textbf{In corso:} Lo stato predefinito al momento della creazione, durante il quale l’iniziativa raccoglie le firme. Questo stato ha una durata naturale di 60 giorni a partire dalla data di pubblicazione (per le iniziative non importate). Durante questa fase, il Comune si impegna a fornire una risposta prima della scadenza (per le iniziative della piattaforma).
+    \item \textbf{Approvata:} L'amministrazione ha preso in carico la richiesta.
+    \item \textbf{Respinta:} L'amministrazione ha respinto la richiesta (con motivazione).
+    \item \textbf{Scaduta:} Se l'iniziativa è stata creata nella nostra piattaforma ed ha raggiunto la data di scadenza senza ottenere alcun responso, oppure se l'iniziativa importata risulta scaduta nel sito originale.
+\end{itemize}
+Definiremo come "archiviata" qualsiasi iniziativa non "in corso".\\
+Per particolari esigenze dell'Amministrazione, i termini di risposta possono essere prorogati non oltre i 120 giorni.
+Le transizioni di stato sono gestite dagli amministratori (RF\ref{rf:gestione_iniziative}) o automaticamente dal sistema (ad esempio per scadenza).
+
+\RF{Sistema di notifiche.} \label{rf:notifiche}
+Il sistema deve inviare notifiche agli utenti nei seguenti casi:
+\begin{itemize}
+    \item Quando un'iniziativa di cui si sta seguendo l'avanzamento (RF\ref{rf:tracciamento_stato}) subisce un cambiamento di stato significativo (ad esempio da "in corso" ad "approvata");
+    \item Quando viene chiuso un bilancio partecipativo in cui l'utente aveva votato (in tal caso la notifica informa l'utente dell'esito finale del bilancio). 
+    \item Nel caso del tentativo di creare un'iniziativa duplicata, viene segnalato all'utente che tale tentativo è stata bloccato. 
+\end{itemize}
+Le notifiche devono essere inviate sia all’interno della piattaforma sia tramite e-mail all'indirizzo definito durante la creazione del profilo (RF\ref{rf:creazione_profilo}).
+%% IDEA: creare impostazioni utente per gestione notifiche
+
+\section{Requisiti Non Funzionali}
+\RNF{Compatibilità.}  \label{rf:login}
+Il sistema deve essere pienamente utilizzabile sia da desktop che da dispositivi mobili (smartphone, tablet), con un design responsivo che adatti automaticamente le interfacce alle diverse dimensioni dello schermo. Deve essere garantito il supporto ai principali browser: Chrome (versione 80 o superiore), Firefox (versione 75 o superiore), Safari (versione 13 o superiore), Microsoft Edge (versione 85 o superiore).  
+
+\RNF{Prestazioni.}  \label{rnf:prestazioni}
+Le operazioni più comuni, come login, caricamento della lista di iniziative e votazione, devono completarsi entro un tempo massimo di 2.5 secondi nel 90\% dei casi. Il sistema deve essere in grado di gestire contemporaneamente almeno 300 richieste al secondo senza degradare l’esperienza utente.  
+
+\RNF{Scalabilità.}  \label{rnf:scalabilità}
+L’architettura deve essere progettata per supportare un aumento progressivo del numero di utenti. Il sistema deve scalare fino a 20.000 utenti simultanei, mantenendo tempi di risposta conformi al requisito RNF\ref{rnf:prestazioni}. Devono essere previste politiche di bilanciamento del carico e possibilità di aggiungere risorse hardware senza modificare la logica applicativa.
+
+
+\RNF{Affidabilità e disponibilità.}  \label{rnf:aff_e_fisponibilita}
+La piattaforma deve garantire un’affidabilità elevata, con una disponibilità minima del 99.5\% annuo (pari a circa 1 giorno e 20 ore di downtime massimo). Devono essere implementati sistemi di backup automatico giornaliero e procedure di disaster recovery in grado di ripristinare i dati entro 2 ore in caso di guasto critico.
+
+\RNF{Sicurezza.}  \label{rnf:sicurezza}
+Il sistema deve rispettare le normative GDPR per la protezione dei dati personali. Le comunicazioni tra client e server devono essere cifrate tramite protocollo HTTPS. Le sessioni utente devono scadere automaticamente dopo un periodo di inattività configurabile. L’integrazione con SPID deve rispettare i protocolli di sicurezza stabiliti a livello nazionale.  
+
+\RNF{Usabilità.} \label{rnf:usabilita} %riferimento a Limite d'applicazione 2
+L’interfaccia deve essere intuitiva e utilizzabile da un cittadino medio senza necessità di formazione. Deve essere possibile comprendere le principali funzionalità (creare una richiesta, votare, commentare) entro un tempo massimo di 15 minuti di utilizzo autonomo. Devono essere adottate linee guida di design coerenti (colori, pulsanti, icone) per garantire un’esperienza uniforme.  
+
+\RNF{Accessibilità.}  \label{rnf:accessibilita}
+Il sistema deve essere conforme alle linee guida WCAG 2.1 livello AA, garantendo l’accesso anche a utenti con disabilità. Ciò include il supporto per screen reader, testi alternativi per immagini, contrasto elevato, navigazione da tastiera e font leggibili.  
+
+\RNF{Manutenibilità.}  \label{rnf:manutenibilita}
+Il software deve essere sviluppato seguendo principi di modularità e documentazione del codice, in modo da permettere futuri aggiornamenti e correzioni senza compromettere la stabilità del sistema. Devono essere previste procedure di test automatici per ridurre il rischio di regressioni.
+
+\newpage %Ivan
+\titleformat{\paragraph}[block]{\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+\titlespacing*{\paragraph}{0em}{3.25ex plus 1ex minus .2ex}{0em}

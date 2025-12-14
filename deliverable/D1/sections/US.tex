@@ -1,0 +1,362 @@
+\section{User Stories} %% ale
+
+%\subsection*{User story 1: Accesso utente (Login).} 
+\US{Accesso utente (Login)}
+Come \textit{utente già registrato} (cittadino o operatore del Comune) voglio poter accedere al mio profilo tramite SPID o CIE in modo da usufruire delle funzionalità a me riservate. \\ (Riferito a RF\ref{rf:login})
+\paragraph{Criteri di accettazione:}
+\begin{itemize}
+    \item L'utente, partendo dall'interfaccia di default dell'applicazione, può visualizzare le opzioni d'accesso permesse (SPID o CIE) e scegliere tra le due dopo aver premuto sul tasto apposito.
+    \item L'utente viene reindirizzato all'interfaccia di scelta per il login anche quando prova a compiere un'azione da utente registrato (ad esempio firmare una petizione o votare al bilancio partecipativo).
+    \item Selezionando un'opzione, il sistema reindirizza l'utente al provider scelto.
+    \item Autenticandosi con la modalità scelta, vengono restituiti al sistema i dati identificativi dell'utente.
+    \item Il sistema verifica  l'esistenza dell'utente nel database. 
+    \item Dopo un login riuscito, il sistema reindirizza l'utente alla dashboard corrispondente al proprio ruolo.
+    \item Se loggato, l'utente è abilitato a tutte le funzionalità a lui dedicate.
+    \item Se l'identificativo fornito dal provider non è presente nel database del sistema, l'utente viene guidato al flusso di creazione del profilo.
+    \item In caso di errore di autenticazione viene mostrato un messaggio d'errore.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Aggiungere alla UI un tasto per il login che mostri le opzioni d'accesso una volta cliccato.
+    \item Implementare il reindirizzamento alla scelta del delle opzioni d'accesso nel caso in cui un utente provi a compiere azioni da utente registrato senza aver fatto login.
+    \item Implementare il reindirizzamento verso i provider SPID/CIE e gestire il callback di ritorno.
+    \item Testare l'accesso per gli utenti registrati (partendo ad esempio dal "super-utente" - RF\ref{rf:ruoli_amministrativi}), per assicurarsi che dopo l'autenticazione vengano reindirizzati alla propria dashboard dedicata.
+    \item Testare inoltre che dopo il login gli utenti possano svolgere le attività che caratterizzano il loro ruolo.
+    \item Testare il reindirizzamento alla fase di creazione del profilo in caso di account inesistente.
+    \item Implementare e verificare il messaggio d'errore in caso di errore di autenticazione.
+\end{itemize}
+
+
+\US{Creazione  profilo al primo accesso}
+Come \textit{utente non ancora registrato} (cittadino o operatore del Comune) voglio poter creare un profilo per  usufruire dei servizi dell'applicazione e svolgere il mio ruolo. \\ (Riferito a RF\ref{rf:creazione_profilo})
+\paragraph{Criteri di accettazione:}
+\begin{itemize}
+    \item L'utente viene guidato al flusso di creazione del profilo quando non vengono trovati i suoi dati, forniti in fase di autenticazione, nel database.
+    \item Il sistema verifica che l'utente sia residente nel Comune di Trento o sia presente nella lista di utenti pre-autorizzati (RF\ref{subRf:assegnazione_privilegi}). 
+    \item Se la verifica va a buon fine, viene richiesto all'utente di fornire un indirizzo e-mail, che verrà integrato nel database.
+    \item Se l'e-mail inserita è valida, viene creato il profilo dell'utente.
+    \item A ogni nuovo accesso, il profilo dell'utente risulta presente nel database.
+    \item Se la verifica non va a buon fine viene mostrato un messaggio d'errore.
+    \item Se l'e-mail non è valida viene mostrato un messaggio d'errore.
+    \item In caso di errore di autenticazione viene mostrato un messaggio d'errore.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Implementare il controllo di residenza o pre-autorizzazione fatto dal sistema.
+    \item Implementare la richiesta dell'e-mail.
+    \item Implementare la verifica dell'e-mail.
+    \item Fare in modo che i dati forniti in fase di autenticazione e la mail costituiscano una nuova tupla nel database.
+    \item Verificare che il profilo risulti esistente nei successivi accessi dell'utente.
+    \item Implementare e verificare i messaggi d'errore nelle varie casistiche di errore.
+\end{itemize}
+
+\US{Visualizzazione della lista di iniziative}
+Come \textit{utente} voglio poter visualizzare le varie iniziative presenti sull'applicazione, per farmi un'idea sulle problematiche del Comune di Trento. \\ (Riferito a RF\ref{rf:consultazione_iniziative})
+\paragraph{Criteri di accettazione:}
+\begin{itemize}
+    \item L'utente riesce a visualizzare il catalogo pubblico di iniziative pubblicate, contenente le varie iniziative con i relativi dati.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Aggiungere una pagina nella UI in cui siano visibili le varie iniziative con i relativi dati.
+\end{itemize}
+
+\US{Ricerca di iniziative}
+Come \textit{utente} voglio poter cercare un'iniziativa pubblicata inserendo delle parole chiave in una barra di ricerca, in modo da trovarla più facilmente. \\ (Riferito a RF\ref{rf:consultazione_iniziative})
+\paragraph{Criteri di accettazione:}
+\begin{itemize}
+    \item L'utente può inserire parole chiave in una barra di ricerca.
+    \item Dopo che l'utente ha inserito le parole chiave e premuto un apposito tasto, la pagina viene aggiornata e vengono mostrate dall'interfaccia solo le iniziative correlate a quelle parole chiave.
+    \item Se la ricerca non riconduce a nessuna iniziativa, viene mostrato un messaggio informativo.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Aggiungere una barra di ricerca sulla stessa pagina di visualizzazione delle iniziative.
+    \item Implementare un algoritmo che selezioni le iniziative da mostrare sulla base delle parole chiave.
+    \item Verificare che dopo aver inserito le parole e  premuto il tasto di ricerca venga aggiornata la pagina e vengano mostrate le iniziative selezionate dall'algoritmo.
+    \item Implementare e verificare il messaggio informativo in caso di mancanza di corrispondenze nella ricerca.
+\end{itemize}
+
+\US{Filtraggio di iniziative}
+Come \textit{utente} voglio applicare dei filtri alla mia ricerca di iniziative, in modo da affinarne i risultati. \\ (Riferito a RF\ref{rf:consultazione_iniziative})
+\paragraph{Criteri di accettazione}
+\begin{itemize}
+    \item L'utente può applicare uno o più filtri alla sua ricerca.
+    \item Dopo che l'utente ha premuto il tasto di ricerca, la pagina viene aggiornata e vengono mostrate le iniziative che soddisfano i criteri selezionati.
+    \item Se la ricerca non riconduce a nessuna iniziativa, viene mostrato un messaggio informativo.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Aggiungere un'interfaccia di selezione di filtri sulla pagina di visualizzazione delle iniziative.
+    \item Implementare l'applicazione delle condizioni di filtraggio nella selezione delle iniziative da mostrare.
+    \item Verificare che dopo aver inserito le parole chiave (opzionale), applicato dei filtri e premuto il tasto di ricerca venga aggiornata la pagina e vengano mostrate le iniziative che soddisfano i criteri di ricerca.
+    \item Implementare e verificare il messaggio informativo in caso di mancanza di corrispondenze nella ricerca.
+\end{itemize}
+
+\US{Consultazione di una singola iniziativa}
+Come \textit{utente} voglio poter visualizzare tutte le informazioni relative a una specifica iniziativa. \\ (Riferito a RF\ref{rf:consultazione_singola_iniz})
+\paragraph{Criteri di accettazione:}
+\begin{itemize}
+    \item L'utente, cliccando su un'iniziativa nella lista, viene reindirizzato a una pagina di dettaglio con tutte le informazioni associate all’iniziativa (elencate in RF\ref{rf:consultazione_singola_iniz}). 
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Implementare il reindirizzamento alla pagina di dettaglio quando l'utente clicca sull'iniziativa.
+\end{itemize}
+
+%% MANCA ANALISI RICHIESTE: non è facile stabilire cosa bisogna fare per risolvere il compito se non abbiamo definito precisamente il compito e i sottocompiti
+
+\US{Aggiornamento dello stato di un'iniziativa}
+Come \textit{operatore del Comune} devo poter aggiornare lo stato di un'iniziativa, in modo da far vedere ai cittadini se il Comune l'ha esplicitamente respinta o accettata. \\ Inoltre, devo poter motivare la scelta allegando note o documenti di risposta, in modo che le motivazioni del Comune siano trasparenti ai cittadini. \\ (Riferito a RF\ref{rf:gestione_iniziative})
+\paragraph{Criteri di accettazione:}
+\begin{itemize}
+    \item L'operatore, cliccando su un pulsante nella sua interfaccia di visualizzazione dell'iniziativa, può selezionare una nuova tipologia di stato.
+    \item Quando cambia lo stato ad un'iniziativa, l'operatore vede inserire delle note o allegare dei documenti.
+    \item Una volta premuto un pulsante "Salva", le modifiche apportate si riflettono sul database.
+    \item Dopo le modifiche, tutti gli utenti possono vedere il nuovo stato dell'iniziativa e visualizzare le note / gli allegati che l'operatore ha caricato.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Aggiungere all'interfaccia di visualizzazione dell'iniziativa lato operatore un pulsante per aggiornarne lo stato, scegliendo tra "Respinta" e "Approvata".
+    \item Aggiungere inoltre un box per digitare delle note o allegare dei documenti.
+    \item Aggiungere un pulsante salva per applicare la modifica.
+    \item Implementare l'aggiornamento del database.
+    \item Testare che gli utenti visualizzino il cambiamento di stato e i caricamenti dell'operatore.
+    \item Verificare che le nuove interazioni con l'iniziativa siano coerenti con il nuovo stato.
+\end{itemize}
+
+
+\US{Proroga data di scadenza}
+Come \textit{operatore del Comune} devo poter prorogare la data di scadenza di un'iniziativa in corso, nel caso il Comune necessiti di più tempo per decidere se accettarla o respingerla. \\ (Riferito a RF\ref{rf:gestione_iniziative})
+\paragraph{Criteri di accettazione}
+\begin{itemize}
+    \item L'operatore può visualizzare un elenco di date successive alla data di scadenza attuale dell'iniziativa (le date sono limitate a 120 giorni dopo la creazione).
+    \item Selezionandone una, l'operatore cambia la data di scadenza dell'iniziativa.
+    \item Una volta premuto il pulsante "Salva", le modifiche apportate si riflettono sul database.
+    \item Dopo le modifiche, gli utenti visualizzano una nuova data di scadenza per quell'iniziativa.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Aggiungere all'interfaccia di visualizzazione dell'iniziativa lato operatore un pulsante per il cambiamento di data, che mostri all'operatore la lista di nuove date possibili.
+    \item Implementare l'aggiornamento del database dopo il salvataggio delle modifiche.
+    \item Testare che gli utenti visualizzino la nuova data di scadenza dopo l'aggiornamento.
+\end{itemize}
+
+\US{Creazione bilancio partecipativo}
+Come \textit{operatore del Comune} devo poter creare un sondaggio per il bilancio partecipativo per conto del Comune, in modo da coinvolgere direttamente i cittadini nelle scelte del Comune. \\ (Riferito a RF\ref{rf:creazione_bilancio_partecipativo})
+\paragraph{Criteri di accettazione:}
+\begin{itemize}
+    \item Gli utenti amministratori dispongono di un'interfaccia per creare un nuovo bilancio partecipativo.
+    \item L'interfaccia di creazione richiede di inserire una domanda, delle opzioni 
+    %,una data di inizio 
+    e una data di scadenza, rispettando i vincoli descritti in RF\ref{rf:creazione_bilancio_partecipativo}.
+    \item Il sistema impedisce la pubblicazione del sondaggio qualora ce ne fosse già uno attivo.
+    \item Se l'operatore prova a pubblicare un sondaggio con dei campi incompleti o errati, oppure tenta di pubblicare un sondaggio quando ne è già attivo uno, vengono mostrati degli adeguati messaggi d'errore.
+    \item Prima di pubblicare il sondaggio, l'operatore ne visualizza un'anteprima e preme un pulsante per confermare la compilazione dei campi.
+    \item Dopo la pubblicazione, il sondaggio è visualizzabile dagli altri utenti.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Aggiungere alla UI dell'operatore l'interfaccia di creazione del bilancio partecipativo tramite compilazione di campi.
+    \item Far visualizzare un'anteprima all'operatore prima della sua conferma di pubblicazione.
+    \item Aggiornare il database con i dati del bilancio partecipativo pubblicato.
+    \item Implementare e verificare i messaggi d'errore nelle casistiche d'errore elencate.
+    \item Testare che il sondaggio sia visibile agli utenti dopo la pubblicazione.
+\end{itemize}
+
+\US{Consultazione Archivio Bilanci Partecipativi}
+Come \textit{operatore del Comune} voglio poter consultare i bilanci partecipativi conclusi, in modo da poter analizzare le scelte che sono state fatte in passato. \\ (Riferito a RF\ref{rf:consultazione_archivio_bilancio_partecipativo})
+\paragraph{Criteri di accettazione:}
+\begin{itemize}
+    \item L'utente con ruolo di "Amministratore" dispone di un'interfaccia per visualizzare l'archivio storico dei bilanci partecipativi.
+    \item Per ogni bilancio partecipativo vengono mostrati i dettagli rilevanti, come descritto in RF\ref{rf:consultazione_archivio_bilancio_partecipativo}.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Aggiungere alla UI dell'operatore una sezione per la consultazione dell'archivio storico dei bilanci partecipativi con i relativi dati.
+\end{itemize}
+
+\US{Visualizzazione e Ricerca Utenti}
+Come \textit{operatore del Comune} devo poter visualizzare un elenco completo degli utenti con ruolo "Amministratore", in modo da poter verificare l'esistenza del profilo di un operatore.\\ (Riferito a RF\ref{subRf:ricerca_utenti})
+\paragraph{Criteri di accettazione:}
+\begin{itemize}
+    \item L'operatore può visualizzare un elenco degli utenti con ruolo "Amministratore" nella sua interfaccia utente.
+    \item L'operatore può cercare un preciso utente inserendo il suo codice fiscale.
+    \item Se l'utente cercato è presente vengono mostrati i suoi dati, altrimenti viene mostrato un messaggio informativo.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Aggiungere alla UI dell'operatore l'elenco degli utenti con ruolo "Amministratore".
+    \item Aggiungere una barra di ricerca dove poter inserire il codice fiscale dell'utente cercato.
+    \item Fare in modo che dopo aver premuto il tasto di invio venga aggiornata la pagina, mostrando i risultati della ricerca.
+    \item Implementare la verifica di esistenza dell'utente nel database.
+    \item Implementare e verificare il messaggio informativo in caso di utente non trovato.
+\end{itemize}
+
+\US{Promozione utente e Pre-autorizzazione}
+Come \textit{operatore del Comune} devo poter promuovere un utente da "Cittadino" ad "Amministratore", in modo che questo possa svolgere anche il suo ruolo da operatore nella piattaforma.\\ Inoltre, devo poter pre-autorizzare un utente, in modo da poter rendere un utente "Amministratore" anche se non è cittadino del Comune di Trento. \\(Riferito a RF\ref{subRf:assegnazione_privilegi})
+\paragraph{Criteri di accettazione:}
+\begin{itemize}
+    \item Nell'interfaccia di visualizzazione degli utenti, l'operatore può digitare manualmente il codice fiscale dell'utente che vuole aggiungere alla lista degli amministratori.
+    \item Se il formato dell'input non rispetta il formato del codice fiscale viene visualizzato un messaggio d'errore.
+    \item Se il codice fiscale inserito corrisponde ad un operatore già presente nella lista viene visualizzato un messaggio informativo.
+    \item Dopo l'inserimento, viene aggiornato il database: se il codice fiscale corrisponde a un cittadino, questo viene promosso; se invece non corrisponde a nessun utente, questo viene pre-autorizzato.
+    \item L’utente promosso (o l’utente pre-autorizzato dopo il primo accesso) ottiene accesso a tutte le funzionalità riservate agli amministratori.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Aggiungere una barra di inserimento dove l'operatore possa digitare il codice fiscale dell'utente da promuovere o pre-autorizzare.
+    \item Implementare l'aggiornamento del database dopo l'inserimento.
+    \item Implementare e verificare i messaggi informativi e d'errore nelle casistiche presentate.
+    \item Verificare che l'utente promosso (o l’utente pre-autorizzato dopo il primo accesso) abbia effettivamente acquisito i privilegi da "Amministratore".
+\end{itemize}
+
+\US{Revoca privilegi}
+Come \textit{operatore del Comune} devo poter selezionare un utente "Amministratore" e revocargli i privilegi, in modo che una volta terminato il suo impiego in Comune non possa continuare ad agire sulla piattaforma come "Amministratore". \\Inoltre, voglio poter rimuovere degli utenti dalla lista degli amministratori, nel caso avessi sbagliato a inserirli.\\ (Riferito a RF\ref{subRf:revoca_previlegi})
+\paragraph{Criteri di accettazione:}
+\begin{itemize}
+    \item Nell'elenco degli amministratori è presente un pulsante "Rimuovi" vicino ad ogni operatore. Il pulsante serve a rimuovere l'operatore dalla lista degli amministratori.
+    \item Premendo il pulsante viene aggiornato il database.
+    \item Se l'operatore prova a rimuovere sé stesso, l'azione viene rifiutata e viene visualizzato un messaggio d'errore.
+    \item Una volta rimosso dalla lista, se l'utente era anche "Cittadino" può continuare a usufruire dei servizi forniti ai cittadini, ma non potrà più svolgere il ruolo di operatore.
+    \item Una volta rimosso dalla lista, se l'utente era solo "Amministratore" perde l'accesso al sistema.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Aggiungere il pulsante "Rimuovi" vicino agli utenti nell'elenco.
+    \item Implementare l'aggiornamento del database.
+    \item Implementare e verificare il messaggio d'errore in caso l'operatore tenti di rimuovere sé stesso dalla lista.
+    \item Verificare che l'utente rimosso dalla lista non possa più svolgere il ruolo di operatore e che mantenga eventualmente i privilegi da cittadino.
+\end{itemize}
+
+\US{Firma}
+Come \textit{cittadino del Comune di Trento} voglio poter firmare un'iniziativa, in modo da supportare la causa. \\ (Riferito a RF\ref{rf:firma})
+\paragraph{Criteri di accettazione:}
+\begin{itemize}
+    \item Nel caso di iniziative interne alla piattaforma, ovviamente in corso, l'utente "Cittadino" deve poter firmare l'iniziativa cliccando un apposito tasto.
+    \item Nel caso di iniziative interne alla piattaforma, il numero totale di adesioni si deve aggiornare in tempo reale dopo una firma.
+    \item Nel caso di iniziative interne alla piattaforma, quando un utente "Cittadino" firma un'iniziativa questa viene spostata nella sezione apposita della sua dashboard personale.
+    \item Quando un cittadino firma un'iniziativa, la sua mail viene aggiunta alla lista di mail a cui inviare aggiornamenti sullo stato dell'iniziativa.
+    \item Nel caso di iniziative interne alla piattaforma, dopo una conferma della firma, il tasto per firmare viene disabilitato in modo da impedire al cittadino di apportare più adesioni alla stessa iniziativa.
+    \item Nel caso di iniziative esterne alla piattaforma, un link permette il reindirizzamento del cittadino alla piattaforma esterna.
+    \item Il sistema monitora il numero di adesioni all'iniziativa esterna.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Aggiungere alla UI i pulsanti per firmare le iniziative.
+    \item Far apparire un box per confermare la scelta dopo aver cliccato il pulsante per firmare.
+    \item Implementare l'aggiornamento dei dati nel database dopo la conferma.
+    \item Implementare lo spostamento dell'iniziativa nella dashboard del cittadino.
+    \item Testare che il singolo cittadino visualizzi l'iniziativa firmata nella propria dashboard.
+    \item Disabilitare il pulsante per firmare del singolo cittadino in seguito alla conferma della sua firma.
+    \item Implementare il reindirizzamento a piattaforme esterne.
+    \item Implementare l'aggiornamento dei dati di piattaforme esterne.
+    \item Testare che gli utenti visualizzino dati aggiornati dopo una firma.
+\end{itemize}
+
+\US{Dashboard personale}
+Come \textit{cittadino del Comune di Trento} voglio avere una dashboard personale per vedere le mie attività e ricevere aggiornamenti. \\ (Riferito a RF\ref{rf:dashboard_personale})
+\paragraph{Criteri di accettazione:}
+\begin{itemize}
+    \item Il cittadino può vedere una dashboard che gli mostri le iniziative create, firmate e seguite e includa una sezione per le notifiche.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Aggiungere la dashboard alla UI.
+\end{itemize}
+
+\US{Creazione di una iniziativa}
+Come \textit{cittadino del Comune di Trento} voglio poter creare un'iniziativa per proporre un cambiamento nella mia città. Vorrei inoltre che quando provo a pubblicare un'iniziativa mi venga notificato se ne esistono già di molto simili, perché se ci fossero troppe iniziative uguali i voti si dividerebbero sulle varie iniziative invece di concentrarsi su una sola. \\ Come \textit{operatore del Comune} voglio che non ci siano più iniziative troppo simili tra loro, perché questo complicherebbe l'analisi dei dati e sovraccaricherebbe il database. \\ (Riferito a RF\ref{rf:creazione_iniziativa} e RF\ref{rf:controllo_duplicati})
+\paragraph{Criteri di accettazione:}
+\begin{itemize}
+    \item L'utente con ruolo di cittadino può creare un'iniziativa, inserendo i dati elencati in RF\ref{rf:creazione_iniziativa} su un'interfaccia visualizzata dopo aver premuto un apposito pulsante.
+    \item Il cittadino visualizza un'anteprima prima di confermare la sottomissione.
+    \item Se il cittadino conferma la pubblicazione senza aver compilato i campi obbligatori, viene mostrato un messaggio d'errore.
+    \item Dopo la pubblicazione dell'iniziativa, il pulsante sulla UI del cittadino rimane disabilitato per 14 giorni.
+    \item Dopo la pubblicazione, la data di scadenza viene impostata automaticamente a 60 giorni dal giorno di pubblicazione e lo stato viene impostato a "In corso".
+    \item Prima della pubblicazione definitiva, l'iniziativa viene sottoposta a un controllo duplicati effettuato dal sistema.
+    \item Se non viene superato il controllo viene mostrato un messaggio informativo.
+    \item La nuova iniziativa viene resa visibile a tutti gli utenti.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Aggiungere alla UI dell'utente cittadino un pulsante per creare una nuova iniziativa.
+    \item Creare un'interfaccia per la compilazione dei campi dell'iniziativa.
+    \item Far visualizzare un'anteprima al cittadino prima della sua conferma di pubblicazione.
+    \item Disabilitare il pulsante di creazione del cittadino per il periodo stabilito.
+    \item Implementare l'impostazione automatica della data di scadenza e dello stato.
+    \item Implementare l'algoritmo di controllo duplicati.
+    \item Implementare e verificare i messaggi informativi e d'errore nelle casistiche presentate.
+    \item Aggiornare il database inserendo i dati relativi alla nuova iniziativa.
+    \item Testare che la nuova iniziativa, una volta superati i controlli e pubblicata, sia visibile a tutti gli utenti.    
+\end{itemize}
+
+\US{Tracciamento stato}
+Come \textit{cittadino del Comune di Trento} voglio seguire lo stato d'avanzamento delle iniziative che mi interessano, in modo da sapere se vengono respinte o accettate. \\ (Riferito a RF\ref{rf:tracciamento_stato})
+\paragraph{Criteri di accettazione:}
+\begin{itemize}
+    \item Il cittadino può salvare un'iniziativa nella propria dashboard cliccando su un apposito tasto.
+    \item Premendo sul tasto una seconda volta, l'iniziativa viene rimossa dalla dashboard.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Aggiungere all'interfaccia di visualizzazione dell'iniziativa un pulsante per aggiungerla in una sezione della dashboard personale.
+    \item Implementare l'aggiunta dell'iniziativa nella dashboard del cittadino quando viene premuto il tasto.
+    \item Implementare la rimozione della stessa dalla dashboard quando viene premuto nuovamente il tasto.
+    \item Testare che i cambiamenti si riflettano nella dashboard del cittadino.
+\end{itemize}
+
+\US{Votazione al bilancio partecipativo}
+Come \textit{cittadino del Comune di Trento} voglio poter votare ai sondaggi di bilancio partecipativo proposti dal Comune per far valere la mia opinione di cittadino. \\ (Riferito a RF\ref{rf:voto})
+\paragraph{Criteri di accettazione:}
+\begin{itemize}
+    \item L'utente visualizza il bilancio partecipativo in atto, e se autenticato può votare una delle opzioni cliccando su di essa.
+    \item Il cittadino e può cambiare scelta finché non preme un pulsante di conferma.
+    \item Una volta confermata la scelta, il sistema aumenta il numero di voti dell'opzione votata.
+    \item Quando un cittadino vota, la sua mail viene aggiunta alla lista di mail a cui inviare il responso finale del sondaggio.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Aggiungere alla UI una sezione per il bilancio partecipativo, in cui il cittadino possa selezionare le opzioni desiderate.
+    \item Aggiornare il database dopo la conferma del voto.
+\end{itemize}
+
+\US{Importazione dati esterni}
+Come \textit{utente} voglio poter visualizzare iniziative relative al Comune di Trento anche se non sono state create sulla piattaforma, per poter consultare e firmare anche quelle. \\ (Riferito a RF\ref{rf:import_dati_esterni})
+\paragraph{Criteri di accettazione:}
+\begin{itemize}
+    \item L'utente può visualizzare anche iniziative presenti in altre piattaforme.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Implementare il metodo di raccolta dei dati esterni e il loro inserimento nel database.
+    \item Testare che gli utenti possano visualizzare le iniziative esterne.
+\end{itemize}
+
+\US{Aggiornamento iniziative esterne}
+Come \textit{utente} voglio che le iniziative provenienti da fonti esterne siano adeguatamente aggiornate. \\ (Riferito a RF\ref{rf:aggiornamento_dati_esterni})
+\paragraph{Criteri di accettazione:}
+\begin{itemize}
+    \item Le iniziative esterne vengono aggiornate con le modalità descritte in RF\ref{rf:aggiornamento_dati_esterni}.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Definire e implementare le tecniche di aggiornamento nelle varie casistiche.
+\end{itemize}
+
+\US{Sistema di notifiche}
+Come \textit{cittadino del Comune di Trento} voglio poter ricevere delle notifiche riguardanti eventi significativi, in modo da rimanere aggiornato. \\ (Riferito a RF\ref{rf:notifiche})
+\paragraph{Criteri di accettazione:}
+\begin{itemize}
+    \item Il cittadino riceve una notifica (all'interno della piattaforma e per mail) nei casi elencati in RF\ref{rf:notifiche}.
+    \item Il cittadino dispone dunque di una sezione della dashboard in cui possa consultare le notifiche.
+\end{itemize}
+\paragraph{Tasks:}
+\begin{itemize}
+    \item Aggiungere nella dashboard una sezione per le notifiche.
+    \item Implementare l'invio delle notifiche ai cittadini.
+\end{itemize}
+
+% COMPONENTI (ANALISI E DIAGRAMMA) -----------------------------------------------
+
+\newpage 

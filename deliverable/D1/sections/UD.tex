@@ -1,0 +1,288 @@
+\section{Use Case Diagram}
+RF\ref{rf:login}: Accesso Utente \\
+RF\ref{rf:creazione_profilo}: Creazione nuovo profilo
+
+\begin{figure}[h!]
+  \centering % \raggedright se si vuole mettere l'immagine a sinistra
+  \fbox{\includegraphics[width=0.9\textwidth]{img/Login Diagram.png}}
+  \label{fig:usecase_login}
+\end{figure}
+
+\paragraph{\large Use Case RF\ref{rf:login}: Accesso utente (Login)}
+\noindent
+1. L'utente inizialmente visualizza l'interfaccia di default dell'applicativo (quella dell'user con meno privilegi).\\
+2. Per fare log-in, clicca su un pulsante apposito.\\
+3. Il sistema reindirizza il cittadino al provider SPID o CIE per l’autenticazione. \\
+4. L'utente accede alla propria dashboard. [eccezione 1]
+
+\paragraph{Eccezioni}
+\noindent
+1. Se le credenziali non sono state registrate in precedenza, allora l'utente entrerà in fase di creazione profilo.
+
+\paragraph{\large Use Case RF\ref{rf:creazione_profilo}: Creazione profilo al primo accesso}
+\noindent
+1. Il cittadino visualizza la pagina di accesso.\\
+2. Seleziona la modalità di autenticazione: SPID o CIE.\\
+3. Il sistema reindirizza il cittadino al provider SPID o CIE per l’autenticazione.\\
+4. Dopo il login, vengono restituiti al sistema i dati identificativi (nome, cognome, codice fiscale, indirizzo di residenza, ecc.).\\
+5. La piattaforma verifica automaticamente che la residenza sia nel territorio del Comune di Trento. [eccezione 1]\\
+6. Una volta eseguita la verifica viene richiesto all'utente di fornire l'indirizzo email come specificato in RF\ref{rf:creazione_profilo} . \\
+7. L'email server verifica la validità dei dati inseriti. [eccezione 2]\\
+8. Se la verifica va a buon fine viene generato un nuovo account con i propri dati personali e il ruolo di "cittadino".
+
+\paragraph{Eccezioni}
+\noindent
+1. Se l'utente non risiede nel Comune di Trento e non fa parte della lista di amministratori pre-autorizzati [estensione 1] %non so se ha senso metterla qui l'estensione
+, la fase di verifica della piattaforma fallisce e viene mostrato all'utente un messaggio di errore con scritto che non soddisfa i requisiti necessari a registrarsi.\\
+2. Se l'indirizzo email non viene confermato in tempo, l'utente dovrà ripetere la registrazione.
+
+\paragraph{Estensioni}
+\noindent
+1. Viene creato un profilo con il solo ruolo di “Amministratore”.
+
+\newpage \noindent
+RF\ref{rf:consultazione_iniziative}: Consultazione delle iniziative\\
+RF\ref{rf:consultazione_singola_iniz}: Consultazione di una singola iniziativa\\
+\begin{figure}[h!]
+  \centering
+  \fbox{\includegraphics[width=0.9\textwidth]{img/iniziative.png}}
+  \label{fig:iniziative}
+\end{figure}
+
+\paragraph{\large Use case RF\ref{rf:consultazione_iniziative}: Consultazione delle iniziative}
+\noindent
+1. L'utente visualizza come default la home page.\\
+2. L'utente consulta il catalogo pubblico delle iniziative presenti
+2. Nella barra di ricerca, una volta inserite le parole chiave e scelti strumenti aggiuntivi (vedi RF\ref{rf:consultazione_iniziative}), viene premuto il pulsante RICERCA. [Eccezione 1]\\
+4. Il sistema, collegandosi al database, mostra le iniziative che rispettano i criteri di ricerca. [eccezione 1]\\
+
+\paragraph{Eccezioni} \noindent
+1. Se non viene trovata nessuna iniziativa che rispetta tali criteri, viene visualizzato un apposito messaggio.
+
+\paragraph{\large Use case RF\ref{rf:consultazione_singola_iniz}: Consultazione di una singola iniziativa}
+\noindent
+1. L'utente visualizza la lista di iniziative che gli interessano. \\
+2. L'utente seleziona una singola iniziativa cliccando su di essa. \\
+3. Il sistema risponde mostrando una pagina di dettaglio con tutte le informazioni associate all’iniziativa (si veda RF4). \\
+
+\noindent
+RF5: Analisi delle richieste\\
+RF6: Gestione iniziative
+\begin{figure}[h!]
+  \centering
+  \fbox{\includegraphics[width=0.9\textwidth]{img/analisi_gestione.png}}
+  \label{fig:analisi_gestione}
+\end{figure}
+
+\paragraph{\large Use case RF\ref{rf:analisi_richieste}: Analisi delle richieste}
+\noindent
+1. L’amministratore accede alla home page. \\
+2. Seleziona l’icona relativa agli strumenti di analisi. \\
+3. Sceglie una delle opzioni analitiche fornite in RF\ref{rf:analisi_richieste}. \\
+4. Il server elabora i dati e restituisce tabelle e grafici interattivi aggiornati.
+
+\paragraph{\large Use case RF\ref{rf:gestione_iniziative}: Gestione iniziative}
+\noindent
+1. L’amministratore accede alla home page. \\
+2. Scorre la sezione “Iniziative in corso”. \\
+3. Seleziona un’iniziativa da aggiornare. \\
+4. Applica una o più modifiche tra quelle fornite in RF\ref{rf:gestione_iniziative}. [Estensione 1] \\
+5. Conferma le modifiche premendo il pulsante “Salva”. \\
+6. Il server riceve i dati aggiornati e li applica al database.
+
+\paragraph{Estensioni} \noindent
+1. In caso di modifica allo stato dell’iniziativa, l’amministratore deve inserire una motivazione, che sarà resa visibile ai cittadini nella scheda dell’iniziativa.
+
+\newpage \noindent
+RF\ref{rf:creazione_bilancio_partecipativo}: Creazione bilancio partecipativo \\
+RF\ref{rf:consultazione_archivio_bilancio_partecipativo}: Consultazione Archivio Bilanci Partecipativi
+\begin{figure}[h!]
+  \centering
+  \fbox{\includegraphics[width=0.9\textwidth]{img/bilanci_part.png}}
+  \label{fig:bilanci_part}
+\end{figure}
+
+\paragraph{Use case RF\ref{rf:creazione_bilancio_partecipativo}: Creazione bilancio partecipativo}
+\noindent
+1. L’amministratore accede alla home page. \\
+2. Visualizza l’interfaccia di gestione dei bilanci partecipativi. \\
+3. Seleziona "Crea nuovo bilancio partecipativo". \\
+4. Compila i campi richiesti \\
+5. Conferma premendo sul pulsante "Conferma". \\
+6. Se tutte le condizioni sono soddisfatte, il sistema registra e pubblica il bilancio, rendendolo visibile agli utenti. [Eccezione 1][Eccezione 2][Eccezione 3] \\
+7. L’amministratore riceve conferma dell’avvenuta pubblicazione.
+
+\paragraph{Eccezioni} \noindent
+1. Se è già presente un bilancio partecipativo attivo, il sistema blocca la pubblicazione e notifica l’errore (“Esiste già un bilancio attivo”). \\
+2. Se la durata è inferiore a 14 giorni, il sistema rifiuta la creazione e richiede la correzione delle date. \\
+3. Se il numero di risposte non rientra tra 2 e 5, il sistema mostra un messaggio di validazione.
+
+\paragraph{Use case RF\ref{rf:consultazione_archivio_bilancio_partecipativo}: Consultazione Archivio Bilanci Partecipativi}
+\noindent
+1. L’amministratore accede alla home page. \\
+2. Entra nella sezione “Archivio bilanci partecipativi”. [Eccezione 1]\\
+3. Il sistema mostra l’elenco dei bilanci partecipativi conclusi. \\
+4. L’amministratore seleziona un bilancio specifico dall’elenco. \\
+5. Il sistema recupera i dati corrispondenti dal database e li mostra. [Eccezione 2][Estensione 1]
+
+\paragraph{Eccezioni} \noindent
+1. Se il database non contiene bilanci archiviati, il sistema mostra un messaggio informativo (“Nessun bilancio concluso disponibile”). \\
+2. In caso di errore nel recupero dei dati (es. connessione al database fallita), il sistema notifica l’amministratore e invita a riprovare.
+
+\paragraph{Estensioni} \noindent
+1. L’amministratore può eventualmente esportare i risultati o visualizzare grafici riepilogativi.\\
+
+\newpage \noindent
+RF\ref{rf:ruoli_amministrativi}: Gestione Ruoli Amministrativi
+\begin{figure}[!h]
+  \centering
+  \fbox{\includegraphics[width=0.9\textwidth]{img/ruoli_amministrativi.png}}
+  \label{fig:ruoli_amministrativi}
+\end{figure}
+
+\paragraph{Use case RF\ref{rf:ruoli_amministrativi}: Gestione Ruoli Amministrativi}
+\noindent
+1. L’amministratore accede alla home page. \\
+2. Entra nella sezione “Gestione ruoli amministrativi” dal pannello di amministrazione. \\
+3. Il sistema mostra l’elenco di tutti gli utenti con ruolo amministrativo, come descritto in RF\ref{subRf:ricerca_utenti}. [Estensione 1] [Eccezione 1] \\
+4. Seleziona un utente della lista.
+5. Applica una delle opzioni fornite in RF\ref{subRf:assegnazione_privilegi} o RF\ref{subRf:revoca_previlegi}. [Eccezione 2] \\
+6. Il sistema aggiorna i dati nel database e conferma l’avvenuta modifica dei privilegi. [Eccezione 3]
+
+\paragraph{Eccezioni} \noindent
+1. Se il Codice Fiscale inserito non esiste e non si desidera pre-autorizzarlo, il sistema mostra un errore (“Utente non trovato nel sistema”).\\
+2. Se un amministratore prova a revocare i propri privilegi, il sistema mostra un messaggio di blocco (“Operazione non consentita sull’utente corrente”).\\
+3. Se si verifica un errore durante l’aggiornamento del database, il sistema notifica l’amministratore e annulla la modifica.
+
+\paragraph{Estensioni} \noindent
+1. L’amministratore può effettuare una ricerca con Codice Fiscale per individuare un utente da gestire.
+
+\paragraph{\large Use case RF\ref{rf:firma}: Firma}
+1. L'utente visualizza come default la home page. \\
+2. Accede all’iniziativa che desidera sostenere. \\
+3. Seleziona l’opzione “Firma / Sostieni l’iniziativa”. [Estensione 1][Eccezione 1] \\
+4. Il sistema verifica che l’utente non abbia già firmato quella specifica iniziativa. \\
+5. Il sistema registra la firma nel database.\\
+6. Il numero totale di firme viene aggiornato in tempo reale e mostrato all’utente. [Estensione 2]
+
+\paragraph{Eccezioni} \noindent
+1. Se il cittadino tenta di firmare un’iniziativa interna già sostenuta, il sistema mostra un messaggio (“Hai già sostenuto questa iniziativa”) senza cambiare il conteggio.\\
+2. Se l'iniziativa non è più firmabile (archiviata, respinta), il sistema blocca l'operazione e mostra un messaggio (“Questa iniziativa non è più attiva”).
+
+\paragraph{Estensioni} \noindent
+1. Se l'iniziativa proviene da una fonte esterna allora l'utente viene reindirizzato alla pagina originale. Una volta completata la firma, tramite sincronizzazione, API o scraping autorizzato, il sistema aggiorna in tempo reale il numero totale di adesioni anche nella propria piattaforma.\\
+2. L’utente vede la firma registrata nella propria area personale.
+
+\paragraph{\large Use case RF:\ref{rf:dashboard_personale}: Dashboard personale} \noindent
+1. L'utente visualizza come default la home page. \\
+2. Seleziona “Dashboard personale” dal menu principale. \\
+3. Il sistema recupera dal database tutte le informazioni associate all’utente elencate in RF\ref{rf:dashboard_personale}. \\
+4. Il sistema genera una vista riepilogativa. [Eccezione 1] \\
+5. L’utente visualizza la dashboard contenente tutte le informazioni aggiornate.
+
+\paragraph{Eccezioni} \noindent
+1. Se l’utente non ha ancora: creato iniziative, supportato iniziative o seguito iniziative, il sistema mostra una dashboard vuota, con messaggi informativi e link utili per iniziare.
+
+\paragraph{\large Use case RF\ref{rf:creazione_iniziativa}: Creazione di una iniziativa}
+\noindent
+1. L'utente, dalla home page, seleziona il tasto "Crea".\\
+2. Il sistema mostra il form di compilazione con i campi richiesti in RF\ref{rf:consultazione_singola_iniz}.[Eccezione 1]\\
+3. Il sistema genera un'anteprima della proposta.\\
+4. L'utente conferma la creazione.\\
+5. Il sistema esegue il controllo automatico di duplicati. [Eccezione 2] \\
+6. L'iniziativa viene registrata nel database e resa visibile nella piattaforma con lo stato "in corso".
+
+\paragraph{Eccezioni:}
+\noindent
+1. Se l'utente non inserisce tutti i dati obbligatori, il sistema segnala i campi mancanti.\\
+2. Se viene rilevata una similarità elevata, il sistema mostra un avviso con le iniziative simili già presenti.
+
+\paragraph{\large Use case RF\ref{rf:tracciamento_stato}: Tracciamento stato}
+\noindent
+1. L'utente visualizza come default la home page. \\
+2. Seleziona un’iniziativa (interna o esterna, vedi RF10 e RF18). \\
+3. Sceglie l’opzione “Segui iniziativa / Aggiungi alla dashboard personale”. \\
+4. Il sistema aggiunge l’iniziativa all’elenco personale dell’utente (dashboard, RF13). \\
+5. Il sistema monitora lo stato dell’iniziativa in base al suo flusso di vita definito in RF18. [Estensione 1] \\
+8. L’utente visualizza sempre lo stato aggiornato dell’iniziativa nella propria dashboard personale.
+
+\paragraph{Estensioni} \noindent
+1. Se lo stato dell’iniziativa cambia il sistema notifica tempestivamente l’utente.
+
+\paragraph{\large Use Case RF\ref{rf:voto}: Votazione del bilancio partecipativo} \noindent
+1. L'utente visualizza come default la home page. \\
+2. Apre la sezione dedicata ai bilanci partecipativi. \\
+3. Il sistema mostra l’elenco dei bilanci partecipativi attualmente attivi. [Eccezione 1] \\
+4. L’utente seleziona il sondaggio. [Eccezione 2] \\
+5. Il sistema mostra il modulo di voto.
+6. L’utente seleziona una delle opzioni proposte e conferma il voto.
+7. Il sistema registra la preferenza dell’utente nel database e aggiorna il conteggio delle votazioni.
+8. Al termine del voto, viene mostrato un messaggio di conferma.
+9. Alla chiusura del periodo di votazione, il sistema invia automaticamente all’utente una notifica sui risultati finali, come previsto in RF19.
+
+\paragraph{Eccezioni} \noindent
+1. Se non esiste alcun bilancio attivo, il sistema mostra un messaggio: “Nessun bilancio partecipativo attivo al momento.” \\
+2. Se l'utente ha già votato, il sistema mostra un avviso: “Hai già votato questo bilancio partecipativo.” \\
+3. Se il database o il servizio interno non risponde, il sistema mostra un errore temporaneo.
+
+\paragraph{\large Use case RF\ref{rf:controllo_duplicati}: Controllo duplicati}
+1. L’utente compila il modulo per la creazione di una nuova iniziativa (titolo, descrizione, luogo, categoria, allegati).\\
+2. Prima della pubblicazione, il sistema avvia il controllo automatico anti-duplicati.\\
+3. Utilizzando algoritmi di similarità testuale, viene calcolato un punteggio di somiglianza.\\
+4. Se il punteggio supera una soglia predefinita, il sistema considera la proposta duplicata o troppo simile [Eccezione 1].\\
+5. Se la similarità è bassa, la proposta viene accettata e pubblicata normalmente.
+
+\paragraph{Eccezioni:}
+1. La pubblicazione viene bloccata e l’utente riceve una notifica con un elenco di iniziative simili già presenti.
+
+\paragraph{\large Use case RF\ref{rf:import_dati_esterni}: Importazione dati esterni}
+\noindent
+1. Un processo pianificato avvia periodicamente la procedura di importazione. \\
+2. Il sistema si connette alle API pubbliche o agli endpoint open data delle piattaforme esterne configurate. [Eccezione 1]\\
+3. Vengono estratti i dati elencati in RF\ref{rf:analisi_richieste}. \\
+4. Il sistema controlla la validità dei dati importati. [Eccezione 2]\\
+5. Il sistema uniforma il formato dei dati a quello usato nella piattaforma aggiungendo anche un attributo di origine esterna.\\
+6. Le iniziative importate vengono rese visibili sulla piattaforma.
+
+\paragraph{Eccezioni}
+\noindent
+1. In caso di mancata connessione a una fonte, il sistema segnala l'errore e riprova al ciclo successivo.\\
+2. Se i dati sono incompleti, i record vengono temporaneamente scartati e segnalati all'amministrazione.
+
+\paragraph{\large Use case RF\ref{rf:aggiornamento_dati_esterni}:  Aggiornamento iniziative esterne} \noindent
+1. Il sistema identifica tutte le iniziative esterne importate (RF16) presenti nel database.
+2. Ogni iniziativa viene sincronizzata secondo la modalità configurata tra quelle fornite in RF\ref{rf:aggiornamento_dati_esterni}. \\
+3. Il sistema aggiorna i dati dell’iniziativa sulla base delle informazioni ricevute dalle fonti esterne. [Eccezione 1][Eccezione 2][Eccezione 3][Eccezione 4]\\
+4. Il database viene aggiornato e reso disponibile all’interfaccia utente e ai moduli di elaborazione (RF5, RF13).
+
+\paragraph{Eccezioni} \noindent
+1. Se il sito esterno non risponde: L’aggiornamento viene rimandato, l’iniziativa mantiene l’ultimo stato noto, il sistema registra un log di errore e ritenta al ciclo successivo. \\
+2. Se i dati restituiti dalla fonte esterna non rispettano il formato previsto: Il sistema scarta l’aggiornamento, mantiene i valori precedenti e notifica un warning agli amministratori. \\
+3. Se la piattaforma esterna impone limiti di frequenza: Il sistema scala automaticamente la frequenza di aggiornamento, l’iniziativa rimane nello stato attuale fino al prossimo tentativo consentito. \\
+4. Se la fonte esterna segnala che l’iniziativa non esiste più: Il sistema segna l’iniziativa come “non più disponibile” o la archivia automaticamente.
+
+\paragraph{\large Use case RF\ref{rf:ciclo_vita_stati}: Definizione e ciclo di vita degli stati} \noindent
+1. Ogni iniziativa, sia creata dall’utente sulla piattaforma, sia importata da una fonte esterna (RF16), viene inizialmente associata a uno stato.
+2. Se una iniziativa "in corso" non riceve una risposta entro i 60 giorni, il sistema la marca come “Archiviata”. [Estensione 1][Eccezione 1][Estensione 2] \\
+3. Per le iniziative esterne, lo stato viene aggiornato automaticamente in base alle informazioni ricevute dal sito originale (RF\ref{rf:aggiornamento_dati_esterni}). [Eccezione 2]
+
+\paragraph{Eccezioni}
+1. Se l’amministratore richiede una proroga oltre i 120 giorni: il sistema rifiuta la modifica e indica il limite massimo normativo. \\
+2. Se un’iniziativa importata presenta una data scaduta ma uno stato ancora “in corso”: il sistema risolve il conflitto portandola allo stato “Scaduta” e segnala l’incongruenza in un log.
+
+\paragraph{Estensioni}
+1. L’amministrazione può prorogare la durata dello stato “In corso” fino a un massimo di 120 giorni. \\
+2. L’amministratore può modificare manualmente lo stato (ad esempio “Approvata”, “Respinta”) fornendo una motivazione visibile ai cittadini.
+
+\paragraph{\large Use case RF\ref{rf:notifiche}: Sistema di notifiche}
+1. Il sistema monitora eventi che richiedono la generazione di notifiche per gli utenti (RF\ref{rf:notifiche}).\\
+2. Il sistema produce il messaggio di notifica. \\
+3. La notifica viene inviata all’interno della piattaforma (centro notifiche), via e-mail all’indirizzo dell’utente registrato (RF\ref{subRf:reg_cittadini}). [Eccezione 1][Eccezione 2]\\
+4. L’utente può visualizzare, leggere o segnare come lette le notifiche dal proprio profilo.
+
+\paragraph{Eccezioni} \noindent
+1. Se l’e-mail non può essere consegnata: La notifica interna viene comunque registrata, il sistema marca l’invio e-mail come fallito e programma un nuovo tentativo automatico. \\
+2. Se durante la generazione della notifica si verifica un errore: L’evento viene registrato in un log, il sistema riprova automaticamente, l’utente non perde la notifica (ritento fino a successo).
+
+%---------------------------------------------------------------------------------------------------------------------
+\newpage 
