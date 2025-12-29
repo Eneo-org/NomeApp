@@ -387,134 +387,119 @@ exports.createReply = async (req, res) => {
             });
         }
 
-        // 2. VALIDAZIONE BODY (Joi)
+        // 2. VALIDAZIONE BODY
         const { error, value } = administrationReplySchema.validate(req.body, { abortEarly: false });
-        
         if (error) {
             return res.status(400).json({
                 timeStamp: new Date().toISOString(),
                 message: "Errore di validazione",
-                details: error.details.map(err => ({
-                    field: err.context.key,
-                    issue: err.message
-                }))
+                details: error.details.map(err => ({ field: err.context.key, issue: err.message }))
             });
         }
-
         const { status, motivations, attachments } = value;
 
         // 3. AVVIO TRANSAZIONE
         connection = await db.getConnection();
         await connection.beginTransaction();
 
-        
-
-        // 4. CONTROLLO PERMESSI ADMIN & ESISTENZA INIZIATIVA
+        // 4. CONTROLLI PRELIMINARI
         const [users] = await connection.query('SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?', [adminId]);
-        
         if (users.length === 0 || !users[0].IS_ADMIN) {
             await connection.rollback();
-            return res.status(403).json({ 
-                timeStamp: new Date().toISOString(),
-                message: "Operazione non consentita: solo gli amministratori possono rispondere.",
-                details: [
-                    {
-                        field: "X-Mock-User-Id",
-                        issue: "L'utente non possiede i privilegi di amministrazione."
-                    }
-                ]
-            });
+            return res.status(403).json({ timeStamp: new Date().toISOString(), message: "Operazione non consentita." });
         }
 
-        // Verifica se l'iniziativa esiste
-        const [initiatives] = await connection.query('SELECT ID_INIZIATIVA FROM INIZIATIVA WHERE ID_INIZIATIVA = ?', [initiativeId]);
+        // Recupero titolo per la notifica
+        const [initiatives] = await connection.query('SELECT ID_INIZIATIVA, TITOLO FROM INIZIATIVA WHERE ID_INIZIATIVA = ?', [initiativeId]);
         if (initiatives.length === 0) {
             await connection.rollback();
-            return res.status(404).json({ 
-                timeStamp: new Date().toISOString(),
-                message: "Iniziativa non trovata" 
-            });
+            return res.status(404).json({ timeStamp: new Date().toISOString(), message: "Iniziativa non trovata" });
         }
-        
-        // Verifica se esiste già una risposta (Opzionale, ma consigliato per evitare duplicati logici)
+        const initiativeTitle = initiatives[0].TITOLO;
+
+        // Controllo risposta esistente
         const [existingReply] = await connection.query('SELECT ID_RISPOSTA FROM RISPOSTA WHERE ID_INIZIATIVA = ?', [initiativeId]);
         if (existingReply.length > 0) {
             await connection.rollback();
-            return res.status(409).json({ 
-                timeStamp: new Date().toISOString(),
-                message: "Esiste già una risposta ufficiale per questa iniziativa." 
-            });
+            return res.status(409).json({ timeStamp: new Date().toISOString(), message: "Risposta già presente." });
         }
 
         // 5. INSERIMENTO RISPOSTA
-        // Mapping: 'motivations' (API) -> 'TEXT_RISP' (DB)
-        const queryInsertReply = `
-            INSERT INTO RISPOSTA (ID_INIZIATIVA, ID_ADMIN, TEXT_RISP)
-            VALUES (?, ?, ?)
-        `;
+        const queryInsertReply = `INSERT INTO RISPOSTA (ID_INIZIATIVA, ID_ADMIN, TEXT_RISP) VALUES (?, ?, ?)`;
         const [replyResult] = await connection.execute(queryInsertReply, [initiativeId, adminId, motivations]);
         const newReplyId = replyResult.insertId;
 
-        // 6. AGGIORNAMENTO STATO INIZIATIVA
-        const queryUpdateStatus = `
-            UPDATE INIZIATIVA 
-            SET STATO = ? 
-            WHERE ID_INIZIATIVA = ?
-        `;
-        await connection.execute(queryUpdateStatus, [status, initiativeId]);
+        // 6. AGGIORNAMENTO STATO
+        await connection.execute('UPDATE INIZIATIVA SET STATO = ? WHERE ID_INIZIATIVA = ?', [status, initiativeId]);
 
-        // 7. INSERIMENTO ALLEGATI (Se presenti)
+        // 7. INSERIMENTO ALLEGATI
         let savedAttachments = [];
         if (attachments && attachments.length > 0) {
-            const queryAllegato = `
-                INSERT INTO ALLEGATO (FILE_NAME, FILE_PATH, FILE_TYPE, ID_RISPOSTA, ID_INIZIATIVA)
-                VALUES (?, ?, ?, ?, NULL) 
-            `;
-            // NOTA: ID_INIZIATIVA deve essere NULL per il vincolo XOR nel DB (CHK_Allegato_XOR)
-
-            const insertPromises = attachments.map(file => {
-                return connection.execute(queryAllegato, [
-                    file.fileName,
-                    file.filePath,
-                    file.fileType || null,
-                    newReplyId
-                ]);
-            });
-
+            const queryAllegato = `INSERT INTO ALLEGATO (FILE_NAME, FILE_PATH, FILE_TYPE, ID_RISPOSTA) VALUES (?, ?, ?, ?)`;
+            const insertPromises = attachments.map(file => connection.execute(queryAllegato, [file.fileName, file.filePath, file.fileType || null, newReplyId]));
             await Promise.all(insertPromises);
-            
-            // Ricostruiamo l'oggetto allegati per la risposta JSON
-            // (In uno scenario reale recupereremmo gli ID generati, qui li mockiamo o li omettiamo parzialmente)
-            savedAttachments = attachments.map(att => ({
-                fileName: att.fileName,
-                filePath: att.filePath,
-                fileType: att.fileType,
-                uploadedAt: new Date().toISOString()
-            }));
+            savedAttachments = attachments; // Semplificato per la risposta
         }
 
-        // 8. COMMIT E RISPOSTA
+        // ---------------------------------------------------------
+        // 8. GESTIONE NOTIFICHE (Autori + Firmatari + Followers)
+        // ---------------------------------------------------------
+        
+        // Query con UNION per ottenere ID unici da tre tabelle diverse
+        const queryRecipients = `
+            -- 1. L'autore dell'iniziativa
+            SELECT ID_AUTORE AS ID_UTENTE 
+            FROM INIZIATIVA 
+            WHERE ID_INIZIATIVA = ? AND ID_AUTORE IS NOT NULL
+            
+            UNION
+            
+            -- 2. Chi ha firmato l'iniziativa
+            SELECT ID_UTENTE 
+            FROM FIRMA_INIZIATIVA 
+            WHERE ID_INIZIATIVA = ?
+            
+            UNION
+            
+            -- 3. Chi segue l'iniziativa (salvata)
+            SELECT ID_UTENTE 
+            FROM INIZIATIVA_SALVATA 
+            WHERE ID_INIZIATIVA = ?
+        `;
+
+        // Passiamo l'ID tre volte (una per ogni SELECT della UNION)
+        const [recipients] = await connection.query(queryRecipients, [initiativeId, initiativeId, initiativeId]);
+
+        if (recipients.length > 0) {
+            const notificationText = `L'iniziativa "${initiativeTitle}" ha ricevuto una risposta ufficiale ed è passata allo stato: ${status}`;
+            const linkRef = `/initiatives/${initiativeId}`;
+
+            const queryInsertNotifica = `INSERT INTO NOTIFICA (ID_UTENTE, TESTO, LINK_RIF) VALUES (?, ?, ?)`;
+
+            // Inserimento parallelo delle notifiche
+            const notificationPromises = recipients.map(user => {
+                return connection.execute(queryInsertNotifica, [user.ID_UTENTE, notificationText, linkRef]);
+            });
+
+            await Promise.all(notificationPromises);
+        }
+        // ---------------------------------------------------------
+
+        // 9. COMMIT
         await connection.commit();
 
         res.status(201).json({
             id: newReplyId,
             initiativeId: parseInt(initiativeId),
-            adminId: parseInt(adminId),
             replyText: motivations,
-            creationDate: new Date().toISOString(),
-            attachments: savedAttachments.length > 0 ? savedAttachments : null
+            status: status, // Ritorniamo anche il nuovo stato applicato
+            attachments: savedAttachments
         });
 
     } catch (err) {
         if (connection) await connection.rollback();
         console.error("Errore createReply:", err);
-        
-        res.status(500).json({ 
-            timeStamp: new Date().toISOString(),
-            message: "Errore interno del server durante la creazione della risposta",
-            details: process.env.NODE_ENV === 'development' ? err.message : undefined
-        });
-
+        res.status(500).json({ timeStamp: new Date().toISOString(), message: "Errore interno server" });
     } finally {
         if (connection) connection.release();
     }
