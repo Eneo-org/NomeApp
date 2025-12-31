@@ -249,12 +249,14 @@ exports.voteParticipatoryBudget = async (req, res) => {
                 message: error.details[0].message 
             });
         
+        // Qui abbiamo già la posizione (es. 1, 2, 3) richiesta dall'utente
         const { position } = value;
 
         connection = await db.getConnection();
         await connection.beginTransaction();
 
         // A. Controllo Ruolo Cittadino
+        // - Tabella UTENTE
         const [users] = await connection.query('SELECT IS_CITTADINO FROM UTENTE WHERE ID_UTENTE = ?', [userId]);
         
         if (users.length === 0) {
@@ -272,8 +274,8 @@ exports.voteParticipatoryBudget = async (req, res) => {
             });
         }
 
-        // B. Controllo Esistenza Bilancio e Recupero Dati Completi (Serve per la risposta finale)
-        // MODIFICA: Selezioniamo * invece di solo la data, così abbiamo già i dati per la risposta
+        // B. Controllo Esistenza Bilancio
+        // - Tabella BILANCIO_PARTECIPATIVO
         const [budgets] = await connection.query(
             'SELECT * FROM BILANCIO_PARTECIPATIVO WHERE ID_BIL = ?', 
             [budgetId]
@@ -288,7 +290,7 @@ exports.voteParticipatoryBudget = async (req, res) => {
         }
         const budgetData = budgets[0];
 
-        // C. Controllo Scadenza Rigoroso
+        // C. Controllo Scadenza
         const expirationDate = new Date(budgetData.DATA_SCADENZA);
         const today = new Date();
         today.setHours(0,0,0,0); 
@@ -301,7 +303,8 @@ exports.voteParticipatoryBudget = async (req, res) => {
             });
         }
 
-        // D. Recupero ID Opzione tramite Posizione
+        // D. Recupero ID Opzione reale (Serve per l'inserimento nel DB)
+        // - Tabella OPZIONI_BILANCIO
         const queryFindOption = `
             SELECT ID_OB 
             FROM OPZIONI_BILANCIO 
@@ -320,14 +323,14 @@ exports.voteParticipatoryBudget = async (req, res) => {
         const realOptionId = optionsResult[0].ID_OB;
 
         // E. Inserimento Voto
+        // - Tabella VOTI_BILANCIO
         const insertVote = `
             INSERT INTO VOTI_BILANCIO (ID_UTENTE, ID_BIL, OPTION_ID)
             VALUES (?, ?, ?)
         `;
         await connection.execute(insertVote, [userId, budgetId, realOptionId]);
 
-        // F. Recupero Tutte le Opzioni per la risposta (Richiesto dalle specifiche)
-        // Dobbiamo restituire l'oggetto completo, quindi ci servono tutte le opzioni, non solo quella votata
+        // F. Recupero Tutte le Opzioni per la risposta
         const queryAllOptions = `
             SELECT * FROM OPZIONI_BILANCIO 
             WHERE ID_BIL = ? 
@@ -338,8 +341,11 @@ exports.voteParticipatoryBudget = async (req, res) => {
         // Conferma Transazione
         await connection.commit();
 
-        // G. Costruzione Risposta (Secondo schema ParticipatoryBudget)
+        // --- G. COSTRUZIONE RISPOSTA MODIFICATA ---
         const responsePayload = {
+            // RESTITUISCE LA POSIZIONE (1, 2, 3...) INVECE DELL'ID DEL DB
+            votedOptionId: position, 
+            
             id: budgetData.ID_BIL,
             creatorId: budgetData.ID_CREATOR,
             title: budgetData.TITOLO,
