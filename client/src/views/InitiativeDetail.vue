@@ -4,7 +4,8 @@ import { useRoute } from 'vue-router';
 import { useInitiativeStore } from '../stores/initiativeStore';
 
 const route = useRoute();
-const store = useInitiativeStore();
+// CHANGE: Rename 'store' to 'initiativeStore' to match template usage
+const initiativeStore = useInitiativeStore();
 
 // Stato locale per questa pagina
 const initiative = ref(null);
@@ -25,7 +26,8 @@ const formatDate = (dateString) => {
 // Caricamento Dati
 onMounted(async () => {
   loading.value = true;
-  const data = await store.fetchInitiativeDetail(initiativeId);
+  // CHANGE: Use initiativeStore instead of store
+  const data = await initiativeStore.fetchInitiativeDetail(initiativeId);
 
   if (data) {
     initiative.value = data;
@@ -39,10 +41,11 @@ onMounted(async () => {
 const handleSign = async () => {
   if (!initiative.value) return;
 
-  const success = await store.signInitiative(initiative.value.id);
+  // CHANGE: Use initiativeStore instead of store
+  const success = await initiativeStore.signInitiative(initiative.value.id);
   if (success) {
     // Se la firma va a buon fine, ricarichiamo i dati per aggiornare il contatore
-    const updatedData = await store.fetchInitiativeDetail(initiativeId);
+    const updatedData = await initiativeStore.fetchInitiativeDetail(initiativeId);
     initiative.value = updatedData;
     alert("Grazie per il tuo sostegno! Firma registrata.");
   }
@@ -72,13 +75,21 @@ const progressPercentage = computed(() => {
 
     <div v-else-if="initiative" class="content-wrapper">
 
-      <header class="detail-header">
+      <header class="detail-header-block">
         <div class="header-top">
           <RouterLink to="/" class="back-btn">← Torna indietro</RouterLink>
-          <span class="category-badge">{{ store.getCategoryName(initiative.categoryId) }}</span>
+          <span class="category-badge">{{ initiativeStore.getCategoryName(initiative.categoryId) }}</span>
         </div>
 
-        <h1>{{ initiative.title }}</h1>
+        <div class="title-row">
+          <h1>{{ initiative.title }}</h1>
+
+          <button v-if="initiative.status === 'In corso'" class="follow-btn-large"
+            :class="{ 'active': initiativeStore.isFollowed(initiative.id) }"
+            @click="initiativeStore.toggleFollow(initiative.id, initiative.title)">
+            {{ initiativeStore.isFollowed(initiative.id) ? '⭐ Segui già' : '☆ Segui' }}
+          </button>
+        </div>
 
         <div class="meta-row">
           <span class="status-badge" :class="initiative.status.toLowerCase().replace(' ', '-')">
@@ -179,7 +190,7 @@ const progressPercentage = computed(() => {
 }
 
 /* Header */
-.detail-header {
+.detail-header-block {
   margin-bottom: 40px;
 }
 
@@ -198,9 +209,17 @@ const progressPercentage = computed(() => {
   font-weight: 600;
 }
 
-.detail-header h1 {
+/* Title Row to align title and follow button */
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.title-row h1 {
   font-size: 2.5rem;
-  margin: 0 0 15px 0;
+  margin: 0;
   line-height: 1.2;
 }
 
@@ -351,13 +370,42 @@ const progressPercentage = computed(() => {
   color: #888;
 }
 
+/* Follow Button Styles */
+.follow-btn-large {
+  background: transparent;
+  border: 2px solid #ccc;
+  padding: 8px 15px;
+  border-radius: 30px;
+  font-size: 1rem;
+  cursor: pointer;
+  font-weight: bold;
+  color: var(--text-color);
+  transition: all 0.2s;
+}
+
+.follow-btn-large.active {
+  border-color: #f1c40f;
+  background-color: rgba(241, 196, 15, 0.1);
+  color: #f39c12;
+}
+
+.follow-btn-large:hover {
+  border-color: #f1c40f;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .main-grid {
     grid-template-columns: 1fr;
   }
 
-  .detail-header h1 {
+  .title-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .title-row h1 {
     font-size: 1.8rem;
   }
 

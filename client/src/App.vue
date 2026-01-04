@@ -57,10 +57,17 @@ const logout = () => {
         <RouterLink to="/">Home</RouterLink>
         <RouterLink to="/archive">Archivio</RouterLink>
 
+        <RouterLink v-if="userStore.isAuthenticated" to="/dashboard">
+          📊 Dashboard
+        </RouterLink>
+
         <RouterLink v-if="!userStore.isAuthenticated" to="/login">Accedi</RouterLink>
 
         <div v-else class="user-menu">
-          <span class="user-name">{{ userStore.fullName }}</span>
+          <RouterLink to="/dashboard" class="user-name-link">
+            <span class="user-name">{{ userStore.fullName }}</span>
+          </RouterLink>
+
           <a @click.prevent="logout" href="#" class="logout-link">Esci</a>
         </div>
 
@@ -216,5 +223,24 @@ body {
   font-size: 0.9rem;
   border-top: 1px solid var(--header-border);
   margin-top: 40px;
+}
+
+.user-name-link {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+}
+
+.user-name-link:hover .user-name {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Stile per il link attivo (quando sei sulla Dashboard) */
+.nav-right a.router-link-active {
+  color: var(--accent-color);
+  font-weight: bold;
+  border-bottom: 2px solid var(--accent-color);
+  /* Sottolineatura verde */
 }
 </style>

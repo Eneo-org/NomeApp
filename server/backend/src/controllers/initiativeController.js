@@ -19,6 +19,7 @@ exports.getAllInitiatives = async (req, res) => {
       category, // Rinominato da categoryID per coerenza col frontend
       platform, // NUOVO
       status,
+      not_status, //NUOVO
       minSignatures,
       maxSignatures,
     } = req.query;
@@ -57,6 +58,11 @@ exports.getAllInitiatives = async (req, res) => {
     if (status) {
       whereConditions.push("i.STATO = ?");
       queryParams.push(status);
+    }
+
+    if (not_status) {
+      whereConditions.push("i.STATO != ?");
+      queryParams.push(not_status);
     }
 
     // Filtro: Range Firme (colonna 'NUM_FIRME')
@@ -193,9 +199,10 @@ exports.createInitiative = async (req, res) => {
 
     // C. QUERY 1: INSERIMENTO INIZIATIVA
     // ---------------------------------------------------------
+    // MODIFICA: Aggiunto ID_PIATTAFORMA e messo id '1' (Trento Partecipa)
     const queryIniziativa = `
-            INSERT INTO INIZIATIVA (TITOLO, DESCRIZIONE, LUOGO, ID_CATEGORIA, ID_AUTORE, STATO)
-            VALUES (?, ?, ?, ?, ?, 'In corso')
+            INSERT INTO INIZIATIVA (TITOLO, DESCRIZIONE, LUOGO, ID_CATEGORIA, ID_AUTORE, STATO, ID_PIATTAFORMA, DATA_CREAZIONE, DATA_SCADENZA)
+            VALUES (?, ?, ?, ?, ?, 'In corso', 1, NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY))
         `;
 
     const [resultInit] = await connection.execute(queryIniziativa, [
@@ -446,12 +453,10 @@ exports.createReply = async (req, res) => {
     );
     if (users.length === 0 || !users[0].IS_ADMIN) {
       await connection.rollback();
-      return res
-        .status(403)
-        .json({
-          timeStamp: new Date().toISOString(),
-          message: "Operazione non consentita.",
-        });
+      return res.status(403).json({
+        timeStamp: new Date().toISOString(),
+        message: "Operazione non consentita.",
+      });
     }
 
     // Recupero titolo per la notifica
@@ -461,12 +466,10 @@ exports.createReply = async (req, res) => {
     );
     if (initiatives.length === 0) {
       await connection.rollback();
-      return res
-        .status(404)
-        .json({
-          timeStamp: new Date().toISOString(),
-          message: "Iniziativa non trovata",
-        });
+      return res.status(404).json({
+        timeStamp: new Date().toISOString(),
+        message: "Iniziativa non trovata",
+      });
     }
     const initiativeTitle = initiatives[0].TITOLO;
 
@@ -477,12 +480,10 @@ exports.createReply = async (req, res) => {
     );
     if (existingReply.length > 0) {
       await connection.rollback();
-      return res
-        .status(409)
-        .json({
-          timeStamp: new Date().toISOString(),
-          message: "Risposta già presente.",
-        });
+      return res.status(409).json({
+        timeStamp: new Date().toISOString(),
+        message: "Risposta già presente.",
+      });
     }
 
     // 5. INSERIMENTO RISPOSTA
@@ -581,12 +582,10 @@ exports.createReply = async (req, res) => {
   } catch (err) {
     if (connection) await connection.rollback();
     console.error("Errore createReply:", err);
-    res
-      .status(500)
-      .json({
-        timeStamp: new Date().toISOString(),
-        message: "Errore interno server",
-      });
+    res.status(500).json({
+      timeStamp: new Date().toISOString(),
+      message: "Errore interno server",
+    });
   } finally {
     if (connection) connection.release();
   }
@@ -706,10 +705,6 @@ exports.signInitiative = async (req, res) => {
 };
 
 exports.followInitiative = async (req, res) => {
-  //questa implementaizone invece di fare prima una query di controllo e poi una di inserimento,
-  // tenta direttamente l'inserimento e gestisce gli errori del database
-  // (chiavi duplicate o chiavi esterne mancanti) per determinare il risultato. In questo modo si ottengono
-  // migliori performance.
   try {
     const initiativeId = req.params.id;
 
@@ -901,3 +896,103 @@ async function _getDetailedInitiativeData(id) {
     reply: formattedReply,
   };
 }
+// Funzione Helper Privata per inviare notifiche ai follower
+const notifyFollowers = async (initiativeId, message, link) => {
+  try {
+    // 1. Trova tutti gli utenti che seguono questa iniziativa
+    const queryFollowers = `SELECT ID_UTENTE FROM INIZIATIVA_SALVATA WHERE ID_INIZIATIVA = ?`;
+    const [followers] = await db.query(queryFollowers, [initiativeId]);
+
+    if (followers.length === 0) return; // Nessuno la segue
+
+    // 2. Prepara i dati per l'inserimento multiplo (Bulk Insert)
+    const queryInsert = `INSERT INTO NOTIFICA (ID_UTENTE, TESTO, LINK_RIF, LETTA) VALUES ?`;
+
+    // Mappiamo l'array per il formato richiesto da mysql2 per le bulk insert: [[val1, val2], [val1, val2]]
+    const values = followers.map((f) => [
+      f.ID_UTENTE,
+      message,
+      link,
+      0, // 0 = Non letta
+    ]);
+
+    // 3. Esegui l'inserimento
+    await db.query(queryInsert, [values]);
+    console.log(
+      `[NOTIFICHE] Inviate ${followers.length} notifiche per l'iniziativa ${initiativeId}`
+    );
+  } catch (err) {
+    console.error("Errore invio notifiche:", err);
+    // Non lanciamo errore per non bloccare la risposta HTTP principale
+  }
+};
+
+/**
+ * CAMBIO STATO INIZIATIVA (Solo Admin)
+ * Aggiorna lo stato e notifica i follower.
+ */
+exports.updateInitiativeStatus = async (req, res) => {
+  try {
+    const initiativeId = req.params.id;
+    const userId = req.header("X-Mock-User-Id");
+    const { status } = req.body; // Es: 'Approvata', 'Respinta', 'In corso'
+
+    // 1. Validazione Input
+    if (!userId) return res.status(401).json({ message: "Auth mancante" });
+    if (!status) return res.status(400).json({ message: "Stato mancante" });
+
+    // 2. Controllo Permessi Admin
+    const [admins] = await db.query(
+      "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
+      [userId]
+    );
+    if (admins.length === 0 || !admins[0].IS_ADMIN) {
+      return res.status(403).json({
+        message:
+          "Accesso negato: Solo gli amministratori possono cambiare lo stato.",
+      });
+    }
+
+    // 3. Recupero Titolo Iniziativa (per il messaggio di notifica)
+    const [rows] = await db.query(
+      "SELECT TITOLO FROM INIZIATIVA WHERE ID_INIZIATIVA = ?",
+      [initiativeId]
+    );
+    if (rows.length === 0)
+      return res.status(404).json({ message: "Iniziativa non trovata" });
+
+    const initiativeTitle = rows[0].TITOLO;
+
+    // 4. Aggiornamento Stato nel DB
+    await db.query("UPDATE INIZIATIVA SET STATO = ? WHERE ID_INIZIATIVA = ?", [
+      status,
+      initiativeId,
+    ]);
+
+    // 5. INVIO NOTIFICHE AI FOLLOWER 🔔
+    // Costruiamo un messaggio personalizzato
+    let notifMsg = `Aggiornamento iniziativa: "${initiativeTitle}" è ora: ${status.toUpperCase()}.`;
+
+    if (status === "Approvata")
+      notifMsg = `🎉 Buone notizie! L'iniziativa "${initiativeTitle}" è stata APPROVATA!`;
+    if (status === "Respinta")
+      notifMsg = `L'iniziativa "${initiativeTitle}" è stata chiusa o respinta.`;
+
+    // Chiamiamo la funzione helper (senza await per non rallentare la risposta all'utente admin)
+    notifyFollowers(initiativeId, notifMsg, `/initiative/${initiativeId}`);
+
+    // 6. Risposta
+    // Possiamo usare la tua funzione helper _getDetailedInitiativeData se vuoi restituire l'oggetto completo
+    // Oppure una risposta semplice:
+    res.status(200).json({
+      message: "Stato aggiornato con successo",
+      id: initiativeId,
+      newStatus: status,
+    });
+  } catch (err) {
+    console.error("Errore updateStatus:", err);
+    res
+      .status(500)
+      .json({ message: "Errore server durante l'aggiornamento stato" });
+  }
+};

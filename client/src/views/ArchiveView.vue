@@ -1,35 +1,47 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-// IMPORTIAMO ENTRAMBI GLI STORE
+import { ref, onMounted } from 'vue'
 import { useInitiativeStore } from '../stores/initiativeStore'
 import { useParticipatoryBudgetStore } from '../stores/participatoryBudgetStore'
 
-// Istanziamo entrambi
+// Istanziamo gli Store
 const initiativeStore = useInitiativeStore()
 const budgetStore = useParticipatoryBudgetStore()
 
-// --- STATO FILTRO ---
+// --- STATO TABS ---
 // 'initiatives' oppure 'budgets'
 const activeTab = ref('initiatives')
 
+// --- LOGICA CARICAMENTO ---
 onMounted(() => {
-  // Carichiamo le iniziative dallo store giusto
-  initiativeStore.fetchInitiatives(1, 'date') // Carichiamo per data (più logico per archivio)
+  // 1. CARICAMENTO INIZIATIVE (Server-Side Filter)
+  // Parametri: Pagina 1, Ordina per Data, Filtro: ESCLUDI 'In corso'
+  initiativeStore.fetchInitiatives(1, 'date', { not_status: 'In corso' })
 
-  // Carichiamo i bilanci dallo store giusto
+  // 2. CARICAMENTO BILANCI
   budgetStore.fetchBudgetArchive()
 })
 
-// --- LOGICA INIZIATIVE ---
-// Filtriamo quelle NON in corso (Approvate, Respinte, Scadute)
-const archivedInitiatives = computed(() => {
-  return initiativeStore.initiatives.filter(item => item.status !== 'In corso')
-})
+// --- FUNZIONE CAMBIO PAGINA ---
+const changePage = async (newPage) => {
+  // Controlli di sicurezza
+  if (newPage < 1 || newPage > initiativeStore.totalPages) return;
 
-// Funzione helper date
+  // Richiediamo la nuova pagina mantenendo il filtro "not_status"
+  await initiativeStore.fetchInitiatives(newPage, 'date', { not_status: 'In corso' });
+
+  // Scrolliamo in alto per comodità
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Funzione helper per formattare le date
 const formatDate = (dateString) => {
   if (!dateString) return 'N/D'
   return new Date(dateString).toLocaleDateString('it-IT')
+}
+
+// Funzione helper per le classi CSS (gestisce maiuscole/minuscole in sicurezza)
+const getStatusClass = (status) => {
+  return status ? status.toLowerCase() : 'default';
 }
 </script>
 
@@ -55,21 +67,48 @@ const formatDate = (dateString) => {
 
       <div v-if="initiativeStore.loading" class="empty-msg">Caricamento in corso...</div>
 
-      <div v-else-if="archivedInitiatives.length > 0" class="initiatives-grid">
-        <div v-for="item in archivedInitiatives" :key="item.id" class="archive-card">
-          <div class="status-stripe" :class="item.status.toLowerCase()"></div>
-          <div class="ac-content">
-            <span class="ac-status" :class="item.status.toLowerCase()">{{ item.status }}</span>
-            <h3>{{ item.title }}</h3>
-            <div class="ac-meta">
-              <span>📅 {{ formatDate(item.creationDate) }}</span>
-              <span>🏷️ {{ initiativeStore.getCategoryName(item.categoryId) }}</span>
+      <div v-else-if="initiativeStore.initiatives.length > 0">
+
+        <div class="initiatives-grid">
+          <div v-for="item in initiativeStore.initiatives" :key="item.id" class="archive-card">
+
+            <div class="status-stripe" :class="getStatusClass(item.status)"></div>
+
+            <div class="ac-content">
+              <span class="ac-status" :class="getStatusClass(item.status)">
+                {{ item.status.toUpperCase() }}
+              </span>
+
+              <h3>{{ item.title }}</h3>
+
+              <div class="ac-meta">
+                <span>📅 {{ formatDate(item.creationDate) }}</span>
+                <span>🏷️ {{ initiativeStore.getCategoryName(item.categoryId) }}</span>
+              </div>
+
+              <RouterLink :to="'/initiative/' + item.id" class="ac-link">
+                Rivedi Dettagli →
+              </RouterLink>
             </div>
-            <RouterLink :to="{ name: 'initiative-detail', params: { id: item.id } }" class="ac-link">
-              Rivedi Dettagli →
-            </RouterLink>
           </div>
         </div>
+
+        <div class="pagination-controls">
+          <button @click="changePage(initiativeStore.currentPage - 1)" :disabled="initiativeStore.currentPage === 1"
+            class="page-btn">
+            ← Precedente
+          </button>
+
+          <span class="page-info">
+            Pagina {{ initiativeStore.currentPage }} di {{ initiativeStore.totalPages }}
+          </span>
+
+          <button @click="changePage(initiativeStore.currentPage + 1)"
+            :disabled="initiativeStore.currentPage === initiativeStore.totalPages" class="page-btn">
+            Successiva →
+          </button>
+        </div>
+
       </div>
 
       <div v-else class="empty-msg">Nessuna iniziativa conclusa trovata.</div>
@@ -102,7 +141,7 @@ const formatDate = (dateString) => {
 </template>
 
 <style scoped>
-/* STESSO CSS DI PRIMA (È PERFETTO) */
+/* CSS GENERALE */
 .archive-wrapper {
   max-width: 1000px;
   margin: 0 auto;
@@ -177,16 +216,21 @@ const formatDate = (dateString) => {
   height: 100%;
 }
 
+/* Colori specifici per archivio */
 .status-stripe.approvata {
-  background-color: #4caf50;
+  background-color: #27ae60;
 }
 
 .status-stripe.respinta {
-  background-color: #f44336;
+  background-color: #e74c3c;
 }
 
 .status-stripe.scaduta {
-  background-color: #9e9e9e;
+  background-color: #95a5a6;
+}
+
+.status-stripe.default {
+  background-color: #7f8c8d;
 }
 
 .ac-content {
@@ -205,18 +249,23 @@ const formatDate = (dateString) => {
 }
 
 .ac-status.approvata {
-  background: rgba(76, 175, 80, 0.1);
-  color: #4caf50;
+  background: rgba(39, 174, 96, 0.1);
+  color: #27ae60;
 }
 
 .ac-status.respinta {
-  background: rgba(244, 67, 54, 0.1);
-  color: #f44336;
+  background: rgba(231, 76, 60, 0.1);
+  color: #e74c3c;
 }
 
 .ac-status.scaduta {
-  background: rgba(158, 158, 158, 0.1);
-  color: #9e9e9e;
+  background: rgba(149, 165, 166, 0.1);
+  color: #95a5a6;
+}
+
+.ac-status.default {
+  background: rgba(127, 140, 141, 0.1);
+  color: #7f8c8d;
 }
 
 .ac-content h3 {
@@ -296,14 +345,12 @@ const formatDate = (dateString) => {
   border-radius: 6px;
   color: var(--secondary-text);
   cursor: pointer;
-  /* Riabilitato il cursore */
 }
 
 .history-btn:hover {
   background: var(--card-border);
 }
 
-/* Responsive */
 @media (max-width: 600px) {
   .tabs-container {
     flex-direction: column;
@@ -326,5 +373,43 @@ const formatDate = (dateString) => {
   color: var(--secondary-text);
   padding: 40px;
   font-style: italic;
+}
+
+/* --- PAGINAZIONE (NUOVO) --- */
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--card-border);
+}
+
+.page-btn {
+  background-color: var(--card-bg);
+  border: 1px solid var(--header-border);
+  color: var(--text-color);
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.page-btn:hover:not(:disabled) {
+  background-color: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-weight: bold;
+  color: var(--secondary-text);
 }
 </style>

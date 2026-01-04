@@ -7,14 +7,16 @@ import { useUserStore } from '../stores/userStore'
 const initiativeStore = useInitiativeStore()
 const budgetStore = useParticipatoryBudgetStore()
 const userStore = useUserStore()
+const page = ref(1);
+const sort = ref('signatures');
 
 // --- STATO FILTRI ---
 const filters = ref({
   search: '',
-  place: '',
   category: '',
-  platform: ''
-})
+  platform: '',
+  status: 'In corso' //filtro di default
+});
 
 // Helper date
 const formatDate = (dateString) => {
@@ -35,13 +37,10 @@ onMounted(async () => {
 })
 
 // Funzione centrale per caricare i dati
-const loadData = () => {
-  initiativeStore.fetchInitiatives(
-    initiativeStore.currentPage,
-    'signatures', // O l'ordinamento corrente se lo rendi dinamico
-    filters.value // Passiamo i filtri allo store
-  )
-}
+const loadData = async () => {
+  // Passiamo filters.value che ora contiene { status: 'In corso' }
+  await initiativeStore.fetchInitiatives(page.value, sort.value, filters.value);
+};
 
 // --- GESTIONE PAGINAZIONE ---
 const nextPage = () => {
@@ -74,6 +73,43 @@ const resetFilters = () => {
   applyFilters()
 }
 
+const handleSign = async (item) => {
+  // 1. Controllo Login
+  if (!userStore.isAuthenticated) {
+    // Se non è loggato, lo mandiamo alla pagina di login
+    if (confirm("Devi accedere per firmare. Vuoi andare al login?")) {
+      // Nota: assicurati di aver importato useRouter se non c'è
+      // import { useRouter } from 'vue-router'; const router = useRouter();
+      // Ma qui possiamo usare window.location o router.push se già definito
+      window.location.href = '/login';
+    }
+    return;
+  }
+
+  // 2. Chiamata allo Store
+  const result = await initiativeStore.signInitiative(item.id);
+
+  // 3. Feedback visivo (Opzionale, l'alert è già nello store)
+  if (result.success) {
+    // Possiamo fare un effetto sonoro o un toast notification qui in futuro
+    console.log("Firma registrata con successo!");
+  }
+};
+
+const getStatusClass = (status) => {
+  if (!status) return 'status-default';
+
+  // Normalizziamo il testo (minuscolo) per evitare errori
+  const s = status.toLowerCase();
+
+  if (s === 'in corso') return 'status-active';
+  if (s === 'approvata') return 'status-success';
+  if (s === 'respinta') return 'status-danger';
+  if (s === 'scaduta') return 'status-muted';
+
+  return 'status-default';
+};
+
 // Opzionale: Se vuoi che il filtro "Luogo" o "Cerca" parta solo premendo Invio, togli il watch.
 // Se vuoi che sia istantaneo sulle select, usa watch.
 watch(() => filters.value.category, applyFilters)
@@ -103,16 +139,23 @@ watch(() => filters.value.platform, applyFilters)
         </div>
         <div class="filter-group">
           <label>Categoria</label>
-          <select v-model="filters.category">
+          <select v-model="filters.category" @change="applyFilters">
             <option value="">Tutte le categorie</option>
-            <option v-for="(name, id) in initiativeStore.categories" :key="id" :value="id">{{ name }}</option>
+
+            <option v-for="cat in initiativeStore.categories" :key="cat.id" :value="cat.id">
+              {{ cat.name }}
+            </option>
           </select>
         </div>
+
         <div class="filter-group">
           <label>Piattaforma</label>
-          <select v-model="filters.platform">
+          <select v-model="filters.platform" @change="applyFilters">
             <option value="">Tutte le piattaforme</option>
-            <option v-for="(name, id) in initiativeStore.platforms" :key="id" :value="id">{{ name }}</option>
+
+            <option v-for="p in initiativeStore.platforms" :key="p.id" :value="p.id">
+              {{ p.platformName }}
+            </option>
           </select>
         </div>
 
@@ -150,8 +193,8 @@ watch(() => filters.value.platform, applyFilters)
         </div>
 
         <div class="results-header">
-          <h2>Iniziative in Evidenza</h2>
-          <span class="count-badge">{{ initiativeStore.initiatives.length }} visualizzate</span>
+          <h2>Esplora le Iniziative</h2>
+          <span class="count-badge">{{ initiativeStore.totalObjects }} Iniziative attive</span>
         </div>
 
         <div v-if="initiativeStore.loading" class="loading-msg">Caricamento in corso...</div>
@@ -172,7 +215,18 @@ watch(() => filters.value.platform, applyFilters)
             <div class="card-content">
               <div class="card-header">
                 <h3>{{ item.title }}</h3>
-                <span class="status-badge in-corso">In Corso</span>
+
+                <div class="status-wrapper">
+                  <span class="badge-status" :class="getStatusClass(item.status)">
+                    {{ item.status.toUpperCase() }}
+                  </span>
+
+                  <button v-if="item.status && item.status.toLowerCase() === 'in corso'" class="follow-btn"
+                    :class="{ 'active': initiativeStore.isFollowed(item.id) }" title="Segui/Smetti di seguire"
+                    @click.prevent="initiativeStore.toggleFollow(item.id, item.title)">
+                    {{ initiativeStore.isFollowed(item.id) ? '⭐' : '☆' }}
+                  </button>
+                </div>
               </div>
               <div class="card-meta">
                 <span>📍 <strong>{{ item.place || 'Trento' }}</strong></span>
@@ -180,14 +234,27 @@ watch(() => filters.value.platform, applyFilters)
                 <div class="date-row"><span>📅 {{ formatDate(item.creationDate) }}</span></div>
               </div>
               <div class="card-footer">
-                <span class="signatures">Firme: <strong>{{ item.signatures }}</strong></span>
+                <div class="signatures">
+                  <strong>Firme: {{ item.signatures }}</strong>
+                </div>
 
-                <a v-if="item.platformId !== 1" :href="item.externalURL || '#'" target="_blank"
-                  class="detail-btn external-btn">Vedi su {{ initiativeStore.getPlatformName(item.platformId) }}</a>
+                <div class="actions">
+                  <div v-if="item.platformId === 1" class="internal-actions">
+                    <RouterLink :to="'/initiative/' + item.id">
+                      <button class="action-btn">Dettagli</button>
+                    </RouterLink>
 
-                <RouterLink v-else :to="{ name: 'initiative-detail', params: { id: item.id } }">
-                  <button class="detail-btn">Vedi Dettagli</button>
-                </RouterLink>
+                    <button v-if="item.status === 'In corso'" @click="handleSign(item)" class="sign-btn">
+                      ✍️ Firma
+                    </button>
+                  </div>
+
+                  <a v-else :href="item.externalURL || '#'" target="_blank" class="external-link-btn">
+                    <button class="action-btn outline">
+                      Su {{ initiativeStore.getPlatformName(item.platformId) }} ↗
+                    </button>
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -599,6 +666,99 @@ watch(() => filters.value.platform, applyFilters)
   background: var(--card-bg);
   border-radius: 12px;
   border: 1px solid var(--card-border);
+}
+
+.internal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.sign-btn {
+  background-color: #2c3e50;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+.sign-btn:hover {
+  background-color: var(--accent-color);
+}
+
+.badge-status {
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: white;
+  text-transform: uppercase;
+}
+
+.status-active {
+  background-color: #3498db;
+}
+
+.status-success {
+  background-color: #27ae60;
+}
+
+.status-danger {
+  background-color: #e74c3c;
+}
+
+.status-muted {
+  background-color: #95a5a6;
+}
+
+.status-default {
+  background-color: #7f8c8d;
+}
+
+.status-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.follow-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  transition: transform 0.2s, filter 0.2s;
+  filter: grayscale(100%);
+  opacity: 0.7;
+}
+
+.follow-btn:hover {
+  transform: scale(1.2);
+  filter: grayscale(0%);
+  opacity: 1;
+}
+
+.follow-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.6rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: transform 0.2s;
+  color: #ccc;
+}
+
+.follow-btn.active {
+  color: #f1c40f;
+  filter: drop-shadow(0 0 2px rgba(241, 196, 15, 0.5));
+}
+
+.follow-btn:hover {
+  transform: scale(1.2);
+  color: #f1c40f;
 }
 
 @media (max-width: 768px) {

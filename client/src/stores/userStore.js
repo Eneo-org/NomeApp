@@ -5,85 +5,59 @@ import { ref, computed } from 'vue'
 const API_URL = import.meta.env.VITE_API_URL
 
 export const useUserStore = defineStore('user', () => {
-  // STATE
-  const user = ref(null) // Contiene i dati dell'utente (nome, ruolo, ecc.)
-  const mockUserId = ref(null) // L'ID da mandare al backend (1 o 2)
+  // --- STATE ---
+  const user = ref(null) // Oggetto utente reale dal DB
+  const mockUserId = ref(null) // ID salvato
 
-  // GETTERS
+  // --- GETTERS ---
   const isAuthenticated = computed(() => !!user.value)
-  const isAdmin = computed(() => user.value?.isAdmin === true)
-  const isCitizen = computed(() => user.value?.isCitizen === true)
+  // Nota: il backend ci restituisce 1/0 per i booleani, quindi usiamo !! per convertirli in true/false sicuri
+  const isAdmin = computed(() => !!user.value?.isAdmin)
+  const isCitizen = computed(() => !!user.value?.isCitizen)
+
   const fullName = computed(() =>
     user.value ? `${user.value.firstName} ${user.value.lastName}` : 'Ospite',
   )
 
-  // ACTIONS
+  // --- ACTIONS ---
 
-  // 1. LOGIN SIMULATO
+  // 1. LOGIN (Aggiornato con Luigi e chiamata reale)
   const login = async (email, password) => {
     try {
-      // LOGICA DI SIMULAZIONE:
-      // Invece di chiedere al server "è giusta la password?",
-      // decidiamo noi l'ID in base all'email inserita.
-      let targetId = null
+      // MAPPING EMAIL -> ID (Simulazione Auth)
+      // Qui aggiungi i tuoi utenti di test
+      const userMap = {
+        'mario.rossi@email.com': 1,
+        'admin@comune.trento.it': 2,
+        'luigi@test.com': 3, // <--- NUOVO UTENTE LUIGI
+      }
 
-      if (email === 'admin@comune.trento.it') {
-        targetId = 2 // ID Admin nel tuo DB
-      } else if (email === 'mario.rossi@email.com') {
-        targetId = 1 // ID Cittadino nel tuo DB
-      } else {
-        alert('Utente non riconosciuto nella demo.')
+      const targetId = userMap[email]
+
+      if (!targetId) {
+        alert(
+          'Utente non riconosciuto. Prova: mario.rossi@email.com, admin@comune.trento.it o luigi@test.com',
+        )
         return false
       }
 
-      // Ora chiediamo al backend i dettagli di questo utente
-      // Usiamo la rotta che mi hai mostrato: GET /users/profile (o simile, controlla il tuo users.js)
-      // Se non hai una rotta 'me', usiamo quella generica getUser passando l'header
-
-      // Impostiamo l'header per la richiesta
+      // 1. Impostiamo l'header per axios
       axios.defaults.headers.common['X-Mock-User-Id'] = targetId
-
-      // Chiamiamo il backend per avere i dati freschi (Nome, Cognome, Ruoli)
-      // Nota: Se la tua rotta è /users/1, usiamo quella.
-      // Dallo screenshot sembra tu abbia exports.getUser che usa l'header.
-      // Assumo che la rotta sia GET /users/profile o GET /users/me mappata su getUser
-      // Se non c'è, la simuliamo chiamando GET /users con un parametro fittizio o adattando userController.
-
-      // PER ORA: Dato che non voglio farti modificare il backend, facciamo una chiamata sicura
-      // Se il tuo backend non ha una rotta "/me", useremo i dati hardcoded per ora,
-      // ma l'ideale sarebbe chiamare: await axios.get(`${API_URL}/users/profile`);
-
-      // Salviamo lo stato
       mockUserId.value = targetId
-
-      // Simuliamo i dati utente in base all'ID (così non dipendiamo da rotte backend mancanti)
-      if (targetId === 2) {
-        user.value = {
-          id: 2,
-          firstName: 'Admin',
-          lastName: 'Comune',
-          email: email,
-          isAdmin: true,
-          isCitizen: true,
-        }
-      } else {
-        user.value = {
-          id: 1,
-          firstName: 'Mario',
-          lastName: 'Rossi',
-          email: email,
-          isAdmin: false,
-          isCitizen: true,
-        }
-      }
-
-      // Persistenza nel browser (così se aggiorni la pagina resti loggato)
       localStorage.setItem('tp_mock_id', targetId)
-      localStorage.setItem('tp_user_data', JSON.stringify(user.value))
+
+      // 2. CHIAMATA REALE AL BACKEND (Recuperiamo i dati veri: nome, ruolo, ecc.)
+      // Questo usa la rotta /users/me che hai nel backend
+      const response = await axios.get(`${API_URL}/users/me`)
+
+      // 3. Salviamo nello stato i dati freschi dal DB
+      user.value = response.data
 
       return true
     } catch (err) {
-      console.error('Errore login simulato:', err)
+      console.error('Errore login:', err)
+      alert('Impossibile recuperare i dati utente dal server.')
+      logout() // Se fallisce, puliamo tutto
       return false
     }
   }
@@ -93,31 +67,37 @@ export const useUserStore = defineStore('user', () => {
     user.value = null
     mockUserId.value = null
     localStorage.removeItem('tp_mock_id')
-    localStorage.removeItem('tp_user_data')
 
-    // Rimuoviamo l'header
+    // Rimuoviamo header
     delete axios.defaults.headers.common['X-Mock-User-Id']
 
-    // Ricarica la pagina per pulire tutto
+    // Ricarica per pulire lo stato di tutta l'app
     window.location.href = '/'
   }
 
-  // 3. INIT (Da chiamare all'avvio dell'app)
-  const initializeStore = () => {
+  // 3. INITIALIZE (Chiamato da App.vue al refresh)
+  const initializeStore = async () => {
     const storedId = localStorage.getItem('tp_mock_id')
-    const storedUser = localStorage.getItem('tp_user_data')
 
-    if (storedId && storedUser) {
+    if (storedId) {
+      // Ripristiniamo subito l'header per non fallire le chiamate
       mockUserId.value = parseInt(storedId)
-      user.value = JSON.parse(storedUser)
-      // Ripristiniamo l'header per tutte le chiamate Axios future
       axios.defaults.headers.common['X-Mock-User-Id'] = mockUserId.value
+
+      // Proviamo a scaricare i dati freschi dell'utente
+      try {
+        const response = await axios.get(`${API_URL}/users/me`)
+        user.value = response.data
+      } catch (err) {
+        console.error('Sessione scaduta o utente non trovato:', err)
+        logout() // Se l'ID salvato non è valido, facciamo logout
+      }
     }
   }
 
   return {
     user,
-    mockUserId, // Utile per debug
+    mockUserId,
     isAuthenticated,
     isAdmin,
     isCitizen,
