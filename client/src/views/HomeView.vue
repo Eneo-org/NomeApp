@@ -4,6 +4,13 @@ import { useInitiativeStore } from '../stores/initiativeStore'
 import { useParticipatoryBudgetStore } from '../stores/participatoryBudgetStore'
 import { useUserStore } from '../stores/userStore'
 
+// 1. IMPORTA L'IMMAGINE DI DEFAULT (Assicurati che il file esista in src/assets/)
+import defaultImage from '@/assets/placeholder-initiative.jpg'; 
+
+
+
+const API_URL = 'http://localhost:3000'; // URL del tuo Backend
+
 const initiativeStore = useInitiativeStore()
 const budgetStore = useParticipatoryBudgetStore()
 const userStore = useUserStore()
@@ -40,6 +47,19 @@ onMounted(async () => {
 const loadData = async () => {
   // Passiamo filters.value che ora contiene { status: 'In corso' }
   await initiativeStore.fetchInitiatives(page.value, sort.value, filters.value);
+};
+
+// --- NUOVA FUNZIONE PER GESTIRE LE IMMAGINI ---
+const getImageUrl = (item) => {
+  // Caso 1: Nessun allegato -> Ritorna immagine default locale
+  if (!item.attachment || !item.attachment.filePath) {
+    return defaultImage;
+  }
+
+  // Caso 2: Allegato presente -> Costruisci URL Backend
+  // Nota: .replace(/\\/g, '/') serve per fixare i percorsi Windows (es. uploads\file.jpg -> uploads/file.jpg)
+  const cleanPath = item.attachment.filePath.replace(/\\/g, '/');
+  return `${API_URL}/${cleanPath}`;
 };
 
 // --- GESTIONE PAGINAZIONE ---
@@ -207,9 +227,7 @@ watch(() => filters.value.platform, applyFilters)
               <div v-if="item.platformId !== 1" class="source-badge external">
                 🔗 {{ initiativeStore.getPlatformName(item.platformId) }}
               </div>
-              <img img
-                :src="item.attachment ? item.attachment.filePath : 'https://placehold.co/300x200?text=Nessuna+Immagine'"
-                class="card-img">
+              <img :src="getImageUrl(item)" class="card-img" alt="Immagine iniziativa">
             </div>
 
             <div class="card-content">

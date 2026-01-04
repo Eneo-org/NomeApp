@@ -1,11 +1,7 @@
 const Joi = require("joi");
 
-// 1. Definiamo lo schema per l'allegato una volta sola
-const attachmentSchema = Joi.object({
-  fileName: Joi.string().required(),
-  filePath: Joi.string().required(),
-  fileType: Joi.string().allow(null, "").optional(),
-}).unknown(true); // .unknown(true) permette altri campi se necessario (es. size, encoding)
+// attachmentSchema è stato rimosso perché la validazione dei file 
+// avviene ora tramite Multer e controlli diretti nel controller.
 
 exports.initiativeSchema = Joi.object({
   title: Joi.string().max(255).required().messages({
@@ -18,10 +14,11 @@ exports.initiativeSchema = Joi.object({
   place: Joi.string().max(64).required().messages({
     "string.empty": "Il luogo è obbligatorio",
   }),
+  // Joi converte automaticamente le stringhe numeriche in numeri per default
   categoryId: Joi.number().integer().required().messages({
     "number.base": "La categoria deve essere un numero intero positivo",
   }),
-  attachments: Joi.array().items(attachmentSchema).required(),
+  // Attachments rimosso: gestito separatamente
 });
 
 exports.changeExpirationSchema = Joi.object({
@@ -37,12 +34,11 @@ exports.administrationReplySchema = Joi.object({
     .valid("In corso", "Approvata", "Respinta", "Scaduta", "Archiviata")
     .required()
     .messages({
-      "any.only":
-        "Lo stato deve essere uno dei valori consentiti (es. Approvata, Respinta)",
+      "any.only": "Lo stato deve essere uno dei valori consentiti.",
     }),
   motivations: Joi.string().required().min(10).messages({
     "string.empty": "Le motivazioni sono obbligatorie",
     "string.min": "Le motivazioni devono essere lunghe almeno 10 caratteri",
   }),
-  attachments: Joi.array().items(attachmentSchema).optional().allow(null),
+  // Attachments rimosso: gestito separatamente
 });

@@ -2,6 +2,10 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useInitiativeStore } from '../stores/initiativeStore';
+// 1. IMPORTA L'IMMAGINE DI DEFAULT
+import defaultImage from '@/assets/placeholder-initiative.jpg';
+
+const API_URL = 'http://localhost:3000';
 
 const route = useRoute();
 // CHANGE: Rename 'store' to 'initiativeStore' to match template usage
@@ -50,6 +54,20 @@ const handleSign = async () => {
     alert("Grazie per il tuo sostegno! Firma registrata.");
   }
 };
+
+// --- NUOVA COMPUTED O FUNZIONE PER L'IMMAGINE PRINCIPALE ---
+const mainImageSrc = computed(() => {
+  if (!initiative.value) return defaultImage;
+
+  // Controlliamo se esiste l'array attachments e se ha elementi
+  if (initiative.value.attachments && initiative.value.attachments.length > 0) {
+    const cleanPath = initiative.value.attachments[0].filePath.replace(/\\/g, '/');
+    return `${API_URL}/${cleanPath}`;
+  }
+
+  // Fallback
+  return defaultImage;
+});
 
 // Calcolo percentuale progress bar (esempio: target 1000 firme)
 const progressPercentage = computed(() => {
@@ -104,8 +122,8 @@ const progressPercentage = computed(() => {
 
         <div class="left-col">
 
-          <div v-if="initiative.attachments && initiative.attachments.length > 0" class="main-image">
-            <img :src="initiative.attachments[0].filePath" alt="Allegato Iniziativa">
+          <div class="main-image">
+            <img :src="mainImageSrc" alt="Dettaglio Iniziativa">
           </div>
 
           <section class="description-section">
@@ -126,7 +144,9 @@ const progressPercentage = computed(() => {
                 <h4>Allegati alla risposta:</h4>
                 <ul>
                   <li v-for="att in initiative.reply.attachments" :key="att.id">
-                    📄 <a :href="att.filePath" target="_blank">{{ att.fileName }}</a>
+                    <a :href="`${API_URL}/${att.filePath.replace(/\\/g, '/')}`" target="_blank">
+                      {{ att.fileName }}
+                    </a>
                   </li>
                 </ul>
               </div>

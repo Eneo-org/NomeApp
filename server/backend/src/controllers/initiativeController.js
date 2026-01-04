@@ -1,8 +1,21 @@
 const db = require("../config/db");
+const fs = require("fs"); // Necessario per cancellare i file in caso di errore
 const { initiativeSchema } = require("../validators/initiativeSchema");
 const { changeExpirationSchema } = require("../validators/initiativeSchema");
 const { administrationReplySchema } = require("../validators/initiativeSchema");
 const { INITIATIVE_SORT_MAP } = require("../config/constants");
+
+/**
+ * Funzione Helper per cancellare i file caricati se la procedura fallisce
+ */
+const cleanupFiles = (files) => {
+  if (!files || files.length === 0) return;
+  files.forEach((file) => {
+    fs.unlink(file.path, (err) => {
+      if (err) console.error(`[Cleanup] Errore cancellazione file ${file.path}:`, err);
+    });
+  });
+};
 
 exports.getAllInitiatives = async (req, res) => {
   try {
@@ -155,28 +168,23 @@ exports.getAllInitiatives = async (req, res) => {
   }
 };
 
-// --- 2. Logica del Controller ---
+// --- MODIFICA: Gestione Multipart/Form-Data ---
 exports.createInitiative = async (req, res) => {
-  let connection; // Variabile per la connessione dedicata alla transazione
+  let connection;
+  const files = req.files; 
 
   try {
-    // A. VALIDAZIONE INPUT
-    // ---------------------------------------------------------
-    // Validiamo l'Header (Mock User)
     const mockUserId = req.header("X-Mock-User-Id");
     if (!mockUserId) {
-      return res.status(400).json({
-        timestamp: new Date().toISOString(),
-        message: "Header X-Mock-User-Id mancante",
-      });
+      cleanupFiles(files); 
+      return res.status(400).json({ message: "Header X-Mock-User-Id mancante" });
     }
 
-    // Validiamo il Body con Joi
-    const { error, value } = initiativeSchema.validate(req.body, {
-      abortEarly: false,
-    });
-
+    // 1. Validazione
+    // Assicurati che il tuo initiativeSchema (Joi) validi 'title', 'description', 'place', 'categoryId'
+    const { error, value } = initiativeSchema.validate(req.body, { abortEarly: false });
     if (error) {
+      cleanupFiles(files);
       return res.status(400).json({
         message: "Errore di validazione",
         details: error.details.map((err) => ({
@@ -186,23 +194,20 @@ exports.createInitiative = async (req, res) => {
       });
     }
 
-    // Estraiamo i dati puliti e validati
-    const { title, description, place, categoryId, attachments } = value;
+    const { title, description, place, categoryId } = value;
 
-    // B. AVVIO TRANSAZIONE DATABASE
-    // ---------------------------------------------------------
-    // Otteniamo una connessione specifica dal pool (non usiamo db.query diretto)
     connection = await db.getConnection();
-
-    // Iniziamo la transazione: da qui in poi, o tutto va bene, o nulla viene salvato
     await connection.beginTransaction();
 
-    // C. QUERY 1: INSERIMENTO INIZIATIVA
-    // ---------------------------------------------------------
-    // MODIFICA: Aggiunto ID_PIATTAFORMA e messo id '1' (Trento Partecipa)
+    // Calcolo date in JS per allineamento perfetto tra DB e JSON
+    const now = new Date();
+    const expiration = new Date(now);
+    expiration.setDate(expiration.getDate() + 30); // Scadenza default +30gg
+
+    // 2. Inserimento Iniziativa
     const queryIniziativa = `
-            INSERT INTO INIZIATIVA (TITOLO, DESCRIZIONE, LUOGO, ID_CATEGORIA, ID_AUTORE, STATO, ID_PIATTAFORMA, DATA_CREAZIONE, DATA_SCADENZA)
-            VALUES (?, ?, ?, ?, ?, 'In corso', 1, NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY))
+            INSERT INTO INIZIATIVA (TITOLO, DESCRIZIONE, LUOGO, ID_CATEGORIA, ID_AUTORE, STATO, ID_PIATTAFORMA, DATA_CREAZIONE, DATA_SCADENZA, NUM_FIRME)
+            VALUES (?, ?, ?, ?, ?, 'In corso', NULL, ?, ?, 0)
         `;
 
     const [resultInit] = await connection.execute(queryIniziativa, [
@@ -211,76 +216,73 @@ exports.createInitiative = async (req, res) => {
       place,
       categoryId,
       mockUserId,
+      now,
+      expiration
     ]);
 
     const newInitiativeId = resultInit.insertId;
 
-    // D. QUERY 2: INSERIMENTO ALLEGATI (Ciclo)
-    // ---------------------------------------------------------
-    if (attachments && attachments.length > 0) {
+    // 3. Inserimento Allegati e costruzione array response
+    let responseAttachments = null; // Default null come da schema se vuoto
+
+    if (files && files.length > 0) {
+      responseAttachments = [];
       const queryAllegato = `
                 INSERT INTO ALLEGATO (FILE_NAME, FILE_PATH, FILE_TYPE, ID_INIZIATIVA)
                 VALUES (?, ?, ?, ?)
             `;
 
-      // 1. Creiamo un array di "Promesse"
-      // Invece di eseguire e aspettare, mappiamo ogni file a una richiesta DB
-      const insertPromises = attachments.map((file) => {
-        return connection.execute(queryAllegato, [
-          file.fileName,
-          file.filePath,
-          file.fileType || null,
+      // Usiamo un ciclo for per eseguire le query e recuperare gli ID inseriti
+      // (Promise.all è più veloce, ma così siamo sicuri di avere gli ID corretti per la response)
+      for (const file of files) {
+        const [resAtt] = await connection.execute(queryAllegato, [
+          file.originalname, 
+          file.path,         
+          file.mimetype,     
           newInitiativeId,
         ]);
-      });
 
-      // 2. Lanciamo tutte le richieste insieme e aspettiamo che finiscano tutte
-      await Promise.all(insertPromises);
+        // Aggiungiamo l'oggetto all'array per la risposta JSON
+        responseAttachments.push({
+            id: resAtt.insertId,
+            fileName: file.originalname,
+            filePath: file.path,
+            fileType: file.mimetype,
+            uploadedAt: new Date().toISOString()
+        });
+      }
     }
 
-    // E. COMMIT E CHIUSURA
-    // ---------------------------------------------------------
-    // Se siamo arrivati qui senza errori, confermiamo le modifiche al DB
     await connection.commit();
 
-    // Rispondiamo al client (201 Created)
+    // 4. Risposta conforme al nuovo schema JSON
     res.status(201).json({
       id: newInitiativeId,
-      title,
-      description,
-      place,
-      categoryId,
+      title: title,
+      description: description, // Ora presente e obbligatorio
+      place: place || null,     // Assicura null se undefined
       status: "In corso",
-      attachments: attachments,
-      authorId: mockUserId,
-      createdAt: new Date().toISOString(),
+      signatures: 0,            // Default 0
+      creationDate: now.toISOString(), // Formato ISO string
+      expirationDate: expiration.toISOString(),
+      authorId: parseInt(mockUserId),
+      categoryId: parseInt(categoryId),
+      platformId: null,         // Default NULL
+      externalURL: null,        // Default NULL
+      attachments: responseAttachments, // Array di oggetti o null
+      reply: null               // Default NULL alla creazione
     });
+
   } catch (err) {
-    // F. GESTIONE ERRORI E ROLLBACK
-    // ---------------------------------------------------------
-    // Se qualcosa è andato storto, annulliamo tutto
     if (connection) await connection.rollback();
+    cleanupFiles(files); 
 
     console.error("Errore CreateInitiative:", err);
-
-    // Gestione errore specifico foreign key (es. utente o categoria non trovati)
     if (err.code === "ER_NO_REFERENCED_ROW_2") {
-      return res.status(400).json({
-        timestamp: new Date().toISOString(),
-        message:
-          "Riferimento non valido: ID Categoria o ID Utente inesistente.",
-      });
+      return res.status(400).json({ message: "ID Categoria o ID Utente inesistente." });
     }
-
-    // Errore generico del server
-    res.status(500).json({
-      timestamp: new Date().toISOString(),
-      message: "Errore interno del server durante la creazione.",
-    });
+    res.status(500).json({ message: "Errore interno del server." });
   } finally {
-    // G. RILASCIO CONNESSIONE
-    // ---------------------------------------------------------
-    // È fondamentale rilasciare la connessione al pool, altrimenti il server si blocca dopo 10 richieste
     if (connection) connection.release();
   }
 };
@@ -411,181 +413,123 @@ exports.updateInitiative = async (req, res) => {
 // Assicurati di importare lo schema di validazione all'inizio del file se non c'è già
 // const { administrationReplySchema } = require('../validators/initiativeSchema');
 
+// --- MODIFICA: CreateReply con Multer per la gestione dei file---
 exports.createReply = async (req, res) => {
   let connection;
+  const files = req.files; // File caricati (Immagini o PDF)
 
   try {
     const initiativeId = req.params.id;
     const adminId = req.header("X-Mock-User-Id");
 
-    // 1. VALIDAZIONE AUTENTICAZIONE
     if (!adminId) {
-      return res.status(401).json({
-        timeStamp: new Date().toISOString(),
-        message: "Autenticazione richiesta: Header X-Mock-User-Id mancante",
-      });
+      cleanupFiles(files);
+      return res.status(401).json({ message: "Autenticazione richiesta" });
     }
 
-    // 2. VALIDAZIONE BODY
-    const { error, value } = administrationReplySchema.validate(req.body, {
-      abortEarly: false,
-    });
+    const { error, value } = administrationReplySchema.validate(req.body, { abortEarly: false });
     if (error) {
+      cleanupFiles(files);
       return res.status(400).json({
-        timeStamp: new Date().toISOString(),
         message: "Errore di validazione",
-        details: error.details.map((err) => ({
-          field: err.context.key,
-          issue: err.message,
-        })),
+        details: error.details.map((err) => ({ field: err.context.key, issue: err.message })),
       });
     }
-    const { status, motivations, attachments } = value;
+    const { status, motivations } = value;
 
-    // 3. AVVIO TRANSAZIONE
     connection = await db.getConnection();
     await connection.beginTransaction();
 
-    // 4. CONTROLLI PRELIMINARI
-    const [users] = await connection.query(
-      "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
-      [adminId]
-    );
+    // Check permessi Admin
+    const [users] = await connection.query("SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?", [adminId]);
     if (users.length === 0 || !users[0].IS_ADMIN) {
       await connection.rollback();
-      return res.status(403).json({
-        timeStamp: new Date().toISOString(),
-        message: "Operazione non consentita.",
-      });
+      cleanupFiles(files);
+      return res.status(403).json({ message: "Operazione non consentita." });
     }
 
-    // Recupero titolo per la notifica
+    // Check Iniziativa
     const [initiatives] = await connection.query(
-      "SELECT ID_INIZIATIVA, TITOLO FROM INIZIATIVA WHERE ID_INIZIATIVA = ?",
+      "SELECT ID_INIZIATIVA, TITOLO FROM INIZIATIVA WHERE ID_INIZIATIVA = ?", 
       [initiativeId]
     );
     if (initiatives.length === 0) {
       await connection.rollback();
-      return res.status(404).json({
-        timeStamp: new Date().toISOString(),
-        message: "Iniziativa non trovata",
-      });
+      cleanupFiles(files);
+      return res.status(404).json({ message: "Iniziativa non trovata" });
     }
     const initiativeTitle = initiatives[0].TITOLO;
 
-    // Controllo risposta esistente
+    // Check Risposta Esistente
     const [existingReply] = await connection.query(
-      "SELECT ID_RISPOSTA FROM RISPOSTA WHERE ID_INIZIATIVA = ?",
+      "SELECT ID_RISPOSTA FROM RISPOSTA WHERE ID_INIZIATIVA = ?", 
       [initiativeId]
     );
     if (existingReply.length > 0) {
       await connection.rollback();
-      return res.status(409).json({
-        timeStamp: new Date().toISOString(),
-        message: "Risposta già presente.",
-      });
+      cleanupFiles(files);
+      return res.status(409).json({ message: "Risposta già presente." });
     }
 
-    // 5. INSERIMENTO RISPOSTA
+    // Insert Risposta
     const queryInsertReply = `INSERT INTO RISPOSTA (ID_INIZIATIVA, ID_ADMIN, TEXT_RISP) VALUES (?, ?, ?)`;
-    const [replyResult] = await connection.execute(queryInsertReply, [
-      initiativeId,
-      adminId,
-      motivations,
-    ]);
+    const [replyResult] = await connection.execute(queryInsertReply, [initiativeId, adminId, motivations]);
     const newReplyId = replyResult.insertId;
 
-    // 6. AGGIORNAMENTO STATO
-    await connection.execute(
-      "UPDATE INIZIATIVA SET STATO = ? WHERE ID_INIZIATIVA = ?",
-      [status, initiativeId]
-    );
+    // Update Stato Iniziativa
+    await connection.execute("UPDATE INIZIATIVA SET STATO = ? WHERE ID_INIZIATIVA = ?", [status, initiativeId]);
 
-    // 7. INSERIMENTO ALLEGATI
+    // Insert Allegati (se presenti)
     let savedAttachments = [];
-    if (attachments && attachments.length > 0) {
+    if (files && files.length > 0) {
       const queryAllegato = `INSERT INTO ALLEGATO (FILE_NAME, FILE_PATH, FILE_TYPE, ID_RISPOSTA) VALUES (?, ?, ?, ?)`;
-      const insertPromises = attachments.map((file) =>
+      const insertPromises = files.map((file) =>
         connection.execute(queryAllegato, [
-          file.fileName,
-          file.filePath,
-          file.fileType || null,
+          file.originalname,
+          file.path,
+          file.mimetype,
           newReplyId,
         ])
       );
       await Promise.all(insertPromises);
-      savedAttachments = attachments; // Semplificato per la risposta
+      savedAttachments = files.map(f => ({ fileName: f.originalname, filePath: f.path }));
     }
 
-    // ---------------------------------------------------------
-    // 8. GESTIONE NOTIFICHE (Autori + Firmatari + Followers)
-    // ---------------------------------------------------------
-
-    // Query con UNION per ottenere ID unici da tre tabelle diverse
+    // Invio Notifiche (Logica Preservata)
     const queryRecipients = `
-            -- 1. L'autore dell'iniziativa
-            SELECT ID_AUTORE AS ID_UTENTE 
-            FROM INIZIATIVA 
-            WHERE ID_INIZIATIVA = ? AND ID_AUTORE IS NOT NULL
-            
+            SELECT ID_AUTORE AS ID_UTENTE FROM INIZIATIVA WHERE ID_INIZIATIVA = ? AND ID_AUTORE IS NOT NULL
             UNION
-            
-            -- 2. Chi ha firmato l'iniziativa
-            SELECT ID_UTENTE 
-            FROM FIRMA_INIZIATIVA 
-            WHERE ID_INIZIATIVA = ?
-            
+            SELECT ID_UTENTE FROM FIRMA_INIZIATIVA WHERE ID_INIZIATIVA = ?
             UNION
-            
-            -- 3. Chi segue l'iniziativa (salvata)
-            SELECT ID_UTENTE 
-            FROM INIZIATIVA_SALVATA 
-            WHERE ID_INIZIATIVA = ?
+            SELECT ID_UTENTE FROM INIZIATIVA_SALVATA WHERE ID_INIZIATIVA = ?
         `;
-
-    // Passiamo l'ID tre volte (una per ogni SELECT della UNION)
-    const [recipients] = await connection.query(queryRecipients, [
-      initiativeId,
-      initiativeId,
-      initiativeId,
-    ]);
+    const [recipients] = await connection.query(queryRecipients, [initiativeId, initiativeId, initiativeId]);
 
     if (recipients.length > 0) {
       const notificationText = `L'iniziativa "${initiativeTitle}" ha ricevuto una risposta ufficiale ed è passata allo stato: ${status}`;
       const linkRef = `/initiatives/${initiativeId}`;
-
       const queryInsertNotifica = `INSERT INTO NOTIFICA (ID_UTENTE, TESTO, LINK_RIF) VALUES (?, ?, ?)`;
-
-      // Inserimento parallelo delle notifiche
-      const notificationPromises = recipients.map((user) => {
-        return connection.execute(queryInsertNotifica, [
-          user.ID_UTENTE,
-          notificationText,
-          linkRef,
-        ]);
-      });
-
+      
+      const notificationPromises = recipients.map((user) => 
+        connection.execute(queryInsertNotifica, [user.ID_UTENTE, notificationText, linkRef])
+      );
       await Promise.all(notificationPromises);
     }
-    // ---------------------------------------------------------
 
-    // 9. COMMIT
     await connection.commit();
 
     res.status(201).json({
       id: newReplyId,
       initiativeId: parseInt(initiativeId),
       replyText: motivations,
-      status: status, // Ritorniamo anche il nuovo stato applicato
+      status: status,
       attachments: savedAttachments,
     });
   } catch (err) {
     if (connection) await connection.rollback();
+    cleanupFiles(files);
     console.error("Errore createReply:", err);
-    res.status(500).json({
-      timeStamp: new Date().toISOString(),
-      message: "Errore interno server",
-    });
+    res.status(500).json({ message: "Errore interno server" });
   } finally {
     if (connection) connection.release();
   }
