@@ -5,7 +5,7 @@ import { useParticipatoryBudgetStore } from '../stores/participatoryBudgetStore'
 import { useUserStore } from '../stores/userStore'
 
 // 1. IMPORTA L'IMMAGINE DI DEFAULT (Assicurati che il file esista in src/assets/)
-import defaultImage from '@/assets/placeholder-initiative.jpg'; 
+import defaultImage from '@/assets/placeholder-initiative.jpg';
 
 
 
@@ -64,18 +64,20 @@ const getImageUrl = (item) => {
 
 // --- GESTIONE PAGINAZIONE ---
 const nextPage = () => {
+  // Controllo se non siamo già all'ultima pagina
   if (initiativeStore.currentPage < initiativeStore.totalPages) {
-    initiativeStore.currentPage++ // Incrementiamo localmente prima di chiamare
-    loadData()
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    page.value++; // <--- FIX: Aggiorniamo la variabile reattiva locale 'page'
+    loadData();   // Ora loadData userà page.value aggiornato (es. 2)
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
 
 const prevPage = () => {
-  if (initiativeStore.currentPage > 1) {
-    initiativeStore.currentPage-- // Decrementiamo localmente
-    loadData()
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+  // Controlliamo se non siamo già alla prima pagina
+  if (page.value > 1) {
+    page.value--; // <--- FIX: Decrementiamo la variabile locale
+    loadData();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
 
@@ -89,7 +91,13 @@ const applyFilters = () => {
 
 // Reset filtri
 const resetFilters = () => {
-  filters.value = { search: '', place: '', category: '', platform: '' }
+  // FIX: Ripristiniamo lo status su 'In corso' invece di pulirlo del tutto
+  filters.value = {
+    search: '',
+    category: '',
+    platform: '',
+    status: 'In corso'
+  }
   applyFilters()
 }
 

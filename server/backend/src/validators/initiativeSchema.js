@@ -1,6 +1,6 @@
 const Joi = require("joi");
 
-// attachmentSchema è stato rimosso perché la validazione dei file 
+// attachmentSchema è stato rimosso perché la validazione dei file
 // avviene ora tramite Multer e controlli diretti nel controller.
 
 exports.initiativeSchema = Joi.object({
@@ -8,18 +8,32 @@ exports.initiativeSchema = Joi.object({
     "string.empty": "Il titolo è obbligatorio",
     "string.max": "Il titolo non può superare i 255 caratteri",
   }),
+
   description: Joi.string().required().messages({
     "string.empty": "La descrizione è obbligatoria",
   }),
-  place: Joi.string().max(64).required().messages({
-    "string.empty": "Il luogo è obbligatorio",
+
+  // Ho aggiunto allow('', null) perché place potrebbe arrivare vuoto dal form
+  place: Joi.string().max(64).allow("", null).optional().messages({
+    "string.max": "Il luogo non può superare i 64 caratteri",
   }),
-  // Joi converte automaticamente le stringhe numeriche in numeri per default
-  categoryId: Joi.number().integer().required().messages({
-    "number.base": "La categoria deve essere un numero intero positivo",
-  }),
-  // Attachments rimosso: gestito separatamente
-});
+
+  // FIX IMPORTANTE: Accetta sia numeri che stringhe numeriche (per FormData)
+  categoryId: Joi.alternatives()
+    .try(Joi.number().integer(), Joi.string().pattern(/^[0-9]+$/))
+    .required()
+    .messages({
+      "any.required": "La categoria è obbligatoria",
+      "alternatives.match": "La categoria deve essere un numero valido",
+    }),
+
+  // FIX IMPORTANTE: Aggiunto platformId che mancava e causava l'errore 400
+  platformId: Joi.alternatives()
+    .try(Joi.number().integer(), Joi.string())
+    .optional(),
+
+  // .unknown(true) permette di ignorare campi extra (come il file stesso) senza dare errore
+}).unknown(true);
 
 exports.changeExpirationSchema = Joi.object({
   expirationDate: Joi.date().greater("now").required().messages({

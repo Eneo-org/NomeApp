@@ -1,13 +1,15 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useInitiativeStore } from '../stores/initiativeStore';
-// 1. IMPORTA L'IMMAGINE DI DEFAULT
 import defaultImage from '@/assets/placeholder-initiative.jpg';
+import { useUserStore } from '../stores/userStore';
 
 const API_URL = 'http://localhost:3000';
 
 const route = useRoute();
+const userStore = useUserStore();
+const router = useRouter();
 // CHANGE: Rename 'store' to 'initiativeStore' to match template usage
 const initiativeStore = useInitiativeStore();
 
@@ -45,13 +47,28 @@ onMounted(async () => {
 const handleSign = async () => {
   if (!initiative.value) return;
 
-  // CHANGE: Use initiativeStore instead of store
-  const success = await initiativeStore.signInitiative(initiative.value.id);
-  if (success) {
-    // Se la firma va a buon fine, ricarichiamo i dati per aggiornare il contatore
-    const updatedData = await initiativeStore.fetchInitiativeDetail(initiativeId);
+  // 1. Controllo Login (se non lo fa lo store, meglio averlo anche qui)
+  if (!userStore.isAuthenticated) {
+    if (confirm("Devi accedere per firmare. Vuoi andare al login?")) {
+      router.push('/login');
+    }
+    return;
+  }
+
+  // 2. Chiamata allo Store
+  // 'result' è un oggetto tipo { success: true } oppure { success: false }
+  const result = await initiativeStore.signInitiative(initiative.value.id);
+
+  // 3. Controllo Esito
+  // Usiamo result.success, NON solo result
+  if (result.success) {
+    // Se la firma è andata a buon fine, ricarichiamo i dati per vedere il numero aggiornato
+    const updatedData = await initiativeStore.fetchInitiativeDetail(initiative.value.id);
     initiative.value = updatedData;
-    alert("Grazie per il tuo sostegno! Firma registrata.");
+
+    // NIENTE ALERT QUI!
+    // Lo store ha già mostrato "Firma registrata con successo!"
+    // O se c'era errore "Hai già firmato!"
   }
 };
 

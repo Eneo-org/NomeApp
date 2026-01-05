@@ -12,7 +12,8 @@ const cleanupFiles = (files) => {
   if (!files || files.length === 0) return;
   files.forEach((file) => {
     fs.unlink(file.path, (err) => {
-      if (err) console.error(`[Cleanup] Errore cancellazione file ${file.path}:`, err);
+      if (err)
+        console.error(`[Cleanup] Errore cancellazione file ${file.path}:`, err);
     });
   });
 };
@@ -168,23 +169,25 @@ exports.getAllInitiatives = async (req, res) => {
   }
 };
 
-// --- MODIFICA: Gestione Multipart/Form-Data ---
 exports.createInitiative = async (req, res) => {
   let connection;
-  const files = req.files; 
+  const files = req.files;
 
   try {
     const mockUserId = req.header("X-Mock-User-Id");
     if (!mockUserId) {
-      cleanupFiles(files); 
-      return res.status(400).json({ message: "Header X-Mock-User-Id mancante" });
+      if (files) cleanupFiles(files);
+      return res
+        .status(400)
+        .json({ message: "Header X-Mock-User-Id mancante" });
     }
 
     // 1. Validazione
-    // Assicurati che il tuo initiativeSchema (Joi) validi 'title', 'description', 'place', 'categoryId'
-    const { error, value } = initiativeSchema.validate(req.body, { abortEarly: false });
+    const { error, value } = initiativeSchema.validate(req.body, {
+      abortEarly: false,
+    });
     if (error) {
-      cleanupFiles(files);
+      if (files) cleanupFiles(files);
       return res.status(400).json({
         message: "Errore di validazione",
         details: error.details.map((err) => ({
@@ -194,20 +197,22 @@ exports.createInitiative = async (req, res) => {
       });
     }
 
-    const { title, description, place, categoryId } = value;
+    // Estraiamo anche platformId (o usiamo 1 come default se manca)
+    const { title, description, place, categoryId, platformId } = value;
+    const finalPlatformId = platformId || 1; // Default Trento Partecipa
 
     connection = await db.getConnection();
     await connection.beginTransaction();
 
-    // Calcolo date in JS per allineamento perfetto tra DB e JSON
     const now = new Date();
     const expiration = new Date(now);
-    expiration.setDate(expiration.getDate() + 30); // Scadenza default +30gg
+    expiration.setDate(expiration.getDate() + 30);
 
     // 2. Inserimento Iniziativa
+    // FIX: Ho sostituito 'NULL' con '?' nella posizione di ID_PIATTAFORMA
     const queryIniziativa = `
             INSERT INTO INIZIATIVA (TITOLO, DESCRIZIONE, LUOGO, ID_CATEGORIA, ID_AUTORE, STATO, ID_PIATTAFORMA, DATA_CREAZIONE, DATA_SCADENZA, NUM_FIRME)
-            VALUES (?, ?, ?, ?, ?, 'In corso', NULL, ?, ?, 0)
+            VALUES (?, ?, ?, ?, ?, 'In corso', ?, ?, ?, 0)
         `;
 
     const [resultInit] = await connection.execute(queryIniziativa, [
@@ -216,14 +221,15 @@ exports.createInitiative = async (req, res) => {
       place,
       categoryId,
       mockUserId,
+      finalPlatformId, // <--- Ora passiamo l'ID corretto (1)
       now,
-      expiration
+      expiration,
     ]);
 
     const newInitiativeId = resultInit.insertId;
 
-    // 3. Inserimento Allegati e costruzione array response
-    let responseAttachments = null; // Default null come da schema se vuoto
+    // 3. Inserimento Allegati
+    let responseAttachments = null;
 
     if (files && files.length > 0) {
       responseAttachments = [];
@@ -232,54 +238,52 @@ exports.createInitiative = async (req, res) => {
                 VALUES (?, ?, ?, ?)
             `;
 
-      // Usiamo un ciclo for per eseguire le query e recuperare gli ID inseriti
-      // (Promise.all è più veloce, ma così siamo sicuri di avere gli ID corretti per la response)
       for (const file of files) {
         const [resAtt] = await connection.execute(queryAllegato, [
-          file.originalname, 
-          file.path,         
-          file.mimetype,     
+          file.originalname,
+          file.path,
+          file.mimetype,
           newInitiativeId,
         ]);
 
-        // Aggiungiamo l'oggetto all'array per la risposta JSON
         responseAttachments.push({
-            id: resAtt.insertId,
-            fileName: file.originalname,
-            filePath: file.path,
-            fileType: file.mimetype,
-            uploadedAt: new Date().toISOString()
+          id: resAtt.insertId,
+          fileName: file.originalname,
+          filePath: file.path,
+          fileType: file.mimetype,
+          uploadedAt: new Date().toISOString(),
         });
       }
     }
 
     await connection.commit();
 
-    // 4. Risposta conforme al nuovo schema JSON
+    // 4. Risposta
     res.status(201).json({
       id: newInitiativeId,
       title: title,
-      description: description, // Ora presente e obbligatorio
-      place: place || null,     // Assicura null se undefined
+      description: description,
+      place: place || null,
       status: "In corso",
-      signatures: 0,            // Default 0
-      creationDate: now.toISOString(), // Formato ISO string
+      signatures: 0,
+      creationDate: now.toISOString(),
       expirationDate: expiration.toISOString(),
       authorId: parseInt(mockUserId),
       categoryId: parseInt(categoryId),
-      platformId: null,         // Default NULL
-      externalURL: null,        // Default NULL
-      attachments: responseAttachments, // Array di oggetti o null
-      reply: null               // Default NULL alla creazione
+      platformId: parseInt(finalPlatformId), // <--- Ritorniamo l'ID corretto
+      externalURL: null,
+      attachments: responseAttachments,
+      reply: null,
     });
-
   } catch (err) {
     if (connection) await connection.rollback();
-    cleanupFiles(files); 
+    if (files) cleanupFiles(files);
 
     console.error("Errore CreateInitiative:", err);
     if (err.code === "ER_NO_REFERENCED_ROW_2") {
-      return res.status(400).json({ message: "ID Categoria o ID Utente inesistente." });
+      return res
+        .status(400)
+        .json({ message: "ID Categoria o ID Utente inesistente." });
     }
     res.status(500).json({ message: "Errore interno del server." });
   } finally {
@@ -427,12 +431,17 @@ exports.createReply = async (req, res) => {
       return res.status(401).json({ message: "Autenticazione richiesta" });
     }
 
-    const { error, value } = administrationReplySchema.validate(req.body, { abortEarly: false });
+    const { error, value } = administrationReplySchema.validate(req.body, {
+      abortEarly: false,
+    });
     if (error) {
       cleanupFiles(files);
       return res.status(400).json({
         message: "Errore di validazione",
-        details: error.details.map((err) => ({ field: err.context.key, issue: err.message })),
+        details: error.details.map((err) => ({
+          field: err.context.key,
+          issue: err.message,
+        })),
       });
     }
     const { status, motivations } = value;
@@ -441,7 +450,10 @@ exports.createReply = async (req, res) => {
     await connection.beginTransaction();
 
     // Check permessi Admin
-    const [users] = await connection.query("SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?", [adminId]);
+    const [users] = await connection.query(
+      "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
+      [adminId]
+    );
     if (users.length === 0 || !users[0].IS_ADMIN) {
       await connection.rollback();
       cleanupFiles(files);
@@ -450,7 +462,7 @@ exports.createReply = async (req, res) => {
 
     // Check Iniziativa
     const [initiatives] = await connection.query(
-      "SELECT ID_INIZIATIVA, TITOLO FROM INIZIATIVA WHERE ID_INIZIATIVA = ?", 
+      "SELECT ID_INIZIATIVA, TITOLO FROM INIZIATIVA WHERE ID_INIZIATIVA = ?",
       [initiativeId]
     );
     if (initiatives.length === 0) {
@@ -462,7 +474,7 @@ exports.createReply = async (req, res) => {
 
     // Check Risposta Esistente
     const [existingReply] = await connection.query(
-      "SELECT ID_RISPOSTA FROM RISPOSTA WHERE ID_INIZIATIVA = ?", 
+      "SELECT ID_RISPOSTA FROM RISPOSTA WHERE ID_INIZIATIVA = ?",
       [initiativeId]
     );
     if (existingReply.length > 0) {
@@ -473,11 +485,18 @@ exports.createReply = async (req, res) => {
 
     // Insert Risposta
     const queryInsertReply = `INSERT INTO RISPOSTA (ID_INIZIATIVA, ID_ADMIN, TEXT_RISP) VALUES (?, ?, ?)`;
-    const [replyResult] = await connection.execute(queryInsertReply, [initiativeId, adminId, motivations]);
+    const [replyResult] = await connection.execute(queryInsertReply, [
+      initiativeId,
+      adminId,
+      motivations,
+    ]);
     const newReplyId = replyResult.insertId;
 
     // Update Stato Iniziativa
-    await connection.execute("UPDATE INIZIATIVA SET STATO = ? WHERE ID_INIZIATIVA = ?", [status, initiativeId]);
+    await connection.execute(
+      "UPDATE INIZIATIVA SET STATO = ? WHERE ID_INIZIATIVA = ?",
+      [status, initiativeId]
+    );
 
     // Insert Allegati (se presenti)
     let savedAttachments = [];
@@ -492,7 +511,10 @@ exports.createReply = async (req, res) => {
         ])
       );
       await Promise.all(insertPromises);
-      savedAttachments = files.map(f => ({ fileName: f.originalname, filePath: f.path }));
+      savedAttachments = files.map((f) => ({
+        fileName: f.originalname,
+        filePath: f.path,
+      }));
     }
 
     // Invio Notifiche (Logica Preservata)
@@ -503,15 +525,23 @@ exports.createReply = async (req, res) => {
             UNION
             SELECT ID_UTENTE FROM INIZIATIVA_SALVATA WHERE ID_INIZIATIVA = ?
         `;
-    const [recipients] = await connection.query(queryRecipients, [initiativeId, initiativeId, initiativeId]);
+    const [recipients] = await connection.query(queryRecipients, [
+      initiativeId,
+      initiativeId,
+      initiativeId,
+    ]);
 
     if (recipients.length > 0) {
       const notificationText = `L'iniziativa "${initiativeTitle}" ha ricevuto una risposta ufficiale ed è passata allo stato: ${status}`;
       const linkRef = `/initiatives/${initiativeId}`;
       const queryInsertNotifica = `INSERT INTO NOTIFICA (ID_UTENTE, TESTO, LINK_RIF) VALUES (?, ?, ?)`;
-      
-      const notificationPromises = recipients.map((user) => 
-        connection.execute(queryInsertNotifica, [user.ID_UTENTE, notificationText, linkRef])
+
+      const notificationPromises = recipients.map((user) =>
+        connection.execute(queryInsertNotifica, [
+          user.ID_UTENTE,
+          notificationText,
+          linkRef,
+        ])
       );
       await Promise.all(notificationPromises);
     }

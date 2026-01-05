@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import axios from 'axios'
-import { ref, computed } from 'vue'
+import { ref } from 'vue' // Ho rimosso 'computed' che dava errore
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -9,8 +9,6 @@ export const useInitiativeStore = defineStore('initiative', () => {
   const initiatives = ref([])
   const categories = ref([])
   const platforms = ref([])
-
-  // NUOVO: Lista degli ID delle iniziative seguite dall'utente loggato
   const followedIds = ref([])
 
   const loading = ref(false)
@@ -32,12 +30,11 @@ export const useInitiativeStore = defineStore('initiative', () => {
     return found ? found.platformName : 'Fonte Esterna'
   }
 
-  // NUOVO: Helper per sapere se un'iniziativa è seguita
   const isFollowed = (id) => followedIds.value.includes(id)
 
   // --- ACTIONS ---
 
-  // 1. Carica i Filtri (Categorie/Piattaforme)
+  // 1. Carica i Filtri
   const fetchFiltersData = async () => {
     try {
       const [resCat, resPlat] = await Promise.all([
@@ -51,7 +48,7 @@ export const useInitiativeStore = defineStore('initiative', () => {
     }
   }
 
-  // 2. Carica Iniziative
+  // 2. Carica Iniziative (Home Page)
   const fetchInitiatives = async (page = 1, sortBy = 'signatures', filters = {}) => {
     loading.value = true
     try {
@@ -77,7 +74,6 @@ export const useInitiativeStore = defineStore('initiative', () => {
         totalObjects.value = response.data.meta.totalObjects
       }
 
-      // Quando carichiamo le iniziative, aggiorniamo anche la lista dei preferiti per averla sincronizzata
       await fetchUserFollowedIds()
     } catch (err) {
       console.error('Errore fetch initiatives:', err)
@@ -92,7 +88,6 @@ export const useInitiativeStore = defineStore('initiative', () => {
     error.value = null
     try {
       const response = await axios.get(`${API_URL}/initiatives/${id}`)
-      // Aggiorniamo i preferiti anche qui per sapere se accendere la stella nel dettaglio
       await fetchUserFollowedIds()
       return response.data
     } catch (err) {
@@ -103,112 +98,136 @@ export const useInitiativeStore = defineStore('initiative', () => {
     }
   }
 
-  // --- NUOVA GESTIONE FOLLOW (SMART) ---
-
-  // A. Scarica solo gli ID delle iniziative seguite (per colorare le stelle)
+  // --- GESTIONE PREFERITI ---
   const fetchUserFollowedIds = async () => {
     const userId = localStorage.getItem('tp_mock_id')
     if (!userId) {
       followedIds.value = []
       return
     }
-
     try {
-      // Usiamo la rotta della dashboard che hai già creato, chiedendo le "followed"
-      // Nota: Questo scarica tutte le info, ideale sarebbe una rotta leggera solo ID,
-      // ma per ora va benissimo questa.
       const res = await axios.get(`${API_URL}/users/me/initiatives`, {
-        params: { relation: 'followed', objectsPerPage: 100 }, // Ne prendiamo tante per essere sicuri
+        params: { relation: 'followed', objectsPerPage: 100 },
         headers: { 'X-Mock-User-Id': userId },
       })
-
-      // Estraiamo solo gli ID e li salviamo nello state
       followedIds.value = res.data.data.map((item) => item.id)
     } catch (err) {
       console.error('Errore sync preferiti:', err)
     }
   }
 
-  // B. Toggle (Metti / Togli) con Conferma
   const toggleFollow = async (id, title = 'questa iniziativa') => {
     const userId = localStorage.getItem('tp_mock_id')
     if (!userId) {
-      alert("Devi effettuare il login per seguire un'iniziativa.")
+      alert('Devi effettuare il login.')
       return
     }
 
     const alreadyFollowed = isFollowed(id)
 
-    // 1. LOGICA RIMozione (UNFOLLOW)
     if (alreadyFollowed) {
-      if (!confirm(`Vuoi davvero smettere di seguire "${title}"? Non riceverai più notifiche.`)) {
-        return // Utente ha annullato
-      }
-
+      if (!confirm(`Vuoi smettere di seguire "${title}"?`)) return
       try {
         await axios.delete(`${API_URL}/initiatives/${id}/unfollows`, {
           headers: { 'X-Mock-User-Id': userId },
         })
-        // Aggiorna lo stato locale rimuovendo l'ID
         followedIds.value = followedIds.value.filter((itemId) => itemId !== id)
-        // alert("Rimossa dai preferiti.") // Opzionale, forse troppo invasivo
       } catch (err) {
         console.error(err)
         alert('Errore durante la rimozione.')
       }
-    }
-    // 2. LOGICA AGGIUNTA (FOLLOW)
-    else {
+    } else {
       try {
         await axios.post(
           `${API_URL}/initiatives/${id}/follows`,
           {},
-          {
-            headers: { 'X-Mock-User-Id': userId },
-          },
+          { headers: { 'X-Mock-User-Id': userId } },
         )
-        // Aggiorna lo stato locale aggiungendo l'ID
         followedIds.value.push(id)
         alert('Aggiunta ai preferiti! ⭐')
       } catch (err) {
         if (err.response && err.response.status === 409) {
           alert('Segui già questa iniziativa.')
         } else {
-          console.error(err)
-          alert("Errore nel seguire l'iniziativa.")
+          alert('Errore generico.')
         }
       }
     }
   }
 
+  // --- AZIONI UTENTE (Firma e Creazione) ---
   const signInitiative = async (initiativeId) => {
-    // ... (Tua funzione signInitiative esistente, copiala qui) ...
-    // Per brevità non la ricopio tutta, ma lasciala com'era nel tuo file
     const storedId = localStorage.getItem('tp_mock_id')
     const mockUserId = storedId ? parseInt(storedId) : null
+
     if (!mockUserId) {
-      alert('Login richiesto')
-      return false
+      alert('Devi essere loggato per firmare.')
+      return { success: false }
     }
+
     try {
       await axios.post(
-        `${API_URL}/initiatives/${initiativeId}/sign`,
+        `${API_URL}/initiatives/${initiativeId}/signatures`, // Endpoint corretto
         {},
         { headers: { 'X-Mock-User-Id': mockUserId } },
       )
+
       const init = initiatives.value.find((i) => i.id === initiativeId)
       if (init) init.signatures += 1
+
+      alert('Firma registrata con successo! Grazie per il supporto. ✍️')
       return { success: true }
     } catch (err) {
-      alert('Errore firma')
+      if (err.response && err.response.status === 409) {
+        alert('Hai già firmato questa iniziativa!')
+      } else {
+        console.error('Errore firma:', err)
+        alert('Si è verificato un errore durante la firma.')
+      }
       return { success: false }
     }
   }
 
-  const createInitiative = async (formData) => {
-    // ... (Tua funzione createInitiative esistente) ...
-    // Copia la tua funzione create qui
-    return true
+  const createInitiative = async (payloadData) => {
+    loading.value = true
+    error.value = null
+    const userId = localStorage.getItem('tp_mock_id')
+    if (!userId) {
+      alert('Devi essere loggato.')
+      loading.value = false
+      return false
+    }
+
+    try {
+      console.log('Creazione iniziativa...')
+      const formData = new FormData()
+      formData.append('title', payloadData.title)
+      formData.append('description', payloadData.description)
+      formData.append('place', payloadData.place || '')
+      formData.append('categoryId', payloadData.categoryId)
+      formData.append('platformId', payloadData.platformId || 1)
+
+      if (payloadData.file) {
+        formData.append('attachments', payloadData.file)
+      }
+
+      const response = await axios.post(`${API_URL}/initiatives`, formData, {
+        headers: {
+          'X-Mock-User-Id': userId,
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+
+      await fetchInitiatives() // Ricarica Home
+      console.log('Successo! ID:', response.data.id)
+      return true
+    } catch (err) {
+      console.error('Errore creazione:', err)
+      error.value = err.response?.data?.message || 'Errore durante la creazione.'
+      return false
+    } finally {
+      loading.value = false
+    }
   }
 
   return {
@@ -220,8 +239,8 @@ export const useInitiativeStore = defineStore('initiative', () => {
     currentPage,
     totalPages,
     totalObjects,
-    followedIds, // Export stato
-    isFollowed, // Export getter
+    followedIds,
+    isFollowed,
     getCategoryName,
     getPlatformName,
     fetchFiltersData,
@@ -229,7 +248,7 @@ export const useInitiativeStore = defineStore('initiative', () => {
     fetchInitiativeDetail,
     signInitiative,
     createInitiative,
-    toggleFollow, // Export action unica
+    toggleFollow,
     fetchUserFollowedIds,
   }
 })

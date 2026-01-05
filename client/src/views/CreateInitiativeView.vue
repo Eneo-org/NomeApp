@@ -11,17 +11,26 @@ const formData = ref({
   title: '',
   description: '',
   place: '',
-  categoryId: '',
-  imageUrl: ''
+  categoryId: ''
 })
 
-const loading = ref(false)
-const error = ref(null)
+// Variabile per il file selezionato
+const selectedFile = ref(null)
 
-// Carichiamo le categorie all'avvio per riempire la select
+const loading = ref(false)
+
+// Carichiamo le categorie all'avvio
 onMounted(() => {
   store.fetchFiltersData()
 })
+
+// Gestisce la selezione del file dal computer
+const handleFileUpload = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    selectedFile.value = file
+  }
+}
 
 const handleSubmit = async () => {
   // Validazione base
@@ -31,13 +40,12 @@ const handleSubmit = async () => {
   }
 
   loading.value = true
-  error.value = null
 
-  // Prepariamo l'oggetto da mandare
-  // Nota: piattaforma 1 = Trento Partecipa (interno)
+  // Creiamo un oggetto payload che contiene sia i dati testo che il file
   const payload = {
     ...formData.value,
-    platformId: 1
+    platformId: 1, // Trento Partecipa
+    file: selectedFile.value // Passiamo il file fisico allo store
   }
 
   const success = await store.createInitiative(payload)
@@ -46,9 +54,8 @@ const handleSubmit = async () => {
 
   if (success) {
     alert("Iniziativa creata con successo! 🎉")
-    router.push('/') // Torna alla home
+    router.push('/')
   } else {
-    // L'errore è gestito nello store, ma possiamo mostrarne uno generico qui se serve
     if (!store.error) alert("Errore durante la creazione.")
   }
 }
@@ -83,9 +90,9 @@ const handleSubmit = async () => {
         </div>
 
         <div class="form-group">
-          <label>Link Immagine (Opzionale)</label>
-          <input v-model="formData.imageUrl" type="url" placeholder="https://esempio.com/foto.jpg">
-          <small class="hint">Incolla qui l'URL di un'immagine valida.</small>
+          <label>Immagine (Opzionale)</label>
+          <input type="file" @change="handleFileUpload" accept="image/*">
+          <small class="hint">Carica un'immagine (JPG, PNG, WEBP).</small>
         </div>
 
         <div class="form-group">
@@ -97,7 +104,7 @@ const handleSubmit = async () => {
         <div class="form-actions">
           <button type="button" class="cancel-btn" @click="router.push('/')">Annulla</button>
           <button type="submit" class="submit-btn" :disabled="loading">
-            {{ loading ? 'Invio in corso...' : 'Pubblica Iniziativa' }}
+            {{ loading ? 'Caricamento...' : 'Pubblica Iniziativa' }}
           </button>
         </div>
 
@@ -109,6 +116,7 @@ const handleSubmit = async () => {
 </template>
 
 <style scoped>
+/* Stili uguali a prima */
 .create-container {
   max-width: 800px;
   margin: 0 auto;
