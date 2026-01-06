@@ -6,7 +6,8 @@ const API_URL = import.meta.env.VITE_API_URL
 
 export const useDashboardStore = defineStore('dashboard', () => {
   // --- STATE ---
-  const myInitiatives = ref([]) // Lista iniziative (create, seguite o firmate)
+  const myInitiatives = ref([]) // Lista iniziative utente
+  const expiringInitiatives = ref([]) // NUOVO: Lista scadenze admin
   const notifications = ref([]) // Lista notifiche
   const loading = ref(false)
 
@@ -16,14 +17,12 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   // --- ACTIONS ---
 
-  // 1. Carica lista iniziative
-  // relation può essere: 'created', 'followed', 'signed'
+  // 1. Carica lista iniziative (Utente)
   const fetchDashboardData = async (relation = 'created', page = 1) => {
     loading.value = true
     const userId = localStorage.getItem('tp_mock_id')
 
     try {
-      // NOTA: L'URL punta a /users/me/initiatives come definito nel tuo backend
       const res = await axios.get(`${API_URL}/users/me/initiatives`, {
         params: { relation, currentPage: page, objectsPerPage: 5 },
         headers: { 'X-Mock-User-Id': userId },
@@ -42,11 +41,33 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
-  // 2. Carica Notifiche
+  // 2. NUOVO: Carica Iniziative in Scadenza (Admin)
+  // Usa l'endpoint generico /initiatives filtrando per quelle attive
+  const fetchExpiringInitiatives = async () => {
+    loading.value = true
+    const userId = localStorage.getItem('tp_mock_id')
+    try {
+      const res = await axios.get(`${API_URL}/initiatives`, {
+        params: {
+          status: 'In corso', // Prendi solo quelle attive
+          sortBy: 'expirationDate', // Ordina per scadenza
+          order: 'asc', // Le più vicine per prime
+          objectsPerPage: 10, // Limite (opzionale)
+        },
+        headers: { 'X-Mock-User-Id': userId },
+      })
+      expiringInitiatives.value = res.data.data || []
+    } catch (err) {
+      console.error('Errore caricamento scadenze:', err)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // 3. Carica Notifiche
   const fetchNotifications = async () => {
     const userId = localStorage.getItem('tp_mock_id')
     try {
-      // URL aggiornato: /users/me/notifications
       const res = await axios.get(`${API_URL}/users/me/notifications`, {
         headers: { 'X-Mock-User-Id': userId },
       })
@@ -56,18 +77,16 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
-  // 3. Segna notifica come letta
+  // 4. Segna notifica come letta
   const markAsRead = async (id) => {
     const userId = localStorage.getItem('tp_mock_id')
     try {
-      // URL aggiornato: /users/me/notifications/:id
       await axios.patch(
         `${API_URL}/users/me/notifications/${id}`,
         { isRead: true },
         { headers: { 'X-Mock-User-Id': userId } },
       )
 
-      // Aggiornamento ottimistico (senza ricaricare tutto)
       const notif = notifications.value.find((n) => n.id === id)
       if (notif) notif.isRead = true
     } catch (err) {
@@ -77,11 +96,13 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   return {
     myInitiatives,
+    expiringInitiatives, // Esportiamo la nuova lista
     notifications,
     loading,
     currentPage,
     totalPages,
     fetchDashboardData,
+    fetchExpiringInitiatives, // Esportiamo la nuova funzione
     fetchNotifications,
     markAsRead,
   }

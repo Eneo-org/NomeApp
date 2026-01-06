@@ -2,22 +2,21 @@
 import { ref } from 'vue';
 import { useUserStore } from '../stores/userStore';
 import { useRouter } from 'vue-router';
+// 1. IMPORTA TOAST
+import { useToastStore } from '../stores/toastStore';
 
 const store = useUserStore();
 const router = useRouter();
+const toast = useToastStore(); // 2. ISTANZIA
 
 // Credenziali
 const email = ref('');
-const password = ref(''); // La password è finta, ma la chiediamo per scena
-const errorMessage = ref('');
+const password = ref('');
 
 const handleLogin = async () => {
-  // Reset errore
-  errorMessage.value = '';
-
   // Validazione base
   if (!email.value) {
-    errorMessage.value = "Inserisci l'email.";
+    toast.showToast("⚠️ Inserisci l'email per accedere.", "error");
     return;
   }
 
@@ -25,9 +24,10 @@ const handleLogin = async () => {
   const success = await store.login(email.value, password.value);
 
   if (success) {
-    router.push('/'); // Vai alla Home
+    toast.showToast(`Benvenuto, ${store.user?.name || 'Utente'}! 👋`, "success");
+    router.push('/');
   } else {
-    errorMessage.value = "Credenziali non riconosciute. Prova quelle demo qui sotto.";
+    toast.showToast("❌ Credenziali non riconosciute. Riprova.", "error");
   }
 };
 </script>
@@ -49,10 +49,6 @@ const handleLogin = async () => {
           <input v-model="password" type="password" placeholder="••••••••" />
         </div>
 
-        <div v-if="errorMessage" class="error-box">
-          {{ errorMessage }}
-        </div>
-
         <button type="submit" class="login-btn">Accedi</button>
       </form>
 
@@ -71,6 +67,7 @@ const handleLogin = async () => {
 </template>
 
 <style scoped>
+/* STILI IDENTICI A PRIMA (Ho rimosso solo .error-box che non serve più) */
 .login-container {
   display: flex;
   justify-content: center;
@@ -136,15 +133,6 @@ const handleLogin = async () => {
 
 .login-btn:hover {
   background: #3aa876;
-}
-
-.error-box {
-  background: rgba(231, 76, 60, 0.2);
-  color: #e74c3c;
-  padding: 10px;
-  border-radius: 6px;
-  margin-bottom: 20px;
-  font-size: 0.9rem;
 }
 
 .demo-box {

@@ -2,11 +2,13 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useInitiativeStore } from '../stores/initiativeStore'
+// 1. IMPORTA TOAST
+import { useToastStore } from '../stores/toastStore';
 
 const router = useRouter()
 const store = useInitiativeStore()
+const toast = useToastStore(); // 2. ISTANZIA
 
-// Dati del form
 const formData = ref({
   title: '',
   description: '',
@@ -14,38 +16,31 @@ const formData = ref({
   categoryId: ''
 })
 
-// Variabile per il file selezionato
 const selectedFile = ref(null)
-
 const loading = ref(false)
 
-// Carichiamo le categorie all'avvio
 onMounted(() => {
   store.fetchFiltersData()
 })
 
-// Gestisce la selezione del file dal computer
 const handleFileUpload = (event) => {
   const file = event.target.files[0]
-  if (file) {
-    selectedFile.value = file
-  }
+  if (file) selectedFile.value = file
 }
 
 const handleSubmit = async () => {
-  // Validazione base
+  // Validazione
   if (!formData.value.title || !formData.value.description || !formData.value.categoryId) {
-    alert("Compila tutti i campi obbligatori!")
+    toast.showToast("⚠️ Compila tutti i campi obbligatori!", "error");
     return
   }
 
   loading.value = true
 
-  // Creiamo un oggetto payload che contiene sia i dati testo che il file
   const payload = {
     ...formData.value,
-    platformId: 1, // Trento Partecipa
-    file: selectedFile.value // Passiamo il file fisico allo store
+    platformId: 1,
+    file: selectedFile.value
   }
 
   const success = await store.createInitiative(payload)
@@ -53,10 +48,11 @@ const handleSubmit = async () => {
   loading.value = false
 
   if (success) {
-    alert("Iniziativa creata con successo! 🎉")
+    toast.showToast("🎉 Iniziativa creata con successo!", "success");
     router.push('/')
   } else {
-    if (!store.error) alert("Errore durante la creazione.")
+    // Mostra l'errore che arriva dallo store o uno generico
+    toast.showToast(store.error || "Errore durante la creazione.", "error");
   }
 }
 </script>
@@ -108,15 +104,13 @@ const handleSubmit = async () => {
           </button>
         </div>
 
-        <p v-if="store.error" class="error-msg">{{ store.error }}</p>
-
       </form>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* Stili uguali a prima */
+/* STILI INVARIATI (Rimosso solo .error-msg) */
 .create-container {
   max-width: 800px;
   margin: 0 auto;
@@ -200,12 +194,5 @@ const handleSubmit = async () => {
   padding: 12px 25px;
   border-radius: 8px;
   cursor: pointer;
-}
-
-.error-msg {
-  color: #e74c3c;
-  margin-top: 20px;
-  text-align: center;
-  font-weight: bold;
 }
 </style>

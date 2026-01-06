@@ -4,8 +4,8 @@ const {
   voteBudgetSchema,
 } = require("../validators/participatoryBudgetSchema");
 
-// --- 1. Recupero Lista Archivio (SOLO ADMIN) ---
-exports.getAllParticipatoryBudgets = async (req, res) => {
+// --- 1. Recupero Archivio (SOLO ADMIN & SOLO SCADUTI) ---
+exports.getArchivedBudgets = async (req, res) => {
   try {
     const userId = req.header("X-Mock-User-Id");
 
@@ -37,31 +37,42 @@ exports.getAllParticipatoryBudgets = async (req, res) => {
       });
     }
 
-    // C. Logica Paginazione e Recupero Dati
+    // C. Logica Paginazione
     const { currentPage = 1, objectsPerPage = 10 } = req.query;
     const page = Math.max(1, parseInt(currentPage));
     const limit = Math.max(1, parseInt(objectsPerPage));
     const offset = (page - 1) * limit;
 
-    // Conteggio totale
+    // D. Conteggio totale (SOLO SCADUTI)
     const [countRows] = await db.query(
-      "SELECT COUNT(*) as total FROM BILANCIO_PARTECIPATIVO"
+      "SELECT COUNT(*) as total FROM BILANCIO_PARTECIPATIVO WHERE DATA_SCADENZA < NOW()"
     );
     const totalObjects = countRows[0].total;
 
-    // Recupero Bilanci
+    // E. Recupero Bilanci (SOLO SCADUTI)
     const queryBudgets = `
             SELECT * FROM BILANCIO_PARTECIPATIVO 
-            ORDER BY CREATED_AT DESC
+            WHERE DATA_SCADENZA < NOW()
+            ORDER BY DATA_SCADENZA DESC
             LIMIT ? OFFSET ?
         `;
     const [budgets] = await db.query(queryBudgets, [limit, offset]);
 
-    // Recupero Opzioni e Formattazione
+    // F. Recupero Opzioni e Formattazione
     let formattedData = [];
     if (budgets.length > 0) {
       const budgetIds = budgets.map((b) => b.ID_BIL);
-      const queryOptions = `SELECT * FROM OPZIONI_BILANCIO WHERE ID_BIL IN (?) ORDER BY POSITION ASC`;
+
+      // --- CORREZIONE QUI ---
+      // Ho cambiato COUNT(vb.ID_VOTO) -> COUNT(vb.ID_UTENTE)
+      // Perché ID_VOTO non esiste, ma ID_UTENTE sì e rappresenta il voto univoco.
+      const queryOptions = `SELECT ob.*, COUNT(vb.ID_UTENTE) as vote_count 
+       FROM OPZIONI_BILANCIO ob
+       LEFT JOIN VOTI_BILANCIO vb ON ob.ID_OB = vb.OPTION_ID
+       WHERE ob.ID_BIL IN (?)
+       GROUP BY ob.ID_OB
+       ORDER BY ob.POSITION ASC`;
+
       const [options] = await db.query(queryOptions, [budgetIds]);
 
       formattedData = budgets.map((b) => {
@@ -76,6 +87,7 @@ exports.getAllParticipatoryBudgets = async (req, res) => {
             id: o.ID_OB,
             text: o.TEXT,
             position: o.POSITION,
+            votes: o.vote_count || 0,
           })),
         };
       });
@@ -91,7 +103,7 @@ exports.getAllParticipatoryBudgets = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Errore getAllParticipatoryBudgets:", err);
+    console.error("Errore getArchivedBudgets:", err);
     res.status(500).json({
       timeStamp: new Date().toISOString(),
       message: "Errore interno del server",
@@ -203,10 +215,11 @@ exports.createParticipatoryBudget = async (req, res) => {
   }
 };
 
-// --- 3. Recupero Bilancio Attivo (ALIAS /active) ---
+// --- 3. Recupero Bilancio Attivo (PUBBLICO / HOME) ---
+// Questo rimane visibile a tutti (cittadini inclusi) per permettere il voto
 exports.getActiveParticipatoryBudget = async (req, res) => {
   try {
-    // Cerca il bilancio con scadenza futura o odierna
+    // 1. Cerca il bilancio con scadenza futura o odierna
     const queryBudget = `
             SELECT * FROM BILANCIO_PARTECIPATIVO 
             WHERE DATA_SCADENZA >= CURDATE() 
@@ -216,21 +229,26 @@ exports.getActiveParticipatoryBudget = async (req, res) => {
     const [rows] = await db.query(queryBudget);
 
     if (rows.length === 0) {
-      return res.status(404).json({
-        timeStamp: new Date().toISOString(),
-        message: "Nessun bilancio partecipativo attivo al momento",
+      // Nota: Restituiamo un 200 con data null o array vuoto per non rompere il frontend
+      return res.status(200).json({
+        data: null,
+        message: "Nessun bilancio attivo",
       });
     }
     const budget = rows[0];
 
+    // 2. RECUPERO OPZIONI CON CONTEGGIO VOTI
     const queryOptions = `
-            SELECT * FROM OPZIONI_BILANCIO 
-            WHERE ID_BIL = ? 
-            ORDER BY POSITION ASC
+            SELECT ob.*, COUNT(vb.ID_UTENTE) as vote_count
+            FROM OPZIONI_BILANCIO ob
+            LEFT JOIN VOTI_BILANCIO vb ON ob.ID_OB = vb.OPTION_ID
+            WHERE ob.ID_BIL = ? 
+            GROUP BY ob.ID_OB
+            ORDER BY ob.POSITION ASC
         `;
     const [options] = await db.query(queryOptions, [budget.ID_BIL]);
 
-    // Controllo se l'utente ha già votato
+    // 3. Controllo se l'utente ha già votato
     let votedPosition = null;
     const userId = req.header("X-Mock-User-Id");
 
@@ -244,23 +262,26 @@ exports.getActiveParticipatoryBudget = async (req, res) => {
       const [votes] = await db.query(queryVote, [budget.ID_BIL, userId]);
 
       if (votes.length > 0) {
-        votedPosition = votes[0].POSITION; // Es: 1, 2 o 3
+        votedPosition = votes[0].POSITION;
       }
     }
 
+    // 4. Invio Risposta
     res.status(200).json({
-      id: budget.ID_BIL,
-      creatorId: budget.ID_CREATOR,
-      title: budget.TITOLO,
-      createdAt: budget.CREATED_AT,
-      expirationDate: budget.DATA_SCADENZA,
-      // questa parte restituisce la POSITION nel campo votedOptionId
-      votedOptionId: votedPosition,
-      options: options.map((o) => ({
-        id: o.ID_OB,
-        text: o.TEXT,
-        position: o.POSITION,
-      })),
+      data: {
+        id: budget.ID_BIL,
+        creatorId: budget.ID_CREATOR,
+        title: budget.TITOLO,
+        createdAt: budget.CREATED_AT,
+        expirationDate: budget.DATA_SCADENZA,
+        votedOptionId: votedPosition,
+        options: options.map((o) => ({
+          id: o.ID_OB,
+          text: o.TEXT,
+          position: o.POSITION,
+          votes: o.vote_count || 0,
+        })),
+      },
     });
   } catch (err) {
     console.error("Errore getActiveParticipatoryBudget:", err);
@@ -271,6 +292,7 @@ exports.getActiveParticipatoryBudget = async (req, res) => {
   }
 };
 
+// --- 4. Votazione (SOLO CITTADINI) ---
 exports.voteParticipatoryBudget = async (req, res) => {
   let connection;
   try {
@@ -291,14 +313,12 @@ exports.voteParticipatoryBudget = async (req, res) => {
         message: error.details[0].message,
       });
 
-    // Qui abbiamo già la posizione (es. 1, 2, 3) richiesta dall'utente
     const { position } = value;
 
     connection = await db.getConnection();
     await connection.beginTransaction();
 
     // A. Controllo Ruolo Cittadino
-    // - Tabella UTENTE
     const [users] = await connection.query(
       "SELECT IS_CITTADINO FROM UTENTE WHERE ID_UTENTE = ?",
       [userId]
@@ -320,7 +340,6 @@ exports.voteParticipatoryBudget = async (req, res) => {
     }
 
     // B. Controllo Esistenza Bilancio
-    // - Tabella BILANCIO_PARTECIPATIVO
     const [budgets] = await connection.query(
       "SELECT * FROM BILANCIO_PARTECIPATIVO WHERE ID_BIL = ?",
       [budgetId]
@@ -348,8 +367,7 @@ exports.voteParticipatoryBudget = async (req, res) => {
       });
     }
 
-    // D. Recupero ID Opzione reale (Serve per l'inserimento nel DB)
-    // - Tabella OPZIONI_BILANCIO
+    // D. Recupero ID Opzione reale
     const queryFindOption = `
             SELECT ID_OB 
             FROM OPZIONI_BILANCIO 
@@ -371,7 +389,6 @@ exports.voteParticipatoryBudget = async (req, res) => {
     const realOptionId = optionsResult[0].ID_OB;
 
     // E. Inserimento Voto
-    // - Tabella VOTI_BILANCIO
     const insertVote = `
             INSERT INTO VOTI_BILANCIO (ID_UTENTE, ID_BIL, OPTION_ID)
             VALUES (?, ?, ?)
@@ -386,14 +403,10 @@ exports.voteParticipatoryBudget = async (req, res) => {
         `;
     const [allOptions] = await connection.query(queryAllOptions, [budgetId]);
 
-    // Conferma Transazione
     await connection.commit();
 
-    // --- G. COSTRUZIONE RISPOSTA MODIFICATA ---
     const responsePayload = {
-      // RESTITUISCE LA POSIZIONE (1, 2, 3...) INVECE DELL'ID DEL DB
       votedOptionId: position,
-
       id: budgetData.ID_BIL,
       creatorId: budgetData.ID_CREATOR,
       title: budgetData.TITOLO,

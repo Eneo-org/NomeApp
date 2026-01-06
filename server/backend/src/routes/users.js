@@ -1,36 +1,38 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 // Nota: Anche questo controller lo creeremo a breve
-const userController = require('../controllers/userController');
+const userController = require("../controllers/userController");
 
 // --- 1. Rotte relative all'utente corrente (/me) ---
 // È fondamentale che queste stiano PRIMA di /:id
 
 // GET /users/me - Profilo utente
-router.get('/me', userController.getUser);
+router.get("/me", userController.getUser);
 
 // GET /users/me/initiatives - Dashboard iniziative
-router.get('/me/initiatives', userController.initiativesDashboard);
+router.get("/me/initiatives", userController.initiativesDashboard);
 
 // GET /users/me/notifications - Lista notifiche
-router.get('/me/notifications', userController.notificationsList);
+router.get("/me/notifications", userController.notificationsList);
 
 // PATCH /users/me/notifications/:id - Segna notifica come letta
-router.patch('/me/notifications/:id', userController.readNotification);
+router.patch("/me/notifications/:id", userController.readNotification);
 
+// --- 2. Rotte generali e specifiche (/users) ---
 
-// --- 2. Rotte generali (/users) ---
+// GET /users/admin/list - Lista utenti Admin (con filtri)
+// (Corretto: userController invece di controller)
+router.get("/admin/list", userController.showAdminUsers);
 
 // POST /users - Registrazione nuovo utente
-router.post('/', userController.userRegistration);
+router.post("/", userController.userRegistration);
 
-// GET /users - Lista utenti (per Admin, es. filtro isAdmin=true)
-router.get('/', userController.showAdminUsers);
-
+// GET /users - Lista utenti generale (se serve ancora)
+router.get("/", userController.showAdminUsers);
 
 // --- 3. Rotte con parametri ID specifici (/users/:id) ---
 
 // PATCH /users/:id - Cambio privilegi (Admin)
-router.patch('/:id', userController.changePrivileges);
+router.patch("/:id", userController.changePrivileges);
 
 module.exports = router;

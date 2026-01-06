@@ -1,40 +1,24 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from './stores/userStore'
+import TheToast from './components/TheToast.vue'
+
+// 1. IMPORTA IL COMPOSABLE DEL TEMA
+import { useTheme } from '@/composables/useTheme';
 
 const router = useRouter()
 const userStore = useUserStore()
 
-// --- LOGICA DARK MODE ---
-const isDarkMode = ref(false)
-
-const toggleTheme = () => {
-  isDarkMode.value = !isDarkMode.value
-  applyTheme()
-}
-
-const applyTheme = () => {
-  if (isDarkMode.value) {
-    document.body.classList.add('dark-mode')
-    localStorage.setItem('theme', 'dark')
-  } else {
-    document.body.classList.remove('dark-mode')
-    localStorage.setItem('theme', 'light')
-  }
-}
+// 2. ESTRAI LE VARIABILI E FUNZIONI DAL COMPOSABLE
+const { isDark, toggleTheme, initTheme } = useTheme();
 
 // --- INITIALIZZAZIONE APP ---
 onMounted(() => {
-  // 1. Ripristina il Tema
-  const savedTheme = localStorage.getItem('theme')
-  if (savedTheme === 'dark') {
-    isDarkMode.value = true
-    document.body.classList.add('dark-mode')
-  }
+  // 3. Inizializza il tema usando la funzione centralizzata
+  initTheme();
 
-  // 2. Ripristina la Sessione Utente (IMPORTANTE!)
-  // Controlla se c'è un token salvato e logga l'utente automaticamente
+  // Ripristina la Sessione Utente
   userStore.initializeStore()
 })
 // ------------------------
@@ -47,6 +31,8 @@ const logout = () => {
 
 <template>
   <div class="app-layout">
+
+    <TheToast />
 
     <nav class="navbar">
       <div class="nav-left">
@@ -61,18 +47,20 @@ const logout = () => {
           📊 Dashboard
         </RouterLink>
 
+        <RouterLink v-if="userStore.isAuthenticated && userStore.user?.isAdmin" to="/admin/dashboard"
+          class="admin-link">
+          🏛️ Area Admin
+        </RouterLink>
+
         <RouterLink v-if="!userStore.isAuthenticated" to="/login">Accedi</RouterLink>
 
         <div v-else class="user-menu">
-          <RouterLink to="/dashboard" class="user-name-link">
-            <span class="user-name">{{ userStore.fullName }}</span>
-          </RouterLink>
-
+          <span class="user-name-text">{{ userStore.fullName }}</span>
           <a @click.prevent="logout" href="#" class="logout-link">Esci</a>
         </div>
 
-        <button @click="toggleTheme" class="theme-btn" title="Cambia Tema">
-          {{ isDarkMode ? '☀️' : '🌙' }}
+        <button @click="toggleTheme" class="theme-btn" title="Cambia tema">
+          {{ isDark ? '☀️' : '🌙' }}
         </button>
       </div>
     </nav>
@@ -104,7 +92,13 @@ const logout = () => {
 }
 
 /* --- VARIABILI DARK MODE --- */
-body.dark-mode {
+/* Importante: deve corrispondere alla classe usata in useTheme.js (qui è 'dark') */
+/* Se nel tuo useTheme hai usato .add('dark'), allora qui deve essere body.dark o html.dark */
+/* Se hai usato .add('dark-mode'), mantieni body.dark-mode */
+
+/* Per sicurezza, supportiamo entrambe le classi */
+body.dark-mode,
+body.dark {
   --bg-color: #161616;
   --text-color: #e0e0e0;
   --secondary-text: #a0a0a0;
@@ -169,24 +163,39 @@ body {
   color: var(--accent-color);
 }
 
+/* Stile speciale per il link Admin */
+.admin-link {
+  color: #27ae60 !important;
+  font-weight: bold !important;
+  border: 1px solid #27ae60;
+  padding: 5px 10px;
+  border-radius: 4px;
+}
+
+.admin-link:hover {
+  background-color: #27ae60;
+  color: white !important;
+}
+
 .user-menu {
   display: flex;
   align-items: center;
   gap: 15px;
 }
 
-.user-name {
+/* Nuovo stile per il testo del nome utente (non cliccabile) */
+.user-name-text {
   font-size: 0.9rem;
   font-weight: bold;
   color: var(--accent-color);
   border-right: 1px solid var(--secondary-text);
   padding-right: 15px;
+  cursor: default;
 }
 
 .logout-link {
   cursor: pointer;
   color: #e74c3c !important;
-  /* Rosso per il logout */
 }
 
 /* Pulsante Tema */
@@ -225,22 +234,17 @@ body {
   margin-top: 40px;
 }
 
-.user-name-link {
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-}
-
-.user-name-link:hover .user-name {
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-/* Stile per il link attivo (quando sei sulla Dashboard) */
+/* Stile per il link attivo */
 .nav-right a.router-link-active {
   color: var(--accent-color);
   font-weight: bold;
   border-bottom: 2px solid var(--accent-color);
-  /* Sottolineatura verde */
+}
+
+/* Evitiamo la sottolineatura sul bottone admin quando attivo */
+.nav-right a.router-link-active.admin-link {
+  border-bottom: 1px solid #27ae60;
+  background-color: #27ae60;
+  color: white !important;
 }
 </style>

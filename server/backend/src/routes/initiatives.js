@@ -3,44 +3,39 @@ const router = express.Router();
 const initiativeController = require("../controllers/initiativeController");
 const upload = require("../middleware/upload");
 
-// -- Mapping delle rotte
+// --- 1. ROTTE STATICHE E LISTE (Devono stare IN CIMA) ---
+
+// QUESTA deve stare prima di /:id
+router.get("/admin/expiring", initiativeController.getExpiringInitiatives);
 
 router.get("/", initiativeController.getAllInitiatives);
-/**
- * POST /initiatives
- * Middleware 'uploadInitiative': accetta solo immagini.
- * .array('attachments'): accetta file multipli dal campo form 'attachments'.
- * Nota: I file vengono caricati PRIMA che il controller venga eseguito.
- */
+
 router.post(
-  "/", 
-  upload.uploadInitiative.array("attachments"), 
+  "/",
+  upload.uploadInitiative.array("attachments"),
   initiativeController.createInitiative
 );
+
+// --- 2. ROTTE DINAMICHE (Con :id) ---
+
+// Questa cattura tutto quello che assomiglia a un ID.
+// Se metti /admin/expiring sotto a questa, non verrà mai raggiunta!
 router.get("/:id", initiativeController.getInitiativeById);
 
-// Modifiche all'iniziativa
+// ... il resto delle rotte rimangono uguali ...
 router.patch("/:id", initiativeController.changeExpirationDate);
 router.put("/:id", initiativeController.updateInitiative);
 
-// Azioni specifiche (Sotto-risorse)
-// Notare come l'URL continui ad essere gestito qui perché inizia con /initiatives
-/**
- * POST /initiatives/:id/responses
- * Middleware 'uploadReply': accetta immagini e PDF.
- */
+// (Assicurati che questa parte combaci con il frontend come abbiamo detto prima)
 router.post(
-  "/:id/responses", 
-  upload.uploadReply.array("attachments"), 
+  "/:id/responses",
+  upload.uploadReply.array("attachments"),
   initiativeController.createReply
 );
-router.post("/:id/signatures", initiativeController.signInitiative);
 
-// Gestione "Segui / Non seguire più"
+router.post("/:id/signatures", initiativeController.signInitiative);
 router.post("/:id/follows", initiativeController.followInitiative);
 router.delete("/:id/unfollows", initiativeController.unfollowInitiative);
-
-// PATCH /initiatives/:id/status - Cambio stato (Solo Admin)
 router.patch("/:id/status", initiativeController.updateInitiativeStatus);
 
 module.exports = router;

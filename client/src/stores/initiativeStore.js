@@ -98,6 +98,23 @@ export const useInitiativeStore = defineStore('initiative', () => {
     }
   }
 
+  //3. Recupera Dettaglio Singola Iniziativa ---
+  const fetchInitiativeById = async (id) => {
+    try {
+      // Recuperiamo l'ID utente se disponibile, utile per vedere se l'abbiamo firmata/seguita
+      const storedId = localStorage.getItem('tp_mock_id')
+
+      const response = await axios.get(`${API_URL}/initiatives/${id}`, {
+        headers: { 'X-Mock-User-Id': storedId },
+      })
+
+      return response.data
+    } catch (err) {
+      console.error('Errore fetchInitiativeById:', err)
+      return null
+    }
+  }
+
   // --- GESTIONE PREFERITI ---
   const fetchUserFollowedIds = async () => {
     const userId = localStorage.getItem('tp_mock_id')
@@ -230,6 +247,53 @@ export const useInitiativeStore = defineStore('initiative', () => {
     }
   }
 
+  // --- AZIONE ADMIN: Ottieni Iniziative in Scadenza ---
+  const fetchExpiringInitiatives = async (page = 1) => {
+    try {
+      const storedId = localStorage.getItem('tp_mock_id')
+      const response = await axios.get(
+        `${API_URL}/initiatives/admin/expiring?currentPage=${page}&objectsPerPage=10`,
+        { headers: { 'X-Mock-User-Id': storedId } },
+      )
+      return response.data
+    } catch (err) {
+      console.error('Errore fetchExpiring:', err)
+      return null
+    }
+  }
+
+  // --- AZIONE ADMIN: Invia Risposta Ufficiale ---
+  const submitAdminReply = async (initiativeId, status, motivation, files) => {
+    try {
+      const storedId = localStorage.getItem('tp_mock_id')
+
+      const formData = new FormData()
+      formData.append('status', status)
+      formData.append('motivations', motivation)
+
+      // MODIFICA 1: Il backend usa multer.array("attachments")
+      // Quindi dobbiamo usare "attachments" come nome del campo, non "files"
+      if (files && files.length > 0) {
+        for (let i = 0; i < files.length; i++) {
+          formData.append('attachments', files[i])
+        }
+      }
+
+      // MODIFICA 2: L'URL del backend è configurato su /responses
+      await axios.post(`${API_URL}/initiatives/${initiativeId}/responses`, formData, {
+        headers: {
+          'X-Mock-User-Id': storedId,
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+
+      return true
+    } catch (err) {
+      console.error('Errore invio risposta:', err)
+      throw err.response?.data?.message || "Errore durante l'invio della risposta"
+    }
+  }
+
   return {
     initiatives,
     categories,
@@ -250,5 +314,8 @@ export const useInitiativeStore = defineStore('initiative', () => {
     createInitiative,
     toggleFollow,
     fetchUserFollowedIds,
+    fetchExpiringInitiatives,
+    submitAdminReply,
+    fetchInitiativeById,
   }
 })

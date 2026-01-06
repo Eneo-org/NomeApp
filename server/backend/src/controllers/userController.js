@@ -372,78 +372,69 @@ exports.userRegistration = async (req, res) => {
 
 exports.showAdminUsers = async (req, res) => {
   try {
-    const userId = req.header("X-Mock-User-Id");
+    const requesterId = req.header("X-Mock-User-Id");
 
     // 1. Validazione Header
-    if (!userId) {
-      return res.status(401).json({
-        timeStamp: new Date().toISOString(),
-        message: "Autenticazione richiesta: Header X-Mock-User-Id mancante",
-      });
-    }
+    if (!requesterId) return res.status(401).json({ message: "Auth mancante" });
 
     // 2. Controllo Permessi Admin
-    // Recuperiamo solo IS_ADMIN per la verifica, non servono più i dati anagrafici del richiedente per la risposta
-    const queryCheckAdmin = "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?";
-    const [admins] = await db.query(queryCheckAdmin, [userId]);
-
-    if (admins.length === 0) {
-      return res.status(401).json({
-        timeStamp: new Date().toISOString(),
-        message: "Utente richiedente non trovato.",
-      });
+    const [requesters] = await db.query(
+      "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
+      [requesterId]
+    );
+    if (requesters.length === 0 || !requesters[0].IS_ADMIN) {
+      return res
+        .status(403)
+        .json({ message: "Accesso negato: solo gli admin." });
     }
 
-    if (!admins[0].IS_ADMIN) {
-      return res.status(403).json({
-        timeStamp: new Date().toISOString(),
-        message:
-          "Accesso negato: solo gli amministratori possono visualizzare la lista utenti.",
-      });
-    }
+    // 3. Parametri Query
+    const { fiscalCode, currentPage, objectsPerPage } = req.query;
+    const page = parseInt(currentPage) || 1;
+    const limit = parseInt(objectsPerPage) || 10;
+    const offset = (page - 1) * limit;
 
-    // 3. Gestione Parametri Query
-    const { isAdmin } = req.query;
-
-    // Query base: selezioniamo esplicitamente NOME e COGNOME per metterli nell'array
-    let queryUsers = `
-            SELECT  NOME, COGNOME, CODICE_FISCALE
-            FROM UTENTE
-            WHERE 1=1
-        `;
+    // 4. Costruzione Query (SOLO ADMIN)
+    // Partiamo già filtrando per IS_ADMIN = 1
+    let queryBase = `SELECT ID_UTENTE, NOME, COGNOME, CODICE_FISCALE, EMAIL FROM UTENTE WHERE IS_ADMIN = 1`;
+    let queryCount = `SELECT COUNT(*) as total FROM UTENTE WHERE IS_ADMIN = 1`;
     const queryParams = [];
 
-    //mostriamo solo gli admin
-    queryUsers += " AND IS_ADMIN = 1";
-    // Ordinamento alfabetico
-    queryUsers += " ORDER BY COGNOME ASC, NOME ASC";
+    // Filtro Opzionale Codice Fiscale
+    if (fiscalCode) {
+      queryBase += ` AND CODICE_FISCALE LIKE ?`;
+      queryCount += ` AND CODICE_FISCALE LIKE ?`;
+      queryParams.push(`%${fiscalCode}%`);
+    }
 
-    const [rows] = await db.query(queryUsers, queryParams);
+    // Ordinamento e Paginazione
+    queryBase += ` ORDER BY COGNOME ASC, NOME ASC LIMIT ? OFFSET ?`;
+    const dataParams = [...queryParams, limit, offset];
 
-    // 4. Mappatura Dati
-    // Inseriamo nome e cognome di ogni utente trovato nell'oggetto di risposta
-    const usersList = rows.map((user) => ({
-      firstName: user.NOME,
-      lastName: user.COGNOME,
-      fiscalCode: user.CODICE_FISCALE,
-    }));
+    // 5. Esecuzione
+    const [rows] = await db.query(queryBase, dataParams);
+    const [countRows] = await db.query(queryCount, queryParams);
 
-    // 5. Risposta
-    // Restituiamo solo l'oggetto 'data', senza i dati dell'admin loggato alla radice
+    // 6. Risposta
     res.status(200).json({
-      data: usersList,
+      data: rows.map((u) => ({
+        id: u.ID_UTENTE,
+        firstName: u.NOME,
+        lastName: u.COGNOME,
+        fiscalCode: u.CODICE_FISCALE,
+        email: u.EMAIL,
+        isAdmin: true, // Sono tutti admin in questa lista
+      })),
+      meta: {
+        currentPage: page,
+        objectsPerPage: limit,
+        totalObjects: countRows[0].total,
+        totalPages: Math.ceil(countRows[0].total / limit),
+      },
     });
   } catch (err) {
     console.error("Errore showAdminUsers:", err);
-    res.status(500).json({
-      timeStamp: new Date().toISOString(),
-      message:
-        "Errore interno del server durante il recupero della lista utenti",
-      details:
-        process.env.NODE_ENV === "development"
-          ? [{ field: "database", issue: err.message }]
-          : undefined,
-    });
+    res.status(500).json({ message: "Errore server" });
   }
 };
 

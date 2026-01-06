@@ -2,32 +2,37 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const path = require("path");
+
+// Import Routes
 const initiativeRoutes = require("./routes/initiatives");
 const participatoryBudgetsRoutes = require("./routes/participatoryBudgets");
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
 const filterRoutes = require("./routes/filters");
 
+// Import Cron Jobs
+const startScheduler = require("./cronJobs");
+
+// 1. Middleware Base
 app.use(express.json());
 app.use(cors());
 
-// --- FIX PER LE IMMAGINI ---
-// __dirname è "server/backend/src"
-// Noi dobbiamo puntare a "server/backend/uploads" (un livello sopra)
-// Usiamo path.join con '../uploads'
+// 2. File Statici (Immagini)
+// Serve la cartella "uploads" che sta un livello sopra a "src"
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
-// Se per caso avessi vecchi file dentro src/uploads, puoi decommentare questa riga per servire anche quelli:
-// app.use('/src/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Collega le rotte
+// 3. Collegamento Rotte
 app.use("/initiatives", initiativeRoutes);
 app.use("/participatory-budgets", participatoryBudgetsRoutes);
-
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
+app.use("/", filterRoutes); // Filtri generici
 
-app.use("/", filterRoutes);
+// 4. Avvio Server e Schedulatore
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server attivo sulla porta ${PORT}...`);
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`Server attivo sulla porta ${port}...`));
+  // Avvia il controllo automatico delle scadenze solo quando il server è su
+  startScheduler();
+});

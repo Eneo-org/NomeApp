@@ -3,95 +3,70 @@ import { ref, onMounted, watch } from 'vue'
 import { useInitiativeStore } from '../stores/initiativeStore'
 import { useParticipatoryBudgetStore } from '../stores/participatoryBudgetStore'
 import { useUserStore } from '../stores/userStore'
+import { useToastStore } from '../stores/toastStore';
+// 1. RIMUOVI l'import della singola immagine e IMPORTA il composable
+import { useImage } from '@/composables/useImage';
+import ParticipatoryBudgetCard from '@/components/ParticipatoryBudgetCard.vue'
 
-// 1. IMPORTA L'IMMAGINE DI DEFAULT (Assicurati che il file esista in src/assets/)
-import defaultImage from '@/assets/placeholder-initiative.jpg';
-
-
-
-const API_URL = 'http://localhost:3000'; // URL del tuo Backend
+// (Rimuovi const API_URL se lo usavi solo per le immagini, ora è nel composable)
 
 const initiativeStore = useInitiativeStore()
 const budgetStore = useParticipatoryBudgetStore()
 const userStore = useUserStore()
+const toast = useToastStore();
+
+// 2. USA IL COMPOSABLE
+const { getImageUrl } = useImage();
+
 const page = ref(1);
 const sort = ref('signatures');
 
-// --- STATO FILTRI ---
 const filters = ref({
   search: '',
   category: '',
   platform: '',
-  status: 'In corso' //filtro di default
+  status: 'In corso'
 });
 
-// Helper date
 const formatDate = (dateString) => {
   if (!dateString) return 'N/D'
   return new Date(dateString).toLocaleDateString('it-IT')
 }
 
-// --- LOGICA DI CARICAMENTO ---
 onMounted(async () => {
-  // 1. Carichiamo le opzioni per le select (Categorie e Piattaforme)
   await initiativeStore.fetchFiltersData()
-
-  // 2. Carichiamo le iniziative (Pagina 1, Default Ordinamento)
   loadData()
-
-  // 3. Carichiamo il bilancio
   budgetStore.fetchActiveBudget()
 })
 
-// Funzione centrale per caricare i dati
 const loadData = async () => {
-  // Passiamo filters.value che ora contiene { status: 'In corso' }
   await initiativeStore.fetchInitiatives(page.value, sort.value, filters.value);
 };
 
-// --- NUOVA FUNZIONE PER GESTIRE LE IMMAGINI ---
-const getImageUrl = (item) => {
-  // Caso 1: Nessun allegato -> Ritorna immagine default locale
-  if (!item.attachment || !item.attachment.filePath) {
-    return defaultImage;
-  }
+// 3. LA VECCHIA FUNZIONE getImageUrl È STATA RIMOSSA (ora usiamo quella importata)
 
-  // Caso 2: Allegato presente -> Costruisci URL Backend
-  // Nota: .replace(/\\/g, '/') serve per fixare i percorsi Windows (es. uploads\file.jpg -> uploads/file.jpg)
-  const cleanPath = item.attachment.filePath.replace(/\\/g, '/');
-  return `${API_URL}/${cleanPath}`;
-};
-
-// --- GESTIONE PAGINAZIONE ---
 const nextPage = () => {
-  // Controllo se non siamo già all'ultima pagina
   if (initiativeStore.currentPage < initiativeStore.totalPages) {
-    page.value++; // <--- FIX: Aggiorniamo la variabile reattiva locale 'page'
-    loadData();   // Ora loadData userà page.value aggiornato (es. 2)
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-}
-
-const prevPage = () => {
-  // Controlliamo se non siamo già alla prima pagina
-  if (page.value > 1) {
-    page.value--; // <--- FIX: Decrementiamo la variabile locale
+    page.value++;
     loadData();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
 
-// --- GESTIONE FILTRI ---
+const prevPage = () => {
+  if (page.value > 1) {
+    page.value--;
+    loadData();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
 
-// Applichiamo i filtri quando l'utente preme invio o cambia una select
 const applyFilters = () => {
-  initiativeStore.currentPage = 1 // Si riparte sempre dalla prima pagina quando si filtra
+  initiativeStore.currentPage = 1
   loadData()
 }
 
-// Reset filtri
 const resetFilters = () => {
-  // FIX: Ripristiniamo lo status su 'In corso' invece di pulirlo del tutto
   filters.value = {
     search: '',
     category: '',
@@ -102,52 +77,38 @@ const resetFilters = () => {
 }
 
 const handleSign = async (item) => {
-  // 1. Controllo Login
   if (!userStore.isAuthenticated) {
-    // Se non è loggato, lo mandiamo alla pagina di login
     if (confirm("Devi accedere per firmare. Vuoi andare al login?")) {
-      // Nota: assicurati di aver importato useRouter se non c'è
-      // import { useRouter } from 'vue-router'; const router = useRouter();
-      // Ma qui possiamo usare window.location o router.push se già definito
       window.location.href = '/login';
     }
     return;
   }
 
-  // 2. Chiamata allo Store
   const result = await initiativeStore.signInitiative(item.id);
 
-  // 3. Feedback visivo (Opzionale, l'alert è già nello store)
   if (result.success) {
-    // Possiamo fare un effetto sonoro o un toast notification qui in futuro
-    console.log("Firma registrata con successo!");
+    toast.showToast("✅ Firma registrata con successo!", "success");
+  } else {
+    toast.showToast(result.message || "Errore durante la firma", "error");
   }
 };
 
 const getStatusClass = (status) => {
   if (!status) return 'status-default';
-
-  // Normalizziamo il testo (minuscolo) per evitare errori
   const s = status.toLowerCase();
-
   if (s === 'in corso') return 'status-active';
   if (s === 'approvata') return 'status-success';
   if (s === 'respinta') return 'status-danger';
   if (s === 'scaduta') return 'status-muted';
-
   return 'status-default';
 };
 
-// Opzionale: Se vuoi che il filtro "Luogo" o "Cerca" parta solo premendo Invio, togli il watch.
-// Se vuoi che sia istantaneo sulle select, usa watch.
 watch(() => filters.value.category, applyFilters)
 watch(() => filters.value.platform, applyFilters)
-
 </script>
 
 <template>
   <div class="home-wrapper">
-
     <div class="app-header">
       <h1 class="main-title">TRENTO PARTECIPA</h1>
       <p class="subtitle">La piattaforma per i cittadini attivi</p>
@@ -169,7 +130,6 @@ watch(() => filters.value.platform, applyFilters)
           <label>Categoria</label>
           <select v-model="filters.category" @change="applyFilters">
             <option value="">Tutte le categorie</option>
-
             <option v-for="cat in initiativeStore.categories" :key="cat.id" :value="cat.id">
               {{ cat.name }}
             </option>
@@ -180,7 +140,6 @@ watch(() => filters.value.platform, applyFilters)
           <label>Piattaforma</label>
           <select v-model="filters.platform" @change="applyFilters">
             <option value="">Tutte le piattaforme</option>
-
             <option v-for="p in initiativeStore.platforms" :key="p.id" :value="p.id">
               {{ p.platformName }}
             </option>
@@ -195,30 +154,7 @@ watch(() => filters.value.platform, applyFilters)
 
       <main class="content-area">
 
-        <div v-if="budgetStore.activeBudget" class="budget-banner">
-          <div class="budget-header">
-            <div>
-              <span class="pinned-badge">📌 IN PRIMO PIANO</span>
-              <h2>{{ budgetStore.activeBudget.title }}</h2>
-              <p class="budget-meta">Scadenza: {{ formatDate(budgetStore.activeBudget.expirationDate) }}</p>
-            </div>
-          </div>
-
-          <div class="budget-options">
-            <p>Scegli il progetto che vorresti vedere realizzato:</p>
-            <div class="options-grid">
-              <div v-for="option in budgetStore.activeBudget.options" :key="option.id" class="option-card"
-                :class="{ 'voted': budgetStore.activeBudget.votedOptionId === option.position }"
-                @click="budgetStore.voteBudgetOption(option.position)">
-
-                <span class="option-text">{{ option.text }}</span>
-
-                <span v-if="budgetStore.activeBudget.votedOptionId === option.position" class="vote-check">✅</span>
-                <span v-else class="vote-action">Vota</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ParticipatoryBudgetCard />
 
         <div class="results-header">
           <h2>Esplora le Iniziative</h2>
@@ -230,7 +166,6 @@ watch(() => filters.value.platform, applyFilters)
         <div v-else-if="initiativeStore.initiatives.length > 0" class="cards-container">
 
           <div v-for="item in initiativeStore.initiatives" :key="item.id" class="card">
-
             <div class="card-image-wrapper">
               <div v-if="item.platformId !== 1" class="source-badge external">
                 🔗 {{ initiativeStore.getPlatformName(item.platformId) }}
@@ -241,14 +176,12 @@ watch(() => filters.value.platform, applyFilters)
             <div class="card-content">
               <div class="card-header">
                 <h3>{{ item.title }}</h3>
-
                 <div class="status-wrapper">
                   <span class="badge-status" :class="getStatusClass(item.status)">
                     {{ item.status.toUpperCase() }}
                   </span>
-
                   <button v-if="item.status && item.status.toLowerCase() === 'in corso'" class="follow-btn"
-                    :class="{ 'active': initiativeStore.isFollowed(item.id) }" title="Segui/Smetti di seguire"
+                    :class="{ 'active': initiativeStore.isFollowed(item.id) }"
                     @click.prevent="initiativeStore.toggleFollow(item.id, item.title)">
                     {{ initiativeStore.isFollowed(item.id) ? '⭐' : '☆' }}
                   </button>
@@ -263,18 +196,15 @@ watch(() => filters.value.platform, applyFilters)
                 <div class="signatures">
                   <strong>Firme: {{ item.signatures }}</strong>
                 </div>
-
                 <div class="actions">
                   <div v-if="item.platformId === 1" class="internal-actions">
                     <RouterLink :to="'/initiative/' + item.id">
                       <button class="action-btn">Dettagli</button>
                     </RouterLink>
-
                     <button v-if="item.status === 'In corso'" @click="handleSign(item)" class="sign-btn">
                       ✍️ Firma
                     </button>
                   </div>
-
                   <a v-else :href="item.externalURL || '#'" target="_blank" class="external-link-btn">
                     <button class="action-btn outline">
                       Su {{ initiativeStore.getPlatformName(item.platformId) }} ↗
@@ -286,18 +216,11 @@ watch(() => filters.value.platform, applyFilters)
           </div>
 
           <div class="pagination-controls">
-            <button @click="prevPage" :disabled="initiativeStore.currentPage === 1" class="page-btn">
-              ←
-            </button>
-
+            <button @click="prevPage" :disabled="initiativeStore.currentPage === 1" class="page-btn">←</button>
             <span class="page-info">Pagina {{ initiativeStore.currentPage }} di {{ initiativeStore.totalPages }}</span>
-
             <button @click="nextPage" :disabled="initiativeStore.currentPage >= initiativeStore.totalPages"
-              class="page-btn">
-              →
-            </button>
+              class="page-btn">→</button>
           </div>
-
         </div>
 
         <div v-else class="no-results">
@@ -311,9 +234,7 @@ watch(() => filters.value.platform, applyFilters)
 </template>
 
 <style scoped>
-/* COPIA QUI I TUOI STILI CSS (GIA' PRESENTI NEL FILE PRECEDENTE) */
-/* Ho mantenuto le classi uguali, quindi il CSS funzionerà perfettamente */
-
+/* STILI IDENTICI A PRIMA */
 .home-wrapper {
   max-width: 1100px;
   margin: 0 auto;
@@ -347,7 +268,6 @@ watch(() => filters.value.platform, applyFilters)
   align-items: start;
 }
 
-/* Sidebar */
 .sidebar {
   background: var(--card-bg);
   padding: 20px;
@@ -408,7 +328,6 @@ watch(() => filters.value.platform, applyFilters)
   margin-top: 10px;
 }
 
-/* Content */
 .results-header {
   display: flex;
   justify-content: space-between;
@@ -424,7 +343,6 @@ watch(() => filters.value.platform, applyFilters)
   color: var(--text-color);
 }
 
-/* Cards */
 .cards-container {
   display: flex;
   flex-direction: column;
@@ -488,6 +406,24 @@ watch(() => filters.value.platform, applyFilters)
   white-space: nowrap;
 }
 
+.source-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  z-index: 2;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.source-badge.external {
+  background-color: #d32f2f;
+  color: white;
+}
+
 .card-meta {
   font-size: 0.9rem;
   color: var(--secondary-text);
@@ -527,25 +463,6 @@ watch(() => filters.value.platform, applyFilters)
   border-color: var(--accent-color);
 }
 
-/* External Badges */
-.source-badge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  z-index: 2;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-.source-badge.external {
-  background-color: #d32f2f;
-  color: white;
-}
-
 .external-btn {
   text-decoration: none;
   font-size: 0.9rem;
@@ -563,7 +480,6 @@ watch(() => filters.value.platform, applyFilters)
   border-color: var(--text-color);
 }
 
-/* Pagination */
 .pagination-controls {
   display: flex;
   justify-content: center;
@@ -593,105 +509,6 @@ watch(() => filters.value.platform, applyFilters)
 .page-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-/* --- STILI BUDGET --- */
-.budget-banner {
-  background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
-  border: 1px solid #ffd700;
-  border-radius: 12px;
-  padding: 25px;
-  margin-bottom: 40px;
-  color: white;
-  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.15);
-}
-
-.budget-header {
-  margin-bottom: 20px;
-}
-
-.pinned-badge {
-  background-color: #ffd700;
-  color: #1a252f;
-  font-weight: bold;
-  font-size: 0.75rem;
-  padding: 4px 8px;
-  border-radius: 4px;
-  text-transform: uppercase;
-  display: inline-block;
-  margin-bottom: 10px;
-}
-
-.budget-header h2 {
-  margin: 0 0 5px 0;
-  font-size: 1.8rem;
-  color: #fff;
-}
-
-.budget-meta {
-  color: #ccc;
-  margin: 0;
-  font-size: 0.9rem;
-}
-
-.budget-options p {
-  margin-bottom: 15px;
-  color: #e0e0e0;
-}
-
-.options-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-}
-
-.option-card {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 15px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 10px;
-}
-
-.option-card:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
-}
-
-.option-card.voted {
-  background: rgba(66, 184, 131, 0.2);
-  border-color: #42b883;
-}
-
-.option-text {
-  font-weight: 500;
-  font-size: 1.1rem;
-}
-
-.vote-action {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #ffd700;
-  font-weight: bold;
-}
-
-.vote-check {
-  font-size: 1.5rem;
-}
-
-.no-results {
-  text-align: center;
-  padding: 40px;
-  background: var(--card-bg);
-  border-radius: 12px;
-  border: 1px solid var(--card-border);
 }
 
 .internal-actions {
@@ -752,29 +569,12 @@ watch(() => filters.value.platform, applyFilters)
 .follow-btn {
   background: transparent;
   border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  line-height: 1;
-  padding: 0;
-  transition: transform 0.2s, filter 0.2s;
-  filter: grayscale(100%);
-  opacity: 0.7;
-}
-
-.follow-btn:hover {
-  transform: scale(1.2);
-  filter: grayscale(0%);
-  opacity: 1;
-}
-
-.follow-btn {
-  background: transparent;
-  border: none;
   font-size: 1.6rem;
   cursor: pointer;
   line-height: 1;
   transition: transform 0.2s;
   color: #ccc;
+  padding: 0;
 }
 
 .follow-btn.active {
@@ -785,6 +585,14 @@ watch(() => filters.value.platform, applyFilters)
 .follow-btn:hover {
   transform: scale(1.2);
   color: #f1c40f;
+}
+
+.no-results {
+  text-align: center;
+  padding: 40px;
+  background: var(--card-bg);
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
 }
 
 @media (max-width: 768px) {

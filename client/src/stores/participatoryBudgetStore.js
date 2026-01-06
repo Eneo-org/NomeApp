@@ -2,7 +2,8 @@ import { defineStore } from 'pinia'
 import axios from 'axios'
 import { ref } from 'vue'
 
-const API_URL = import.meta.env.VITE_API_URL
+// Usa le variabili d'ambiente di Vite. Se non esiste, usa localhost come fallback.
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 export const useParticipatoryBudgetStore = defineStore('participatoryBudget', () => {
   // --- STATE ---
@@ -11,109 +12,132 @@ export const useParticipatoryBudgetStore = defineStore('participatoryBudget', ()
   const loading = ref(false)
   const error = ref(null)
 
+  // --- HELPERS (Interni) ---
+  const getAuthHeaders = () => {
+    const storedId = localStorage.getItem('tp_mock_id')
+    return storedId ? { 'X-Mock-User-Id': storedId } : {}
+  }
+
   // --- ACTIONS ---
 
   // 1. FETCH BILANCIO ATTIVO (Home Page)
   const fetchActiveBudget = async () => {
+    loading.value = true
+    error.value = null
     try {
-      // RECUPERO UTENTE REALE (Se loggato)
+      // Nota: usiamo l'helper getAuthHeaders() se lo hai aggiunto, altrimenti gestiscilo come prima
       const storedId = localStorage.getItem('tp_mock_id')
-      // Se non c'è ID (utente ospite), non mandiamo l'header o mandiamo null.
-      // Il backend dovrebbe restituire il bilancio ma senza info sul "voto dato".
       const headers = storedId ? { 'X-Mock-User-Id': storedId } : {}
 
       const response = await axios.get(`${API_URL}/participatory-budgets/active`, {
         headers: headers,
       })
 
-      activeBudget.value = response.data
+      activeBudget.value = response.data.data || null
     } catch (err) {
       if (err.response && err.response.status === 404) {
-        activeBudget.value = null // Nessun bilancio attivo
+        activeBudget.value = null
       } else {
         console.error('Errore fetch bilancio attivo:', err)
-      }
-    }
-  }
-
-  // 2. FETCH ARCHIVIO (Pagina Archivio)
-  const fetchBudgetArchive = async () => {
-    loading.value = true
-    error.value = null
-    try {
-      // RECUPERO UTENTE REALE
-      const storedId = localStorage.getItem('tp_mock_id')
-      // Se non sei loggato, la chiamata fallirà (401), che è corretto.
-
-      const response = await axios.get(`${API_URL}/participatory-budgets`, {
-        headers: { 'X-Mock-User-Id': storedId },
-      })
-
-      // Il backend restituisce { data: [...], meta: ... }
-      budgetArchive.value = response.data.data || []
-    } catch (err) {
-      console.error('Errore archivio bilanci:', err)
-      // Se il backend risponde 403/401, lo mostriamo
-      if (err.response && (err.response.status === 403 || err.response.status === 401)) {
-        error.value = "Accesso negato: devi essere loggato (e forse Admin) per vedere l'archivio."
-      } else {
-        error.value = "Impossibile caricare l'archivio."
+        error.value = 'Impossibile caricare il bilancio attivo.'
       }
     } finally {
       loading.value = false
     }
   }
 
-  // 3. VOTA OPZIONE (CORRETTO)
-  const voteBudgetOption = async (optionId) => {
-    // Controllo preliminare
-    if (!activeBudget.value || !activeBudget.value.id) return
+  // 2. FETCH ARCHIVIO (Pagina Archivio - Admin)
+  const fetchBudgetArchive = async () => {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await axios.get(`${API_URL}/participatory-budgets`, {
+        headers: getAuthHeaders(),
+      })
+      // Gestisce sia { data: [...] } che [...] diretto, per sicurezza
+      budgetArchive.value = response.data.data || response.data || []
+    } catch (err) {
+      console.error('Errore archivio bilanci:', err)
+      if (err.response && (err.response.status === 403 || err.response.status === 401)) {
+        throw new Error('Accesso negato: devi essere loggato come Admin.')
+      } else {
+        throw new Error("Impossibile caricare l'archivio.")
+      }
+    } finally {
+      loading.value = false
+    }
+  }
 
-    // 1. RECUPERO UTENTE REALE DAL LOCALSTORAGE
+  // 3. VOTA OPZIONE
+  const voteBudgetOption = async (optionPosition) => {
+    if (!activeBudget.value?.id) return
+
     const storedId = localStorage.getItem('tp_mock_id')
     if (!storedId) {
-      alert('Devi effettuare il login per votare.')
-      return
+      throw new Error('Devi effettuare il login per votare.')
     }
 
     try {
+      loading.value = true // Opzionale: utile se vuoi mostrare uno spinner durante il voto
       const budgetId = activeBudget.value.id
 
-      // 2. CHIAMATA AXIOS CORRETTA
-      // URL: /participatory-budgets/:id/vote
-      // Body: { position: 1 }
-      const response = await axios.post(
+      await axios.post(
         `${API_URL}/participatory-budgets/${budgetId}/votes`,
-        {
-          position: optionId, // Il backend si aspetta 'position'
-        },
-        {
-          headers: { 'X-Mock-User-Id': storedId },
-        },
+        { position: optionPosition },
+        { headers: getAuthHeaders() },
       )
 
-      // 3. AGGIORNAMENTO STATO
-      // Il backend ci restituisce l'oggetto aggiornato con "votedOptionId" popolato.
-      // Sostituiamo direttamente l'oggetto locale.
-      activeBudget.value = response.data
+      // Aggiorna i dati per vedere le nuove percentuali
+      await fetchActiveBudget()
 
-      alert('Voto registrato con successo! ✅')
+      // Ritorna true o semplicemente risolve la promise per indicare successo
+      return true
     } catch (err) {
       console.error('Errore voto:', err)
-
       if (err.response) {
         if (err.response.status === 409) {
-          alert('Hai già votato per questo bilancio!')
+          throw new Error('Hai già votato per questo bilancio!')
         } else if (err.response.status === 403) {
-          alert('Errore: Solo i cittadini possono votare o il bilancio è scaduto.')
-        } else if (err.response.status === 404) {
-          alert('Errore 404: URL Voto non trovato. Controlla il backend.')
-        } else {
-          alert('Errore durante il voto: ' + (err.response.data.message || 'Sconosciuto'))
+          throw new Error('Votazione chiusa o permesso negato.')
         }
-      } else {
-        alert('Errore di connessione.')
       }
+      throw new Error(err.response?.data?.message || 'Errore durante il voto.')
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // 4. CREA NUOVO BILANCIO (Solo Admin)
+  const createParticipatoryBudget = async (budgetData) => {
+    loading.value = true
+    error.value = null
+
+    // Validazione Client-side
+    if (!budgetData.options || budgetData.options.length !== 5) {
+      loading.value = false
+      throw new Error('Un bilancio partecipativo deve avere esattamente 5 opzioni.')
+    }
+
+    if (!localStorage.getItem('tp_mock_id')) {
+      loading.value = false
+      throw new Error('Devi essere loggato come Admin.')
+    }
+
+    try {
+      await axios.post(`${API_URL}/participatory-budgets`, budgetData, {
+        headers: getAuthHeaders(),
+      })
+      return true // Successo
+    } catch (err) {
+      console.error('Errore creazione bilancio:', err)
+      if (err.response && err.response.status === 409) {
+        throw new Error('Esiste già un bilancio attivo! Attendi che scada.')
+      } else if (err.response && err.response.status === 403) {
+        throw new Error('Non hai i permessi di Amministratore.')
+      }
+      throw new Error(err.response?.data?.message || err.message)
+    } finally {
+      loading.value = false
     }
   }
 
@@ -125,5 +149,6 @@ export const useParticipatoryBudgetStore = defineStore('participatoryBudget', ()
     fetchActiveBudget,
     fetchBudgetArchive,
     voteBudgetOption,
+    createParticipatoryBudget,
   }
 })

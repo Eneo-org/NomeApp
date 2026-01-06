@@ -7,10 +7,14 @@ import ArchiveView from '../views/ArchiveView.vue'
 import InitiativeDetail from '../views/InitiativeDetail.vue'
 import LoginView from '../views/LoginView.vue'
 import CreateInitiativeView from '../views/CreateInitiativeView.vue'
-
-// --- FIX IMPORTANTE ---
-// Prima importavi 'DashboardView.vue', ora puntiamo al file corretto 'UserDashboard.vue'
 import UserDashboard from '../views/UserDashboard.vue'
+import AdminCreateBudgetView from '../views/AdminCreateBudgetView.vue'
+import AdminUsersView from '../views/AdminUsersView.vue'
+import AdminExpiringView from '../views/AdminExpiringView.vue'
+import AdminDashboardView from '../views/AdminDashboardView.vue'
+import AdminModerationView from '../views/AdminModerationView.vue'
+import AdminInitiativeReplyView from '../views/AdminInitiativeReplyView.vue'
+import ParticipatoryBudgetResultsView from '../views/ParticipatoryBudgetResultsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -45,8 +49,33 @@ const router = createRouter({
     {
       path: '/dashboard',
       name: 'dashboard',
-      component: UserDashboard, // <--- ORA USIAMO IL COMPONENTE NUOVO
+      component: UserDashboard,
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/admin/create-budget',
+      name: 'create-budget',
+      component: AdminCreateBudgetView,
+    },
+    {
+      path: '/admin/users',
+      component: AdminUsersView,
+    },
+    {
+      path: '/admin/expiring',
+      component: AdminExpiringView,
+    },
+    { path: '/admin/dashboard', component: AdminDashboardView },
+    { path: '/admin/moderation', component: AdminModerationView },
+    {
+      path: '/admin/reply/:id',
+      component: AdminInitiativeReplyView,
+      // (In futuro qui metteremo meta: { requiresAdmin: true })
+    },
+    {
+      path: '/participatory-budget/:id',
+      name: 'participatory-budget-results',
+      component: ParticipatoryBudgetResultsView,
     },
   ],
 })

@@ -95,6 +95,27 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  // --- AZIONE ADMIN: Ottieni lista Admin ---
+  const fetchAdminUsers = async (page = 1, fiscalCode = '') => {
+    try {
+      const storedId = localStorage.getItem('tp_mock_id')
+      // Costruiamo la query string
+      let query = `${API_URL}/users/admin/list?currentPage=${page}&objectsPerPage=10`
+      if (fiscalCode) query += `&fiscalCode=${fiscalCode}`
+
+      const response = await axios.get(query, {
+        headers: { 'X-Mock-User-Id': storedId },
+      })
+
+      return response.data // Ritorna { data: [...], meta: {...} }
+    } catch (err) {
+      console.error('Errore fetchAdminUsers:', err)
+      return null
+    }
+  }
+
+  // Non dimenticare di aggiungere 'fetchAdminUsers' al return finale!
+
   return {
     user,
     mockUserId,
@@ -105,5 +126,6 @@ export const useUserStore = defineStore('user', () => {
     login,
     logout,
     initializeStore,
+    fetchAdminUsers,
   }
 })

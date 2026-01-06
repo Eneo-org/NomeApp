@@ -16,7 +16,8 @@
     "express": "^4.22.1",
     "joi": "^17.11.0",
     "multer": "^2.0.2",
-    "mysql2": "^3.6.5"
+    "mysql2": "^3.6.5",
+    "node-cron": "^4.2.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
