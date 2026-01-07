@@ -516,3 +516,90 @@ exports.changePrivileges = async (req, res) => {
     });
   }
 };
+
+exports.searchUserByFiscalCode = async (req, res) => {
+  try {
+    const requesterId = req.header("X-Mock-User-Id");
+    if (!requesterId) return res.status(401).json({ message: "Auth mancante" });
+
+    const { fiscalCode } = req.query;
+
+    if (!fiscalCode) {
+      return res.status(400).json({ message: "Parametro fiscalCode mancante" });
+    }
+
+    // Cerchiamo l'utente (qualsiasi ruolo)
+    const query = `
+      SELECT ID_UTENTE, NOME, COGNOME, CODICE_FISCALE, EMAIL, IS_ADMIN, IS_CITTADINO
+      FROM UTENTE 
+      WHERE CODICE_FISCALE = ?
+    `;
+
+    const [rows] = await db.query(query, [fiscalCode]);
+
+    if (rows.length === 0) {
+      // Importante: ritorniamo 404 così il frontend sa che deve mostrare il modale "Pre-autorizza"
+      return res.status(404).json({ message: "Utente non trovato" });
+    }
+
+    const user = rows[0];
+
+    // Mappiamo i dati
+    res.status(200).json({
+      id: user.ID_UTENTE,
+      firstName: user.NOME,
+      lastName: user.COGNOME,
+      fiscalCode: user.CODICE_FISCALE,
+      email: user.EMAIL,
+      isAdmin: Boolean(user.IS_ADMIN),
+      isCitizen: Boolean(user.IS_CITTADINO),
+    });
+  } catch (err) {
+    console.error("Errore searchUserByFiscalCode:", err);
+    res.status(500).json({ message: "Errore server durante la ricerca" });
+  }
+};
+
+exports.preAuthorizeAdmin = async (req, res) => {
+  try {
+    const requesterId = req.header("X-Mock-User-Id");
+    if (!requesterId) return res.status(401).json({ message: "Auth mancante" });
+
+    const { fiscalCode } = req.body;
+
+    // Controllo se esiste già per sicurezza
+    const [existing] = await db.query(
+      "SELECT ID_UTENTE FROM UTENTE WHERE CODICE_FISCALE = ?",
+      [fiscalCode]
+    );
+    if (existing.length > 0) {
+      return res.status(409).json({ message: "Utente già esistente" });
+    }
+
+    // Inseriamo il nuovo "Admin Fantasma"
+    // Nota: IS_ADMIN = 1, IS_CITTADINO = 0
+    // Per i campi obbligatori (Password, Email, Nome) mettiamo dei placeholder o NULL se il DB lo permette.
+    // Assumo che il DB accetti NULL su Nome/Cognome o abbia dei default, altrimenti metto stringhe vuote.
+    const insertQuery = `
+      INSERT INTO UTENTE (CODICE_FISCALE, IS_ADMIN, IS_CITTADINO, NOME, COGNOME, EMAIL, PASSWORD, CREATED_AT)
+      VALUES (?, 1, 0, '', '', ?, 'PRE_AUTH_PLACEHOLDER', NOW())
+    `;
+
+    // Generiamo una mail fittizia temporanea per evitare errori UNIQUE key se la colonna email è unique
+    const tempEmail = `preauth_${Date.now()}@temp.local`;
+
+    await db.query(insertQuery, [fiscalCode, tempEmail]);
+
+    res
+      .status(201)
+      .json({ message: "Codice fiscale pre-autorizzato con successo" });
+  } catch (err) {
+    console.error("Errore preAuthorizeAdmin:", err);
+    res
+      .status(500)
+      .json({
+        message: "Errore server durante pre-autorizzazione",
+        details: err.message,
+      });
+  }
+};
