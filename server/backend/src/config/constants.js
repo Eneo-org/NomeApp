@@ -15,3 +15,7 @@ exports.INITIATIVE_STATUS = {
   APPROVATA: "Approvata",
   RESPINTA: "Respinta",
 };
+
+exports.PLATFORM_IDS = {
+  TRENTO_PARTECIPA: 1,
+};

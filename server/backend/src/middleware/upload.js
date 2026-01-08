@@ -9,8 +9,8 @@ const fs = require("fs");
  */
 const storage = (destinationFolder) => multer.diskStorage({
   destination: (req, file, cb) => {
-    // Costruiamo il percorso relativo alla root del progetto (dove gira package.json)
-    const uploadPath = path.join("uploads", destinationFolder);
+    // Costruiamo il percorso ASSOLUTO per evitare problemi se il server viene avviato da cartelle diverse
+    const uploadPath = path.join(__dirname, "../../uploads", destinationFolder);
 
     // Controllo di sicurezza: verifichiamo che la cartella esista
     if (!fs.existsSync(uploadPath)) {

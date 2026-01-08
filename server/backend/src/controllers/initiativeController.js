@@ -1,5 +1,6 @@
 const db = require("../config/db");
 const fs = require("fs"); // Necessario per cancellare i file in caso di errore
+const path = require("path");
 const { initiativeSchema } = require("../validators/initiativeSchema");
 const { changeExpirationSchema } = require("../validators/initiativeSchema");
 const { administrationReplySchema } = require("../validators/initiativeSchema");
@@ -257,9 +258,12 @@ exports.createInitiative = async (req, res) => {
             `;
 
       for (const file of files) {
+        // Costruiamo il path relativo da salvare nel DB (es. uploads/initiatives/nomefile.jpg)
+        const relativePath = path.join("uploads", "initiatives", file.filename);
+
         const [resAtt] = await connection.execute(queryAllegato, [
           file.originalname,
-          file.path,
+          relativePath,
           file.mimetype,
           newInitiativeId,
         ]);
@@ -267,7 +271,7 @@ exports.createInitiative = async (req, res) => {
         responseAttachments.push({
           id: resAtt.insertId,
           fileName: file.originalname,
-          filePath: file.path,
+          filePath: relativePath,
           fileType: file.mimetype,
           uploadedAt: new Date().toISOString(),
         });
@@ -585,18 +589,21 @@ exports.createReply = async (req, res) => {
     let savedAttachments = [];
     if (files && files.length > 0) {
       const queryAllegato = `INSERT INTO ALLEGATO (FILE_NAME, FILE_PATH, FILE_TYPE, ID_RISPOSTA) VALUES (?, ?, ?, ?)`;
-      const insertPromises = files.map((file) =>
-        connection.execute(queryAllegato, [
+      const insertPromises = files.map((file) => {
+        const relativePath = path.join("uploads", "replies", file.filename);
+        // Salviamo il path relativo nell'oggetto file per usarlo nella risposta
+        file.dbPath = relativePath;
+        return connection.execute(queryAllegato, [
           file.originalname,
-          file.path,
+          relativePath,
           file.mimetype,
           newReplyId,
-        ])
-      );
+        ]);
+      });
       await Promise.all(insertPromises);
       savedAttachments = files.map((f) => ({
         fileName: f.originalname,
-        filePath: f.path,
+        filePath: f.dbPath,
       }));
     }
 
