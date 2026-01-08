@@ -38,8 +38,8 @@ exports.loginAndAuth = async (req, res) => {
       const isCitizen = isAdmin ? 0 : 1;
 
       const insertQuery = `
-                INSERT INTO UTENTE (NOME, COGNOME, EMAIL, CODICE_FISCALE, IS_ADMIN, IS_CITTADINO, PASSWORD, CREATED_AT)
-                VALUES (?, ?, ?, ?, ?, ?, 'GOOGLE_AUTH', NOW())
+                INSERT INTO UTENTE (NOME, COGNOME, EMAIL, CODICE_FISCALE, IS_ADMIN, IS_CITTADINO, CREATED_AT)
+                VALUES (?, ?, ?, ?, ?, ?, NOW())
             `;
 
       const [result] = await db.query(insertQuery, [
