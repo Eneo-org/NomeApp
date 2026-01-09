@@ -201,15 +201,17 @@ watch(() => filters.value.platform, applyFilters)
                     <RouterLink :to="'/initiative/' + item.id">
                       <button class="action-btn">Dettagli</button>
                     </RouterLink>
-                    <button v-if="item.status === 'In corso'" @click="handleSign(item)" class="sign-btn">
+
+                    <button v-if="item.status === 'In corso' && userStore.canVote" @click="handleSign(item)"
+                      class="sign-btn">
                       ✍️ Firma
                     </button>
+
+                    <span v-else-if="item.status === 'In corso' && userStore.isAuthenticated && !userStore.canVote"
+                      class="no-vote-label" title="Gli amministratori non residenti non possono votare">
+                      ⛔ Solo Cittadini
+                    </span>
                   </div>
-                  <a v-else :href="item.externalURL || '#'" target="_blank" class="external-link-btn">
-                    <button class="action-btn outline">
-                      Su {{ initiativeStore.getPlatformName(item.platformId) }} ↗
-                    </button>
-                  </a>
                 </div>
               </div>
             </div>
@@ -593,6 +595,12 @@ watch(() => filters.value.platform, applyFilters)
   background: var(--card-bg);
   border-radius: 12px;
   border: 1px solid var(--card-border);
+}
+
+.no-vote-label {
+  font-size: 0.8rem;
+  color: #666;
+  cursor: help;
 }
 
 @media (max-width: 768px) {

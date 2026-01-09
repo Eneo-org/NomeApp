@@ -2,7 +2,6 @@
 import { useRouter } from 'vue-router';
 import { useUserStore } from '../stores/userStore';
 import { useToastStore } from '../stores/toastStore';
-// Importa il componente Google
 import { GoogleLogin } from 'vue3-google-login';
 
 const store = useUserStore();
@@ -13,12 +12,19 @@ const toast = useToastStore();
 const handleGoogleCallback = async (response) => {
   // response.credential è il token JWT fornito da Google
   if (response.credential) {
-    const success = await store.loginWithGoogle(response.credential);
+    const result = await store.loginWithGoogle(response.credential);
 
-    if (success) {
-      toast.showToast(`Benvenuto, ${store.user?.firstName}! 👋`, "success");
+    if (result === true) {
+      // Caso 1: Login completato con successo
+      toast.showToast(`Benvenuto, ${store.fullName}! 👋`, "success");
       router.push('/');
+    } else if (result === 'REGISTER') {
+      // Caso 2: Utente nuovo, serve completare la registrazione
+      toast.showToast("Account non trovato. Completa la registrazione.", "info");
+      // Reindirizza alla pagina di registrazione (assicurati che esista nel router)
+      router.push('/register');
     } else {
+      // Caso 3: Errore generico
       toast.showToast("Errore durante l'accesso con Google.", "error");
     }
   }
@@ -60,6 +66,7 @@ const handleGoogleCallback = async (response) => {
   max-width: 400px;
   text-align: center;
   color: var(--text-color);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .google-btn-wrapper {

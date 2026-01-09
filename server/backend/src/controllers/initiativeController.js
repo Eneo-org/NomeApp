@@ -666,52 +666,51 @@ exports.signInitiative = async (req, res) => {
     connection = await db.getConnection();
     await connection.beginTransaction();
 
-    // ... (Controlli preliminari IS_CITTADINO e STATO restano uguali al tuo codice) ...
-    // [Codice omesso per brevità: inserisci qui i check userRows e initRows come prima]
-    // Assumiamo che i controlli siano passati...
+    // 1. BLOCCO SICUREZZA (Già presente e corretto)
+    const [userCheck] = await connection.execute(
+      "SELECT IS_CITTADINO FROM UTENTE WHERE ID_UTENTE = ?",
+      [userId]
+    );
 
-    // 1. Inserimento Firma
-    // Use Case RF11: Il sistema registra la firma
+    if (userCheck.length === 0 || !userCheck[0].IS_CITTADINO) {
+      await connection.rollback();
+      return res.status(403).json({
+        message:
+          "Azione non consentita: Solo i cittadini residenti possono firmare.",
+      });
+    }
+
+    // --- CORREZIONE QUI SOTTO ---
+    // 2. Inserimento Firma nella tabella di collegamento (MANCAVA QUESTO!)
     await connection.execute(
       `INSERT INTO FIRMA_INIZIATIVA (ID_UTENTE, ID_INIZIATIVA) VALUES (?, ?)`,
       [userId, initiativeId]
     );
+    // ----------------------------
 
-    // 2. Aggiornamento Contatore Firme
+    // 3. Aggiornamento Contatore Firme
     await connection.execute(
       `UPDATE INIZIATIVA SET NUM_FIRME = NUM_FIRME + 1 WHERE ID_INIZIATIVA = ?`,
       [initiativeId]
     );
 
-    // 3. RECUPERO NUOVO TOTALE FIRME (Per controllo Milestone)
+    // 4. Recupero dati aggiornati e Commit
     const [rows] = await connection.execute(
       "SELECT TITOLO, NUM_FIRME FROM INIZIATIVA WHERE ID_INIZIATIVA = ?",
       [initiativeId]
     );
     const newCount = rows[0].NUM_FIRME;
-    const title = rows[0].TITOLO;
 
-    // 4. Commit Transazione (Salviamo la firma prima di notificare)
     await connection.commit();
 
-    // 5. CHECK MILESTONE (Fuori dalla transazione per non bloccare)
-    // Esempio: Notifica ogni 50 firme (50, 100, 150...)
-    const MILESTONE_STEP = 50;
-    if (newCount > 0 && newCount % MILESTONE_STEP === 0) {
-      const msg = `🚀 L'iniziativa "${title}" ha raggiunto ${newCount} firme!`;
-      // Notifica asincrona ai follower (preferiti)
-      notifyFollowers(initiativeId, msg, `/initiative/${initiativeId}`);
-    }
-
-    // (Opzionale) Auto-Follow: Chi firma segue automaticamente
-    // Se vuoi implementare la logica che chi firma riceve aggiornamenti:
+    // 5. Notifiche e Auto-follow (Opzionale)
     try {
       await db.query(
         `INSERT IGNORE INTO INIZIATIVA_SALVATA (ID_UTENTE, ID_INIZIATIVA) VALUES (?, ?)`,
         [userId, initiativeId]
       );
     } catch (e) {
-      /* Ignora errori duplicati */
+      /* ignore */
     }
 
     res.status(201).json({
@@ -720,8 +719,11 @@ exports.signInitiative = async (req, res) => {
     });
   } catch (err) {
     if (connection) await connection.rollback();
+    // Gestione errore duplicato (se l'utente prova a firmare due volte)
     if (err.code === "ER_DUP_ENTRY") {
-      return res.status(409).json({ message: "Hai già firmato." });
+      return res
+        .status(409)
+        .json({ message: "Hai già firmato questa iniziativa." });
     }
     console.error("Errore signInitiative:", err);
     res.status(500).json({ message: "Errore server." });

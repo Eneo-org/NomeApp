@@ -2,9 +2,11 @@
 import { computed } from 'vue';
 import { useParticipatoryBudgetStore } from '../stores/participatoryBudgetStore';
 import { useToastStore } from '../stores/toastStore';
+import { useUserStore } from '../stores/userStore';
 
 const store = useParticipatoryBudgetStore();
 const toast = useToastStore();
+const userStore = useUserStore();
 
 // 1. CALCOLO TOTALE VOTI (CON PROTEZIONE ERRORI)
 const totalVotes = computed(() => {
@@ -68,9 +70,9 @@ const handleVote = async (position) => {
             VOTATO ✅
           </button>
 
-          <button v-else class="vote-btn" :disabled="!!store.activeBudget.votedOptionId"
-            @click="handleVote(option.position)">
-            VOTA
+          <button v-else class="vote-btn" :disabled="!!store.activeBudget.votedOptionId || !userStore.canVote"
+            :title="!userStore.canVote ? 'Solo i cittadini possono votare' : ''" @click="handleVote(option.position)">
+            {{ !userStore.canVote ? '⛔ NO VOTO' : 'VOTA' }}
           </button>
         </div>
 

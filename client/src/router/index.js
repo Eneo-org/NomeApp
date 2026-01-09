@@ -6,6 +6,7 @@ import HomeView from '../views/HomeView.vue'
 import ArchiveView from '../views/ArchiveView.vue'
 import InitiativeDetail from '../views/InitiativeDetail.vue'
 import LoginView from '../views/LoginView.vue'
+import RegisterView from '../views/RegisterView.vue'
 import CreateInitiativeView from '../views/CreateInitiativeView.vue'
 import UserDashboard from '../views/UserDashboard.vue'
 import AdminCreateBudgetView from '../views/AdminCreateBudgetView.vue'
@@ -41,6 +42,11 @@ const router = createRouter({
       component: LoginView,
     },
     {
+      path: '/register',
+      name: 'register',
+      component: RegisterView,
+    },
+    {
       path: '/create',
       name: 'create',
       component: CreateInitiativeView,
@@ -65,8 +71,14 @@ const router = createRouter({
       path: '/admin/expiring',
       component: AdminExpiringView,
     },
-    { path: '/admin/dashboard', component: AdminDashboardView },
-    { path: '/admin/moderation', component: AdminModerationView },
+    {
+      path: '/admin/dashboard',
+      component: AdminDashboardView,
+    },
+    {
+      path: '/admin/moderation',
+      component: AdminModerationView,
+    },
     {
       path: '/admin/reply/:id',
       component: AdminInitiativeReplyView,

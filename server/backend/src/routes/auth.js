@@ -1,12 +1,20 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-// Nota: Questo controller lo creeremo nel prossimo step
-const authController = require('../controllers/authController');
+const authController = require("../controllers/authController");
 
-// POST /auth/google
-router.post('/google', authController.loginAndAuth);
+// --- ROTTE DI AUTENTICAZIONE ---
 
-// POST /auth/logout
-router.post('/logout', authController.logout);
+// 1. Google Login: Riceve il token, verifica se l'utente esiste o se deve registrarsi
+// Questa è la rotta che il frontend chiama con axios.post('/auth/google-login')
+router.post("/google-login", authController.googleLogin);
+
+// 2. Invio OTP: Manda la mail con il codice (per i nuovi utenti)
+router.post("/send-otp", authController.sendOtp);
+
+// 3. Registrazione Finale: Controlla OTP e crea l'utente nel DB
+router.post("/register", authController.registerUser);
+
+// --- ALTRE ROTTE ---
+router.post("/logout", authController.logout);
 
 module.exports = router;

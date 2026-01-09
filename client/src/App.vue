@@ -77,36 +77,69 @@ const logout = () => {
 </template>
 
 <style>
-/* --- DEFINIZIONE VARIABILI GLOBALI (Light Mode Default) --- */
+/* --- DEFINIZIONE VARIABILI GLOBALI (Light Mode - MODIFICATA) --- */
 :root {
-  --bg-color: #f8f9fa;
-  --text-color: #212529;
-  --secondary-text: #6c757d;
+  /* 1. SFONDO GENERALE (Grigio Solido) */
+  --bg-color: #E2E8F0;
+
+  --text-color: #1e293b;
+  --secondary-text: #64748b;
+
+  /* 2. CARD (Bianche con bordi e ombre definite) */
   --card-bg: #ffffff;
-  --card-border: #dee2e6;
-  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  --header-border: #e9ecef;
+  --card-border: #94A3B8;
+  --card-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+  /* 3. NAVBAR LIGHT MODE (Modificata come richiesto) */
+  /* Colore scuro/grigio per la barra in Light Mode */
+  --navbar-bg: #DEE2E6;
+  /* Ombra forte per staccarla */
+  --navbar-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --header-border: #cbd5e1;
+
+  /* INPUTS */
   --input-bg: #ffffff;
+  --input-border: #94A3B8;
+
+  /* BRAND COLORS */
   --accent-color: #42b883;
   --accent-hover: #3aa876;
+  --primary-color: #2563eb;
+  --primary-hover: #1d4ed8;
+
+  /* OTP */
+  --otp-bg: #F1F5F9;
+  --otp-border: #64748b;
 }
 
-/* --- VARIABILI DARK MODE --- */
-/* Importante: deve corrispondere alla classe usata in useTheme.js (qui è 'dark') */
-/* Se nel tuo useTheme hai usato .add('dark'), allora qui deve essere body.dark o html.dark */
-/* Se hai usato .add('dark-mode'), mantieni body.dark-mode */
-
-/* Per sicurezza, supportiamo entrambe le classi */
+/* --- VARIABILI DARK MODE (INVARIATA - ORIGINALE) --- */
 body.dark-mode,
 body.dark {
+  /* Copia esatta dei tuoi valori originali */
   --bg-color: #161616;
   --text-color: #e0e0e0;
   --secondary-text: #a0a0a0;
+
   --card-bg: #202020;
   --card-border: #2a2a2a;
   --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
   --header-border: #2a2a2a;
+
+  /* NAVBAR DARK MODE (Reset allo stato originale) */
+  --navbar-bg: #202020;
+  /* Usa lo stesso colore delle card (come nel tuo codice originale) */
+  --navbar-shadow: none;
+  /* Nessuna ombra in dark mode (come nel tuo codice originale) */
+
   --input-bg: #252525;
+  --input-border: #2a2a2a;
+  /* Aggiunto per compatibilità input */
+
+  --otp-bg: #161616;
+  /* Aggiunto per compatibilità OTP */
+  --otp-border: #444444;
+  /* Aggiunto per compatibilità OTP */
 }
 
 /* APPLICAZIONE VARIABILI AL BODY */
@@ -127,7 +160,10 @@ body {
 
 /* Navbar */
 .navbar {
-  background-color: var(--card-bg);
+  /* Usa le variabili dinamiche */
+  background-color: var(--navbar-bg);
+  box-shadow: var(--navbar-shadow);
+
   border-bottom: 1px solid var(--header-border);
   padding: 15px 30px;
   display: flex;
@@ -139,11 +175,12 @@ body {
 }
 
 .nav-logo {
-  font-weight: bold;
-  font-size: 1.2rem;
+  font-weight: 800;
+  font-size: 1.3rem;
   color: var(--accent-color);
   text-decoration: none;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .nav-right {
@@ -155,8 +192,9 @@ body {
 .nav-right a {
   text-decoration: none;
   color: var(--text-color);
-  font-weight: 500;
+  font-weight: 600;
   transition: color 0.2s;
+  font-size: 0.95rem;
 }
 
 .nav-right a:hover {
@@ -165,15 +203,15 @@ body {
 
 /* Stile speciale per il link Admin */
 .admin-link {
-  color: #27ae60 !important;
-  font-weight: bold !important;
-  border: 1px solid #27ae60;
-  padding: 5px 10px;
-  border-radius: 4px;
+  color: #10b981 !important;
+  font-weight: 800 !important;
+  border: 2px solid #10b981;
+  padding: 6px 12px;
+  border-radius: 6px;
 }
 
 .admin-link:hover {
-  background-color: #27ae60;
+  background-color: #10b981;
   color: white !important;
 }
 
@@ -183,68 +221,70 @@ body {
   gap: 15px;
 }
 
-/* Nuovo stile per il testo del nome utente (non cliccabile) */
 .user-name-text {
-  font-size: 0.9rem;
-  font-weight: bold;
-  color: var(--accent-color);
-  border-right: 1px solid var(--secondary-text);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  border-right: 2px solid var(--header-border);
   padding-right: 15px;
   cursor: default;
 }
 
 .logout-link {
   cursor: pointer;
-  color: #e74c3c !important;
+  color: #ef4444 !important;
+  font-weight: 600;
 }
 
 /* Pulsante Tema */
 .theme-btn {
-  background: none;
+  background: var(--card-bg);
   border: 1px solid var(--card-border);
-  border-radius: 50%;
-  width: 35px;
-  height: 35px;
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
-  transition: background 0.2s;
+  transition: all 0.2s;
   color: var(--text-color);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
 .theme-btn:hover {
-  background-color: var(--header-border);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-color: var(--accent-color);
 }
 
 /* Contenuto */
 .main-content {
   flex: 1;
-  padding: 20px;
+  padding: 30px 20px;
 }
 
 /* Footer */
 .app-footer {
   text-align: center;
-  padding: 20px;
+  padding: 30px;
+  /* Il footer usa lo stesso sfondo della navbar per coerenza */
+  background-color: var(--navbar-bg);
   color: var(--secondary-text);
   font-size: 0.9rem;
   border-top: 1px solid var(--header-border);
-  margin-top: 40px;
+  margin-top: auto;
 }
 
-/* Stile per il link attivo */
 .nav-right a.router-link-active {
   color: var(--accent-color);
-  font-weight: bold;
   border-bottom: 2px solid var(--accent-color);
 }
 
-/* Evitiamo la sottolineatura sul bottone admin quando attivo */
 .nav-right a.router-link-active.admin-link {
-  border-bottom: 1px solid #27ae60;
-  background-color: #27ae60;
+  border-bottom: 2px solid #10b981;
+  background-color: #10b981;
   color: white !important;
 }
 </style>

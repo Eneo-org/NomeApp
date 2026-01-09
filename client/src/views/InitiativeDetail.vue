@@ -10,7 +10,6 @@ const API_URL = 'http://localhost:3000';
 const route = useRoute();
 const userStore = useUserStore();
 const router = useRouter();
-// CHANGE: Rename 'store' to 'initiativeStore' to match template usage
 const initiativeStore = useInitiativeStore();
 
 // Stato locale per questa pagina
@@ -32,7 +31,6 @@ const formatDate = (dateString) => {
 // Caricamento Dati
 onMounted(async () => {
   loading.value = true;
-  // CHANGE: Use initiativeStore instead of store
   const data = await initiativeStore.fetchInitiativeDetail(initiativeId);
 
   if (data) {
@@ -47,7 +45,7 @@ onMounted(async () => {
 const handleSign = async () => {
   if (!initiative.value) return;
 
-  // 1. Controllo Login (se non lo fa lo store, meglio averlo anche qui)
+  // Controllo Login
   if (!userStore.isAuthenticated) {
     if (confirm("Devi accedere per firmare. Vuoi andare al login?")) {
       router.push('/login');
@@ -55,38 +53,26 @@ const handleSign = async () => {
     return;
   }
 
-  // 2. Chiamata allo Store
-  // 'result' è un oggetto tipo { success: true } oppure { success: false }
+  // Chiamata allo Store
   const result = await initiativeStore.signInitiative(initiative.value.id);
 
-  // 3. Controllo Esito
-  // Usiamo result.success, NON solo result
   if (result.success) {
-    // Se la firma è andata a buon fine, ricarichiamo i dati per vedere il numero aggiornato
     const updatedData = await initiativeStore.fetchInitiativeDetail(initiative.value.id);
     initiative.value = updatedData;
-
-    // NIENTE ALERT QUI!
-    // Lo store ha già mostrato "Firma registrata con successo!"
-    // O se c'era errore "Hai già firmato!"
   }
 };
 
-// --- NUOVA COMPUTED O FUNZIONE PER L'IMMAGINE PRINCIPALE ---
+// Immagine principale
 const mainImageSrc = computed(() => {
   if (!initiative.value) return defaultImage;
-
-  // Controlliamo se esiste l'array attachments e se ha elementi
   if (initiative.value.attachments && initiative.value.attachments.length > 0) {
     const cleanPath = initiative.value.attachments[0].filePath.replace(/\\/g, '/');
     return `${API_URL}/${cleanPath}`;
   }
-
-  // Fallback
   return defaultImage;
 });
 
-// Calcolo percentuale progress bar (esempio: target 1000 firme)
+// Calcolo percentuale progress bar
 const progressPercentage = computed(() => {
   if (!initiative.value) return 0;
   const target = 1000;
@@ -132,6 +118,9 @@ const progressPercentage = computed(() => {
           </span>
           <span>📍 {{ initiative.place || 'Trento' }}</span>
           <span>📅 Creato il {{ formatDate(initiative.creationDate) }}</span>
+          <span v-if="initiative.platformId !== 1" class="platform-badge">
+            🌐 {{ initiativeStore.getPlatformName(initiative.platformId) }}
+          </span>
         </div>
       </header>
 
@@ -173,7 +162,7 @@ const progressPercentage = computed(() => {
 
         <aside class="right-col">
           <div class="action-card">
-            <h3>Sostieni questa iniziativa</h3>
+            <h3>{{ initiative.platformId === 1 ? 'Sostieni questa iniziativa' : 'Dettagli raccolta firme' }}</h3>
 
             <div class="progress-box">
               <div class="progress-labels">
@@ -182,14 +171,33 @@ const progressPercentage = computed(() => {
               <div class="progress-bar-bg">
                 <div class="progress-bar-fill" :style="{ width: progressPercentage + '%' }"></div>
               </div>
-              <p class="target-text">Obiettivo indicativo: 1000 firme</p>
+              <div class="progress-labels-bottom">
+                <span class="target-text">Obiettivo: 1000</span>
+                <span v-if="initiative.platformId !== 1" class="ext-source">
+                  (Fonte: {{ initiativeStore.getPlatformName(initiative.platformId) }})
+                </span>
+              </div>
             </div>
 
-            <button @click="handleSign" class="sign-btn" :disabled="initiative.status !== 'In corso'">
-              ✍️ {{ initiative.status === 'In corso' ? 'Firma Iniziativa' : 'Firme Chiuse' }}
-            </button>
+            <div v-if="initiative.platformId === 1">
 
-            <p class="scadenza-info">Scade il: {{ formatDate(initiative.expirationDate) }}</p>
+              <button @click="handleSign" class="sign-btn"
+                :disabled="initiative.status !== 'In corso' || (userStore.isAuthenticated && !userStore.canVote)"
+                :title="userStore.isAuthenticated && !userStore.canVote ? 'Solo i cittadini possono firmare' : ''">
+                <span v-if="userStore.isAuthenticated && !userStore.canVote">⛔ Solo Cittadini</span>
+                <span v-else-if="initiative.status === 'In corso'">✍️ Firma Iniziativa</span>
+                <span v-else>Firme Chiuse</span>
+              </button>
+
+              <p class="scadenza-info">Scade il: {{ formatDate(initiative.expirationDate) }}</p>
+            </div>
+
+            <div v-else class="external-msg">
+              <p>Questa iniziativa è ospitata su <strong>{{ initiativeStore.getPlatformName(initiative.platformId)
+              }}</strong>.</p>
+              <p class="info-note">Non è possibile firmare direttamente tramite questo portale.</p>
+            </div>
+
           </div>
 
           <div class="info-card">
@@ -246,7 +254,6 @@ const progressPercentage = computed(() => {
   font-weight: 600;
 }
 
-/* Title Row to align title and follow button */
 .title-row {
   display: flex;
   justify-content: space-between;
@@ -266,6 +273,8 @@ const progressPercentage = computed(() => {
   align-items: center;
   color: var(--secondary-text);
   font-size: 1rem;
+  flex-wrap: wrap;
+  /* Per schermi piccoli */
 }
 
 .status-badge {
@@ -287,6 +296,15 @@ const progressPercentage = computed(() => {
 
 .status-badge.respinta {
   background-color: #c62828;
+}
+
+.platform-badge {
+  background-color: #f0f0f0;
+  color: #333;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  border: 1px solid #ccc;
 }
 
 /* Grid Layout */
@@ -376,6 +394,7 @@ const progressPercentage = computed(() => {
   cursor: not-allowed;
 }
 
+/* Progress bar updates */
 .progress-box {
   margin-top: 15px;
 }
@@ -393,11 +412,15 @@ const progressPercentage = computed(() => {
   height: 100%;
 }
 
-.target-text {
+.progress-labels-bottom {
+  display: flex;
+  justify-content: space-between;
   font-size: 0.8rem;
   color: #888;
-  text-align: right;
-  margin: 0;
+}
+
+.ext-source {
+  font-style: italic;
 }
 
 .scadenza-info {
@@ -405,6 +428,24 @@ const progressPercentage = computed(() => {
   text-align: center;
   font-size: 0.9rem;
   color: #888;
+}
+
+/* External Message Style */
+.external-msg {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f9f9f9;
+  border: 1px dashed #ccc;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.info-note {
+  font-size: 0.85rem;
+  color: #888;
+  margin-top: 5px;
 }
 
 /* Follow Button Styles */
@@ -444,11 +485,6 @@ const progressPercentage = computed(() => {
 
   .title-row h1 {
     font-size: 1.8rem;
-  }
-
-  .meta-row {
-    flex-wrap: wrap;
-    gap: 10px;
   }
 }
 </style>
