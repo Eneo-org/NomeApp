@@ -1,19 +1,23 @@
 const cron = require("node-cron");
-const db = require("./config/db"); // Assicurati che il percorso al tuo db sia corretto
+const db = require("./config/db");
+// Importiamo il servizio di importazione (assicurati che il percorso sia giusto)
+const importExternalInitiatives = require("./services/importService");
 
 const startScheduler = () => {
-  console.log("⏰ Sistema di monitoraggio scadenze attivato.");
+  console.log("⏰ Sistema di monitoraggio attivato (Cron Jobs).");
 
-  // --- CONFIGURAZIONE ---
-  // "0 * * * *" significa: Esegui al minuto 0 di ogni ora (es. 10:00, 11:00, 12:00...)
-  // Se vuoi testarlo subito metti "* * * * *" (ogni minuto)
+  // =================================================================
+  // JOB 1: MANUTENZIONE INTERNA (Esecuzione ogni ora al minuto 0)
+  // Scopo: Chiudere le iniziative la cui data di scadenza è passata
+  // =================================================================
   cron.schedule("0 * * * *", async () => {
-    console.log("⏳ Esecuzione controllo automatico scadenze...");
-    const connection = await db.getConnection();
+    console.log("⏳ [CRON - Hourly] Avvio controllo scadenze...");
+    let connection;
 
     try {
-      // 1. Trova e aggiorna le iniziative "In corso" che hanno superato la data di scadenza
-      // Nota: CURDATE() o NOW() dipende dal tuo DB, usiamo NOW() per essere precisi
+      connection = await db.getConnection();
+
+      // Query: Imposta STATO = 'Scaduta' per le iniziative 'In corso' che hanno superato la scadenza
       const [result] = await connection.query(`
         UPDATE INIZIATIVA 
         SET STATO = 'Scaduta' 
@@ -23,17 +27,40 @@ const startScheduler = () => {
 
       if (result.affectedRows > 0) {
         console.log(
-          `✅ Aggiornate automaticamente ${result.affectedRows} iniziative scadute.`
+          `✅ [CRON] Manutenzione completata: ${result.affectedRows} iniziative passate a 'Scaduta'.`
         );
-      } else {
-        console.log("👌 Nessuna iniziativa scaduta trovata.");
-      }
+      } 
+      // else { console.log("👌 Nessuna iniziativa scaduta trovata."); }
+
     } catch (error) {
-      console.error("❌ Errore durante il cron job:", error);
+      console.error("❌ [CRON] Errore nel controllo scadenze:", error);
     } finally {
-      connection.release();
+      if (connection) connection.release();
     }
   });
+
+  // =================================================================
+  // JOB 2: IMPORTAZIONE ESTERNA (Esecuzione ogni giorno alle 03:00)
+  // Scopo: Leggere il mock file e importare/aggiornare le iniziative
+  // =================================================================
+  cron.schedule("0 3 * * *", async () => {
+    console.log("🌍 [CRON - Daily] Avvio sincronizzazione piattaforme esterne...");
+    
+    try {
+      // Chiamiamo il servizio che gestisce tutta la logica (connessione, check categorie, upsert)
+      await importExternalInitiatives();
+    } catch (error) {
+      console.error("❌ [CRON] Errore critico durante l'importazione esterna:", error);
+    }
+  });
+
+  // --- (OPZIONALE) DEBUG ---
+  // commenta le righe sotto se vuoi non forzare l'importazione 5 secondi dopo l'avvio del server
+  setTimeout(() => {
+     console.log("🧪 [TEST] Lancio immediato importazione per debug...");
+     importExternalInitiatives();
+  }, 5000);
+  
 };
 
 module.exports = startScheduler;
