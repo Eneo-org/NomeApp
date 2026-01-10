@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useDashboardStore } from '../stores/dashboardStore'
 import { useUserStore } from '../stores/userStore'
 import { useInitiativeStore } from '../stores/initiativeStore'
@@ -30,6 +30,11 @@ const getImageUrl = (item) => {
   const cleanPath = fileData.filePath.replace(/\\/g, '/');
   return `${API_URL}/${cleanPath}`;
 };
+
+// Calcola il numero di notifiche non lette in tempo reale
+const unreadCount = computed(() => {
+  return dashboardStore.notifications.filter(n => !n.isRead).length;
+});
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/D'
@@ -116,9 +121,13 @@ onMounted(async () => {
       <button :class="{ active: activeTab === 'followed' }" @click="activeTab = 'followed'">
         ⭐ Seguite
       </button>
-      <button :class="{ active: activeTab === 'notifications' }" @click="activeTab = 'notifications'">
+      <button class="tab-btn-wrapper" :class="{ active: activeTab === 'notifications' }"
+        @click="activeTab = 'notifications'">
         🔔 Notifiche
-        <span v-if="dashboardStore.notifications.some(n => !n.isRead)" class="dot"></span>
+
+        <span v-if="unreadCount > 0" class="notification-badge">
+          {{ unreadCount > 99 ? '99+' : unreadCount }}
+        </span>
       </button>
     </div>
 
@@ -448,13 +457,37 @@ onMounted(async () => {
   border-radius: 4px;
 }
 
-.dot {
-  height: 8px;
-  width: 8px;
-  background-color: #e74c3c;
-  border-radius: 50%;
-  display: inline-block;
-  margin-left: 5px;
+.tab-btn-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-badge {
+  position: absolute;
+  top: 0px;
+  right: 5px;
+
+  background-color: #ef4444;
+  color: white;
+
+  font-size: 0.7rem;
+  font-weight: bold;
+  line-height: 1;
+
+  min-width: 18px;
+  height: 18px;
+  border-radius: 99px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+
+  border: 2px solid var(--card-bg);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transform: translate(50%, -50%);
 }
 
 .pagination-controls {

@@ -1,15 +1,22 @@
 import { defineStore } from 'pinia'
 import axios from 'axios'
-import { ref } from 'vue' // Ho rimosso 'computed' che dava errore
+import { ref } from 'vue'
+import { useToastStore } from './toastStore' // IMPORT STORE TOAST
 
 const API_URL = import.meta.env.VITE_API_URL
 
 export const useInitiativeStore = defineStore('initiative', () => {
+  // Inizializza Toast Store
+  const toast = useToastStore()
+
   // --- STATE ---
   const initiatives = ref([])
   const categories = ref([])
   const platforms = ref([])
+
+  // FIX CRITICO: Inizializziamo sempre come array vuoto per evitare errori "includes of undefined"
   const followedIds = ref([])
+  const followedInitiatives = followedIds // Alias per compatibilità con HomeView
 
   const loading = ref(false)
   const error = ref(null)
@@ -30,11 +37,11 @@ export const useInitiativeStore = defineStore('initiative', () => {
     return found ? found.platformName : 'Fonte Esterna'
   }
 
-  const isFollowed = (id) => followedIds.value.includes(id)
+  // Check sicuro: usa opzionale chaining o verifica array
+  const isFollowed = (id) => followedIds.value?.includes(id)
 
   // --- ACTIONS ---
 
-  // 1. Carica i Filtri
   const fetchFiltersData = async () => {
     try {
       const [resCat, resPlat] = await Promise.all([
@@ -44,11 +51,10 @@ export const useInitiativeStore = defineStore('initiative', () => {
       categories.value = resCat.data.data
       platforms.value = resPlat.data.data
     } catch (err) {
-      console.error('Errore filtri:', err)
+      console.error('Errore filtri:', err) // Solo console, errore non critico per l'utente
     }
   }
 
-  // 2. Carica Iniziative (Home Page)
   const fetchInitiatives = async (page = 1, sortBy = 'signatures', filters = {}) => {
     loading.value = true
     try {
@@ -78,6 +84,7 @@ export const useInitiativeStore = defineStore('initiative', () => {
     } catch (err) {
       console.error('Errore fetch initiatives:', err)
       error.value = 'Impossibile caricare la lista.'
+      // Nessun toast qui per non disturbare al caricamento pagina
     } finally {
       loading.value = false
     }
@@ -98,16 +105,12 @@ export const useInitiativeStore = defineStore('initiative', () => {
     }
   }
 
-  //3. Recupera Dettaglio Singola Iniziativa ---
   const fetchInitiativeById = async (id) => {
     try {
-      // Recuperiamo l'ID utente se disponibile, utile per vedere se l'abbiamo firmata/seguita
       const storedId = localStorage.getItem('tp_mock_id')
-
       const response = await axios.get(`${API_URL}/initiatives/${id}`, {
         headers: { 'X-Mock-User-Id': storedId },
       })
-
       return response.data
     } catch (err) {
       console.error('Errore fetchInitiativeById:', err)
@@ -130,61 +133,104 @@ export const useInitiativeStore = defineStore('initiative', () => {
       followedIds.value = res.data.data.map((item) => item.id)
     } catch (err) {
       console.error('Errore sync preferiti:', err)
+      followedIds.value = [] // Fallback sicuro
     }
   }
 
-  const toggleFollow = async (id, title = 'questa iniziativa') => {
+  const toggleFollow = async (id = 'questa iniziativa') => {
     const userId = localStorage.getItem('tp_mock_id')
     if (!userId) {
-      alert('Devi effettuare il login.')
+      toast.showToast('Devi effettuare il login.', 'error')
       return
     }
 
     const alreadyFollowed = isFollowed(id)
 
     if (alreadyFollowed) {
-      if (!confirm(`Vuoi smettere di seguire "${title}"?`)) return
+      // --- UNFOLLOW (Rimuovi) ---
+
+      // 1. Aggiornamento Ottimistico: Rimuovi subito dalla lista locale
+      followedIds.value = followedIds.value.filter((itemId) => itemId !== id)
+
+      // 2. Feedback immediato
+      toast.showToast('Rimossa dai preferiti', 'info')
+
       try {
+        // 3. Chiamata API
         await axios.delete(`${API_URL}/initiatives/${id}/unfollows`, {
           headers: { 'X-Mock-User-Id': userId },
         })
-        followedIds.value = followedIds.value.filter((itemId) => itemId !== id)
       } catch (err) {
-        console.error(err)
-        alert('Errore durante la rimozione.')
+        // 4. Gestione Errori Intelligente
+        if (err.response && err.response.status === 404) {
+          // SE 404: Il backend dice "Non c'era nulla da cancellare".
+          // Per noi va bene! Significa che siamo sincronizzati.
+          console.warn('Sync Unfollow: Risorsa già rimossa (404 ignorato).')
+        } else {
+          // ERRORE VERO: Dobbiamo rimettere la stellina (Revert)
+          console.error(err)
+          followedIds.value.push(id)
+          toast.showToast('Errore rete: impossibile rimuovere.', 'error')
+        }
       }
     } else {
+      // --- FOLLOW (Aggiungi) ---
+
+      // 1. Aggiornamento Ottimistico
+      if (!followedIds.value.includes(id)) followedIds.value.push(id)
+
+      // 2. Feedback immediato
+      toast.showToast('Aggiunta ai preferiti! ⭐', 'success')
+
       try {
         await axios.post(
           `${API_URL}/initiatives/${id}/follows`,
           {},
           { headers: { 'X-Mock-User-Id': userId } },
         )
-        followedIds.value.push(id)
-        alert('Aggiunta ai preferiti! ⭐')
       } catch (err) {
         if (err.response && err.response.status === 409) {
-          alert('Segui già questa iniziativa.')
+          // 409 Conflict: Già seguita. Va bene così.
+          console.warn('Sync Follow: Già seguita.')
         } else {
-          alert('Errore generico.')
+          // ERRORE VERO: Revert
+          followedIds.value = followedIds.value.filter((itemId) => itemId !== id)
+          toast.showToast('Errore rete: impossibile aggiungere.', 'error')
         }
       }
     }
   }
 
-  // --- AZIONI UTENTE (Firma e Creazione) ---
+  // Helper per il bottone del Toast "Tienimi Aggiornato"
+  const ensureFollowed = async (id) => {
+    if (!isFollowed(id)) {
+      const userId = localStorage.getItem('tp_mock_id')
+      if (!followedIds.value.includes(id)) followedIds.value.push(id)
+      try {
+        await axios.post(
+          `${API_URL}/initiatives/${id}/follows`,
+          {},
+          { headers: { 'X-Mock-User-Id': userId } },
+        )
+      } catch (e) {
+        /* ignore conflicts */
+      }
+    }
+  }
+
+  // --- AZIONI UTENTE (Firma) ---
   const signInitiative = async (initiativeId) => {
     const storedId = localStorage.getItem('tp_mock_id')
     const mockUserId = storedId ? parseInt(storedId) : null
 
     if (!mockUserId) {
-      alert('Devi essere loggato per firmare.')
+      toast.showToast('Devi essere loggato per firmare.', 'error')
       return { success: false }
     }
 
     try {
       await axios.post(
-        `${API_URL}/initiatives/${initiativeId}/signatures`, // Endpoint corretto
+        `${API_URL}/initiatives/${initiativeId}/signatures`,
         {},
         { headers: { 'X-Mock-User-Id': mockUserId } },
       )
@@ -192,16 +238,22 @@ export const useInitiativeStore = defineStore('initiative', () => {
       const init = initiatives.value.find((i) => i.id === initiativeId)
       if (init) init.signatures += 1
 
-      alert('Firma registrata con successo! Grazie per il supporto. ✍️')
+      // Auto-follow locale immediato per evitare errori se si clicca stella dopo
+      if (!followedIds.value.includes(initiativeId)) {
+        followedIds.value.push(initiativeId)
+      }
+
+      // Il messaggio di successo è delegato a HomeView (Toast Custom),
+      // ma se serve qui: toast.showToast('Firma registrata!', 'success')
       return { success: true }
     } catch (err) {
       if (err.response && err.response.status === 409) {
-        alert('Hai già firmato questa iniziativa!')
+        toast.showToast('Hai già firmato questa iniziativa!', 'info') // Info invece di errore rosso
       } else {
         console.error('Errore firma:', err)
-        alert('Si è verificato un errore durante la firma.')
+        toast.showToast('Si è verificato un errore durante la firma.', 'error')
       }
-      return { success: false }
+      return { success: false, message: err.response?.data?.message }
     }
   }
 
@@ -209,14 +261,14 @@ export const useInitiativeStore = defineStore('initiative', () => {
     loading.value = true
     error.value = null
     const userId = localStorage.getItem('tp_mock_id')
+
     if (!userId) {
-      alert('Devi essere loggato.')
+      toast.showToast('Sessione non valida. Effettua il login.', 'error')
       loading.value = false
       return false
     }
 
     try {
-      console.log('Creazione iniziativa...')
       const formData = new FormData()
       formData.append('title', payloadData.title)
       formData.append('description', payloadData.description)
@@ -228,26 +280,30 @@ export const useInitiativeStore = defineStore('initiative', () => {
         formData.append('attachments', payloadData.file)
       }
 
-      const response = await axios.post(`${API_URL}/initiatives`, formData, {
+      // CORREZIONE QUI: Rimosso "const response =" perché non serve
+      await axios.post(`${API_URL}/initiatives`, formData, {
         headers: {
           'X-Mock-User-Id': userId,
           'Content-Type': 'multipart/form-data',
         },
       })
 
-      await fetchInitiatives() // Ricarica Home
-      console.log('Successo! ID:', response.data.id)
+      await fetchInitiatives() // Ricarica dati home page
+
+      toast.showToast('Iniziativa creata con successo! 🎉', 'success')
       return true
     } catch (err) {
       console.error('Errore creazione:', err)
-      error.value = err.response?.data?.message || 'Errore durante la creazione.'
+      const msg = err.response?.data?.message || 'Errore durante la creazione.'
+      error.value = msg
+      toast.showToast(msg, 'error')
       return false
     } finally {
       loading.value = false
     }
   }
 
-  // --- AZIONE ADMIN: Ottieni Iniziative in Scadenza ---
+  // --- AZIONI ADMIN ---
   const fetchExpiringInitiatives = async (page = 1) => {
     try {
       const storedId = localStorage.getItem('tp_mock_id')
@@ -257,12 +313,11 @@ export const useInitiativeStore = defineStore('initiative', () => {
       )
       return response.data
     } catch (err) {
-      console.error('Errore fetchExpiring:', err)
+      console.error('[Store] Errore fetchExpiring:', err)
       return null
     }
   }
 
-  // --- AZIONE ADMIN: Invia Risposta Ufficiale ---
   const submitAdminReply = async (initiativeId, status, motivation, files) => {
     try {
       const storedId = localStorage.getItem('tp_mock_id')
@@ -271,15 +326,12 @@ export const useInitiativeStore = defineStore('initiative', () => {
       formData.append('status', status)
       formData.append('motivations', motivation)
 
-      // MODIFICA 1: Il backend usa multer.array("attachments")
-      // Quindi dobbiamo usare "attachments" come nome del campo, non "files"
       if (files && files.length > 0) {
         for (let i = 0; i < files.length; i++) {
           formData.append('attachments', files[i])
         }
       }
 
-      // MODIFICA 2: L'URL del backend è configurato su /responses
       await axios.post(`${API_URL}/initiatives/${initiativeId}/responses`, formData, {
         headers: {
           'X-Mock-User-Id': storedId,
@@ -287,10 +339,13 @@ export const useInitiativeStore = defineStore('initiative', () => {
         },
       })
 
+      toast.showToast('Risposta inviata e stato aggiornato!', 'success')
       return true
     } catch (err) {
       console.error('Errore invio risposta:', err)
-      throw err.response?.data?.message || "Errore durante l'invio della risposta"
+      const msg = err.response?.data?.message || 'Errore invio risposta'
+      toast.showToast(msg, 'error')
+      throw msg
     }
   }
 
@@ -304,6 +359,7 @@ export const useInitiativeStore = defineStore('initiative', () => {
     totalPages,
     totalObjects,
     followedIds,
+    followedInitiatives, // Export per compatibilità
     isFollowed,
     getCategoryName,
     getPlatformName,
@@ -313,6 +369,7 @@ export const useInitiativeStore = defineStore('initiative', () => {
     signInitiative,
     createInitiative,
     toggleFollow,
+    ensureFollowed,
     fetchUserFollowedIds,
     fetchExpiringInitiatives,
     submitAdminReply,

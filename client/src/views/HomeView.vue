@@ -4,23 +4,23 @@ import { useInitiativeStore } from '../stores/initiativeStore'
 import { useParticipatoryBudgetStore } from '../stores/participatoryBudgetStore'
 import { useUserStore } from '../stores/userStore'
 import { useToastStore } from '../stores/toastStore';
-// 1. RIMUOVI l'import della singola immagine e IMPORTA il composable
 import { useImage } from '@/composables/useImage';
 import ParticipatoryBudgetCard from '@/components/ParticipatoryBudgetCard.vue'
-
-// (Rimuovi const API_URL se lo usavi solo per le immagini, ora è nel composable)
+import { useRouter } from 'vue-router';
 
 const initiativeStore = useInitiativeStore()
 const budgetStore = useParticipatoryBudgetStore()
 const userStore = useUserStore()
 const toast = useToastStore();
-
-// 2. USA IL COMPOSABLE
+const router = useRouter();
 const { getImageUrl } = useImage();
+
+// --- STATO TOAST PERSONALIZZATO ---
+const showNotificationPrompt = ref(false);
+const lastSignedInitiative = ref(null);
 
 const page = ref(1);
 const sort = ref('signatures');
-
 const filters = ref({
   search: '',
   category: '',
@@ -33,18 +33,21 @@ const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString('it-IT')
 }
 
+// --- INIT ---
 onMounted(async () => {
   await initiativeStore.fetchFiltersData()
   loadData()
   budgetStore.fetchActiveBudget()
+  if (userStore.isAuthenticated) {
+    await initiativeStore.fetchUserFollowedIds();
+  }
 })
 
 const loadData = async () => {
   await initiativeStore.fetchInitiatives(page.value, sort.value, filters.value);
 };
 
-// 3. LA VECCHIA FUNZIONE getImageUrl È STATA RIMOSSA (ora usiamo quella importata)
-
+// --- NAVIGAZIONE ---
 const nextPage = () => {
   if (initiativeStore.currentPage < initiativeStore.totalPages) {
     page.value++;
@@ -63,6 +66,7 @@ const prevPage = () => {
 
 const applyFilters = () => {
   initiativeStore.currentPage = 1
+  page.value = 1;
   loadData()
 }
 
@@ -76,10 +80,25 @@ const resetFilters = () => {
   applyFilters()
 }
 
+// --- LOGICA STELLINA (SEMPLIFICATA) ---
+const handleStarClick = async (item) => {
+  if (!userStore.isAuthenticated) {
+    if (confirm("Devi accedere per seguire le iniziative. Vuoi andare al login?")) {
+      router.push('/login');
+    }
+    return;
+  }
+
+  // DELEGIAMO TUTTO ALLO STORE!
+  // Niente logica locale qui, evita conflitti e doppi messaggi.
+  await initiativeStore.toggleFollow(item.id, item.title);
+};
+
+// --- LOGICA FIRMA (Invariata, ma pulita) ---
 const handleSign = async (item) => {
   if (!userStore.isAuthenticated) {
     if (confirm("Devi accedere per firmare. Vuoi andare al login?")) {
-      window.location.href = '/login';
+      router.push('/login');
     }
     return;
   }
@@ -87,10 +106,72 @@ const handleSign = async (item) => {
   const result = await initiativeStore.signInitiative(item.id);
 
   if (result.success) {
+    // 1. Toast di Successo Standard
     toast.showToast("✅ Firma registrata con successo!", "success");
-  } else {
-    toast.showToast(result.message || "Errore durante la firma", "error");
+
+    // 2. Controllo Prompt (INTEGRATO NEI TOAST)
+    const hidePrompt = localStorage.getItem('hideNotificationPrompt');
+    if (!hidePrompt) {
+
+      // Creiamo il Toast "Prompt" interattivo
+      toast.showToast(
+        `Vuoi ricevere notifiche sugli aggiornamenti di "${item.title}"?`,
+        'prompt', // Tipo nuovo (giallo)
+        {
+          actions: [
+            {
+              label: '🔔 Tienimi aggiornato',
+              style: 'primary',
+              onClick: async (toastId) => {
+                // Logica SI
+                await initiativeStore.ensureFollowed(item.id);
+                toast.removeToast(toastId); // Chiudi il prompt
+                toast.showToast(`Notifiche attivate per "${item.title}"!`, 'success');
+              }
+            },
+            {
+              label: 'Non ora',
+              style: 'secondary',
+              onClick: (toastId) => {
+                // Logica NO
+                toast.removeToast(toastId);
+              }
+            },
+            {
+              label: 'Non chiedere più',
+              style: 'secondary',
+              onClick: (toastId) => {
+                // Logica MAI PIÙ
+                localStorage.setItem('hideNotificationPrompt', 'true');
+                toast.removeToast(toastId);
+                toast.showToast('Preferenza salvata.', 'info');
+              }
+            }
+          ]
+        }
+      );
+    }
   }
+};
+
+// --- AZIONI BOTTONI TOAST ---
+const enableNotifications = async () => {
+  if (lastSignedInitiative.value) {
+    // Usiamo lo store per assicurarci che sia tra i preferiti
+    await initiativeStore.ensureFollowed(lastSignedInitiative.value.id);
+  }
+  toast.showToast(`🔔 Notifiche attivate per "${lastSignedInitiative.value?.title}"!`, "success");
+  showNotificationPrompt.value = false;
+};
+
+const ignorePrompt = () => {
+  showNotificationPrompt.value = false;
+};
+
+const disablePromptForever = () => {
+  localStorage.setItem('hideNotificationPrompt', 'true');
+  showNotificationPrompt.value = false;
+  toast.showToast("Preferenza salvata.", "info");
 };
 
 const getStatusClass = (status) => {
@@ -115,16 +196,14 @@ watch(() => filters.value.platform, applyFilters)
     </div>
 
     <div class="main-layout">
-
       <aside class="sidebar">
         <div class="sidebar-header">
           <h3>🔍 Filtra Iniziative</h3>
           <button @click="resetFilters" class="reset-link">Azzera</button>
         </div>
-
         <div class="filter-group">
           <label>Cerca</label>
-          <input v-model="filters.search" type="text" placeholder="Parole chiave...">
+          <input v-model="filters.search" type="text" placeholder="Parole chiave..." @keyup.enter="applyFilters">
         </div>
         <div class="filter-group">
           <label>Categoria</label>
@@ -135,7 +214,6 @@ watch(() => filters.value.platform, applyFilters)
             </option>
           </select>
         </div>
-
         <div class="filter-group">
           <label>Piattaforma</label>
           <select v-model="filters.platform" @change="applyFilters">
@@ -145,7 +223,6 @@ watch(() => filters.value.platform, applyFilters)
             </option>
           </select>
         </div>
-
         <div class="sidebar-actions" v-if="userStore.isAuthenticated">
           <hr>
           <RouterLink to="/create"><button class="create-btn full-width">+ Crea Nuova</button></RouterLink>
@@ -153,9 +230,7 @@ watch(() => filters.value.platform, applyFilters)
       </aside>
 
       <main class="content-area">
-
         <ParticipatoryBudgetCard />
-
         <div class="results-header">
           <h2>Esplora le Iniziative</h2>
           <span class="count-badge">{{ initiativeStore.totalObjects }} Iniziative attive</span>
@@ -164,7 +239,6 @@ watch(() => filters.value.platform, applyFilters)
         <div v-if="initiativeStore.loading" class="loading-msg">Caricamento in corso...</div>
 
         <div v-else-if="initiativeStore.initiatives.length > 0" class="cards-container">
-
           <div v-for="item in initiativeStore.initiatives" :key="item.id" class="card">
             <div class="card-image-wrapper">
               <div v-if="item.platformId !== 1" class="source-badge external">
@@ -181,8 +255,8 @@ watch(() => filters.value.platform, applyFilters)
                     {{ item.status.toUpperCase() }}
                   </span>
                   <button v-if="item.status && item.status.toLowerCase() === 'in corso'" class="follow-btn"
-                    :class="{ 'active': initiativeStore.isFollowed(item.id) }"
-                    @click.prevent="initiativeStore.toggleFollow(item.id, item.title)">
+                    :class="{ 'active': initiativeStore.isFollowed(item.id) }" @click.prevent="handleStarClick(item)"
+                    title="Segui questa iniziativa">
                     {{ initiativeStore.isFollowed(item.id) ? '⭐' : '☆' }}
                   </button>
                 </div>
@@ -193,30 +267,21 @@ watch(() => filters.value.platform, applyFilters)
                 <div class="date-row"><span>📅 {{ formatDate(item.creationDate) }}</span></div>
               </div>
               <div class="card-footer">
-                <div class="signatures">
-                  <strong>Firme: {{ item.signatures }}</strong>
-                </div>
+                <div class="signatures"><strong>Firme: {{ item.signatures }}</strong></div>
                 <div class="actions">
                   <div v-if="item.platformId === 1" class="internal-actions">
-                    <RouterLink :to="'/initiative/' + item.id">
-                      <button class="action-btn">Dettagli</button>
-                    </RouterLink>
-
+                    <RouterLink :to="'/initiative/' + item.id"><button class="action-btn">Dettagli</button></RouterLink>
                     <button v-if="item.status === 'In corso' && userStore.canVote" @click="handleSign(item)"
-                      class="sign-btn">
-                      ✍️ Firma
-                    </button>
-
+                      class="sign-btn">✍️ Firma</button>
                     <span v-else-if="item.status === 'In corso' && userStore.isAuthenticated && !userStore.canVote"
-                      class="no-vote-label" title="Gli amministratori non residenti non possono votare">
-                      ⛔ Solo Cittadini
-                    </span>
+                      class="no-vote-label">⛔ Solo Cittadini</span>
                   </div>
+                  <a v-else :href="item.externalURL || '#'" target="_blank"><button class="external-btn">Su {{
+                    initiativeStore.getPlatformName(item.platformId) }} ↗</button></a>
                 </div>
               </div>
             </div>
           </div>
-
           <div class="pagination-controls">
             <button @click="prevPage" :disabled="initiativeStore.currentPage === 1" class="page-btn">←</button>
             <span class="page-info">Pagina {{ initiativeStore.currentPage }} di {{ initiativeStore.totalPages }}</span>
@@ -224,19 +289,33 @@ watch(() => filters.value.platform, applyFilters)
               class="page-btn">→</button>
           </div>
         </div>
-
         <div v-else class="no-results">
           <p>Nessuna iniziativa trovata.</p>
           <button @click="resetFilters" class="clear-btn">Ricarica Tutto</button>
         </div>
-
       </main>
     </div>
+
+    <Transition name="slide-fade">
+      <div v-if="showNotificationPrompt" class="custom-toast">
+        <div class="toast-header">
+          <strong>Rimani aggiornato?</strong>
+          <button class="close-btn" @click="ignorePrompt">×</button>
+        </div>
+        <p>Vuoi ricevere notifiche sugli aggiornamenti di <strong>"{{ lastSignedInitiative?.title }}"</strong>?</p>
+        <div class="toast-actions">
+          <button class="btn-confirm" @click="enableNotifications">🔔 Tienimi aggiornato</button>
+          <button class="btn-ignore" @click="ignorePrompt">Ignora</button>
+        </div>
+        <button class="btn-link" @click="disablePromptForever">Non mostrare più questo messaggio</button>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <style scoped>
-/* STILI IDENTICI A PRIMA */
+/* COPIA GLI STILI DI PRIMA, SONO CORRETTI */
+/* ... Styles ... */
 .home-wrapper {
   max-width: 1100px;
   margin: 0 auto;
@@ -256,6 +335,7 @@ watch(() => filters.value.platform, applyFilters)
   margin: 0;
   color: var(--accent-color);
   text-transform: uppercase;
+  font-weight: 800;
 }
 
 .subtitle {
@@ -293,6 +373,7 @@ watch(() => filters.value.platform, applyFilters)
   color: var(--secondary-text);
   cursor: pointer;
   text-decoration: underline;
+  font-size: 0.9rem;
 }
 
 .filter-group {
@@ -328,6 +409,11 @@ watch(() => filters.value.platform, applyFilters)
   cursor: pointer;
   font-weight: bold;
   margin-top: 10px;
+  transition: background 0.2s;
+}
+
+.create-btn.full-width:hover {
+  background: var(--accent-hover);
 }
 
 .results-header {
@@ -360,6 +446,7 @@ watch(() => filters.value.platform, applyFilters)
   overflow: hidden;
   height: 180px;
   box-shadow: var(--card-shadow);
+  transition: transform 0.2s;
 }
 
 .card-image-wrapper {
@@ -395,35 +482,63 @@ watch(() => filters.value.platform, applyFilters)
   line-height: 1.2;
   flex: 1;
   color: var(--text-color);
+  font-weight: 700;
 }
 
-.status-badge {
-  font-size: 0.7rem;
-  padding: 3px 8px;
+.status-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge-status {
+  padding: 5px 10px;
   border-radius: 4px;
-  text-transform: uppercase;
+  font-size: 0.8rem;
   font-weight: bold;
-  background: #1565c0;
   color: white;
-  white-space: nowrap;
+  text-transform: uppercase;
 }
 
-.source-badge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  z-index: 2;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+.status-active {
+  background-color: #3498db;
 }
 
-.source-badge.external {
-  background-color: #d32f2f;
-  color: white;
+.status-success {
+  background-color: #27ae60;
+}
+
+.status-danger {
+  background-color: #e74c3c;
+}
+
+.status-muted {
+  background-color: #95a5a6;
+}
+
+.status-default {
+  background-color: #7f8c8d;
+}
+
+.follow-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.6rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: transform 0.2s;
+  color: #ccc;
+  padding: 0;
+}
+
+.follow-btn.active {
+  color: #f1c40f;
+  filter: drop-shadow(0 0 2px rgba(241, 196, 15, 0.5));
+}
+
+.follow-btn:hover {
+  transform: scale(1.2);
+  color: #f1c40f;
 }
 
 .card-meta {
@@ -449,37 +564,67 @@ watch(() => filters.value.platform, applyFilters)
   margin-top: auto;
 }
 
-.detail-btn {
+.internal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.action-btn,
+.external-btn {
   background-color: var(--card-bg);
   color: var(--text-color);
   border: 1px solid var(--header-border);
-  padding: 6px 12px;
-  border-radius: 4px;
+  padding: 8px 12px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
-}
-
-.detail-btn:hover {
-  background-color: var(--accent-color);
-  color: white;
-  border-color: var(--accent-color);
-}
-
-.external-btn {
   text-decoration: none;
   font-size: 0.9rem;
-  display: inline-block;
-  text-align: center;
-  background-color: transparent;
-  border: 1px solid var(--secondary-text);
-  color: var(--text-color);
-  padding: 6px 12px;
-  border-radius: 4px;
 }
 
+.action-btn:hover,
 .external-btn:hover {
-  background-color: var(--card-border);
-  border-color: var(--text-color);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.sign-btn {
+  background-color: #2c3e50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+.sign-btn:hover {
+  background-color: var(--accent-color);
+}
+
+.source-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  z-index: 2;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.source-badge.external {
+  background-color: #d32f2f;
+  color: white;
+}
+
+.no-vote-label {
+  font-size: 0.8rem;
+  color: #666;
+  cursor: help;
 }
 
 .pagination-controls {
@@ -513,82 +658,6 @@ watch(() => filters.value.platform, applyFilters)
   cursor: not-allowed;
 }
 
-.internal-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.sign-btn {
-  background-color: #2c3e50;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background 0.2s;
-}
-
-.sign-btn:hover {
-  background-color: var(--accent-color);
-}
-
-.badge-status {
-  padding: 5px 10px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: bold;
-  color: white;
-  text-transform: uppercase;
-}
-
-.status-active {
-  background-color: #3498db;
-}
-
-.status-success {
-  background-color: #27ae60;
-}
-
-.status-danger {
-  background-color: #e74c3c;
-}
-
-.status-muted {
-  background-color: #95a5a6;
-}
-
-.status-default {
-  background-color: #7f8c8d;
-}
-
-.status-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.follow-btn {
-  background: transparent;
-  border: none;
-  font-size: 1.6rem;
-  cursor: pointer;
-  line-height: 1;
-  transition: transform 0.2s;
-  color: #ccc;
-  padding: 0;
-}
-
-.follow-btn.active {
-  color: #f1c40f;
-  filter: drop-shadow(0 0 2px rgba(241, 196, 15, 0.5));
-}
-
-.follow-btn:hover {
-  transform: scale(1.2);
-  color: #f1c40f;
-}
-
 .no-results {
   text-align: center;
   padding: 40px;
@@ -597,10 +666,131 @@ watch(() => filters.value.platform, applyFilters)
   border: 1px solid var(--card-border);
 }
 
-.no-vote-label {
+.clear-btn {
+  margin-top: 15px;
+  padding: 10px 20px;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.custom-toast {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 340px;
+  background: var(--card-bg);
+  color: var(--text-color);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--accent-color);
+  padding: 20px;
+  z-index: 9999;
+  font-family: 'Segoe UI', sans-serif;
+  animation: slideIn 0.3s ease-out;
+}
+
+.toast-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+  color: var(--accent-color);
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--secondary-text);
+  line-height: 1;
+}
+
+.custom-toast p {
+  font-size: 0.95rem;
+  color: var(--text-color);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.toast-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.btn-confirm {
+  flex: 1;
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-confirm:hover {
+  background-color: var(--accent-hover);
+}
+
+.btn-ignore {
+  background: none;
+  border: 1px solid var(--header-border);
+  padding: 10px 15px;
+  border-radius: 6px;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.btn-ignore:hover {
+  background-color: var(--header-border);
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--secondary-text);
   font-size: 0.8rem;
-  color: #666;
-  cursor: help;
+  text-decoration: underline;
+  cursor: pointer;
+  width: 100%;
+  text-align: center;
+}
+
+.btn-link:hover {
+  color: var(--text-color);
+}
+
+.slide-fade-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.slide-fade-leave-active {
+  transition: all 0.3s cubic-bezier(1, 0.5, 0.8, 1);
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  transform: translateY(20px);
+  opacity: 0;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 @media (max-width: 768px) {
@@ -620,12 +810,19 @@ watch(() => filters.value.platform, applyFilters)
 
   .card-image-wrapper {
     flex: none;
-    height: 160px;
+    height: 180px;
     width: 100%;
   }
 
   .card-content {
     padding: 15px;
+  }
+
+  .custom-toast {
+    left: 20px;
+    right: 20px;
+    width: auto;
+    bottom: 20px;
   }
 }
 </style>

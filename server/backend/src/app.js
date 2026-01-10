@@ -9,6 +9,7 @@ const participatoryBudgetsRoutes = require("./routes/participatoryBudgets");
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
 const filterRoutes = require("./routes/filters");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 // Import Cron Jobs
 const startScheduler = require("./cronJobs");
@@ -27,6 +28,7 @@ app.use("/participatory-budgets", participatoryBudgetsRoutes);
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
 app.use("/", filterRoutes); // Filtri generici
+app.use("/notifications", notificationRoutes);
 
 // 4. Avvio Server e Schedulatore
 const PORT = process.env.PORT || 3000;

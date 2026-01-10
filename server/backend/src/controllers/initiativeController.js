@@ -659,14 +659,16 @@ exports.signInitiative = async (req, res) => {
   let connection;
   try {
     const initiativeId = req.params.id;
-    const userId = req.header("X-Mock-User-Id");
+
+    // TODO: In produzione usa req.user.id (dal middleware auth)
+    const userId = req.user ? req.user.id : req.header("X-Mock-User-Id");
 
     if (!userId) return res.status(401).json({ message: "Auth mancante" });
 
     connection = await db.getConnection();
     await connection.beginTransaction();
 
-    // 1. BLOCCO SICUREZZA (Già presente e corretto)
+    // 1. BLOCCO SICUREZZA (Controllo residenza)
     const [userCheck] = await connection.execute(
       "SELECT IS_CITTADINO FROM UTENTE WHERE ID_UTENTE = ?",
       [userId]
@@ -680,13 +682,11 @@ exports.signInitiative = async (req, res) => {
       });
     }
 
-    // --- CORREZIONE QUI SOTTO ---
-    // 2. Inserimento Firma nella tabella di collegamento (MANCAVA QUESTO!)
+    // 2. Inserimento Firma
     await connection.execute(
       `INSERT INTO FIRMA_INIZIATIVA (ID_UTENTE, ID_INIZIATIVA) VALUES (?, ?)`,
       [userId, initiativeId]
     );
-    // ----------------------------
 
     // 3. Aggiornamento Contatore Firme
     await connection.execute(
@@ -694,32 +694,48 @@ exports.signInitiative = async (req, res) => {
       [initiativeId]
     );
 
-    // 4. Recupero dati aggiornati e Commit
+    // 4. Recupero dati aggiornati (Titolo e Nuovo numero firme)
     const [rows] = await connection.execute(
       "SELECT TITOLO, NUM_FIRME FROM INIZIATIVA WHERE ID_INIZIATIVA = ?",
       [initiativeId]
     );
     const newCount = rows[0].NUM_FIRME;
+    const title = rows[0].TITOLO;
 
-    await connection.commit();
+    await connection.commit(); // Salva tutto definitivamente
 
-    // 5. Notifiche e Auto-follow (Opzionale)
+    // --- DA QUI IN POI LE AZIONI NON BLOCCANTI ---
+
+    // 5. Auto-follow (Chi firma segue automaticamente)
     try {
       await db.query(
         `INSERT IGNORE INTO INIZIATIVA_SALVATA (ID_UTENTE, ID_INIZIATIVA) VALUES (?, ?)`,
         [userId, initiativeId]
       );
     } catch (e) {
-      /* ignore */
+      console.warn("Auto-follow fallito (non critico)", e);
+    }
+
+    // 6. 🔔 NOTIFICHE MILESTONE (Nuova logica aggiunta)
+    // Controlliamo se abbiamo raggiunto un traguardo importante (50, 100, 500...)
+    if (newCount === 50 || newCount === 100 || newCount % 500 === 0) {
+      const msg = `🚀 L'iniziativa "${title}" ha appena raggiunto ${newCount} firme!`;
+      const link = `/initiative/${initiativeId}`;
+
+      // Funzione helper "Fire & Forget" (senza await per non rallentare la risposta)
+      notifyFollowers(initiativeId, msg, link);
+      console.log(
+        `[NOTIFICA] Milestone ${newCount} raggiunta per iniziativa ${initiativeId}`
+      );
     }
 
     res.status(201).json({
-      message: "Firma registrata",
+      message: "Firma registrata con successo",
       signatures: newCount,
     });
   } catch (err) {
     if (connection) await connection.rollback();
-    // Gestione errore duplicato (se l'utente prova a firmare due volte)
+
     if (err.code === "ER_DUP_ENTRY") {
       return res
         .status(409)
@@ -735,64 +751,33 @@ exports.signInitiative = async (req, res) => {
 exports.followInitiative = async (req, res) => {
   try {
     const initiativeId = req.params.id;
+    const userId = req.header("X-Mock-User-Id"); // O req.user.id in produzione
 
-    // 1. Validazione Header Utente
-    const userId = req.header("X-Mock-User-Id");
     if (!userId) {
-      return res.status(401).json({
-        timeStamp: new Date().toISOString(),
-        message: "Autenticazione richiesta: Header X-Mock-User-Id mancante",
-      });
+      return res.status(401).json({ message: "Autenticazione richiesta" });
     }
 
-    // 2. Query di Inserimento diretto
+    // USA "INSERT IGNORE" invece di INSERT normale
+    // Questo evita l'errore ER_DUP_ENTRY se esiste già
     const query = `
-            INSERT INTO INIZIATIVA_SALVATA (ID_UTENTE, ID_INIZIATIVA)
-            VALUES (?, ?)
-        `;
+      INSERT IGNORE INTO INIZIATIVA_SALVATA (ID_UTENTE, ID_INIZIATIVA)
+      VALUES (?, ?)
+    `;
 
-    await db.execute(query, [userId, initiativeId]);
+    const [result] = await db.execute(query, [userId, initiativeId]);
 
-    // 3. Risposta di Successo
+    // Se affectedRows è 0, significava che c'era già, ma va bene lo stesso!
+    // Restituiamo 200 OK in entrambi i casi.
+
     res.status(200).json({
+      success: true,
+      message: "Iniziativa aggiunta ai preferiti",
       userId: parseInt(userId),
       initiativeId: parseInt(initiativeId),
-      savedAt: new Date().toISOString(),
     });
   } catch (err) {
-    // 4. Gestione Errori Specifici
-
-    // Codice 1062: Duplicate entry
-    if (err.code === "ER_DUP_ENTRY") {
-      return res.status(409).json({
-        timeStamp: new Date().toISOString(),
-        message: "L'iniziativa è già tra i seguiti dell'utente.",
-      });
-    }
-
-    // Codice 1452: Foreign Key mancante
-    if (err.code === "ER_NO_REFERENCED_ROW_2") {
-      return res.status(404).json({
-        timeStamp: new Date().toISOString(),
-        message: "Iniziativa o Utente non trovato.",
-        details: [
-          {
-            field: "id",
-            issue: "Impossibile salvare: iniziativa o utente inesistente.",
-          },
-        ],
-      });
-    }
-
     console.error("Errore followInitiative:", err);
-    res.status(500).json({
-      timeStamp: new Date().toISOString(),
-      message: "Errore interno del server",
-      details:
-        process.env.NODE_ENV === "development"
-          ? [{ field: "server", issue: err.message }]
-          : undefined,
-    });
+    res.status(500).json({ message: "Errore interno server" });
   }
 };
 
@@ -973,7 +958,11 @@ const notifySingleUser = async (userId, message, link) => {
 exports.updateInitiativeStatus = async (req, res) => {
   try {
     const initiativeId = req.params.id;
-    const userId = req.header("X-Mock-User-Id");
+
+    // MODIFICA PER PRODUZIONE: Usa req.user.id se hai il middleware auth
+    // Altrimenti mantieni req.header se sei ancora in fase di test puro
+    const userId = req.user ? req.user.id : req.header("X-Mock-User-Id");
+
     const { status } = req.body;
 
     if (!userId || !status)
@@ -984,8 +973,10 @@ exports.updateInitiativeStatus = async (req, res) => {
       "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
       [userId]
     );
+
+    // Controllo robusto: verifica che l'utente esista E sia admin
     if (admins.length === 0 || !admins[0].IS_ADMIN) {
-      return res.status(403).json({ message: "Solo Admin." });
+      return res.status(403).json({ message: "Accesso negato: Solo Admin." });
     }
 
     // 2. Recupero Info Iniziativa e Autore
@@ -1005,35 +996,38 @@ exports.updateInitiativeStatus = async (req, res) => {
     ]);
 
     // 4. GESTIONE NOTIFICHE INTELLIGENTE 🔔
-
     const link = `/initiative/${initiativeId}`;
 
-    // A. Notifica all'AUTORE (Messaggio dedicato)
+    // A. Notifica all'AUTORE
     if (authorId) {
       let authorMsg = `Lo stato della tua iniziativa "${title}" è cambiato in: ${status}.`;
+
+      // Personalizzazione tono
       if (status === "Respinta") {
-        authorMsg = `⚠️ Attenzione: La tua iniziativa "${title}" è stata respinta o rimossa dagli amministratori.`;
+        authorMsg = `⚠️ Attenzione: La tua iniziativa "${title}" non è stata approvata.`;
       } else if (status === "Approvata") {
-        authorMsg = `✅ Complimenti! La tua iniziativa "${title}" è stata approvata.`;
+        authorMsg = `✅ Complimenti! La tua iniziativa "${title}" è stata approvata ed è ora pubblica.`;
       }
+
+      // Await qui è utile per essere sicuri che l'autore riceva la notifica prima di chiudere
       await notifySingleUser(authorId, authorMsg, link);
     }
 
-    // B. Notifica ai FOLLOWER (Messaggio pubblico)
-    // Non notifichiamo i follower se è stata rimossa/respinta (per non fare spam negativo),
-    // a meno che non sia una policy specifica. Qui notifichiamo solo se Approvata o altri stati positivi.
+    // B. Notifica ai FOLLOWER (Solo se notizie positive/neutre)
     if (status !== "Respinta") {
       let followerMsg = `Aggiornamento: L'iniziativa "${title}" è ora ${status}.`;
       if (status === "Approvata")
-        followerMsg = `L'iniziativa "${title}" che segui è stata approvata!`;
+        followerMsg = `🚀 L'iniziativa "${title}" che segui è stata approvata!`;
 
-      // notifyFollowers è la funzione helper che hai già nel tuo codice
+      // Non usiamo 'await' qui per non rallentare la risposta se i follower sono tanti (Fire & Forget)
       notifyFollowers(initiativeId, followerMsg, link);
     }
 
-    res.status(200).json({ message: "Stato aggiornato", newStatus: status });
+    res
+      .status(200)
+      .json({ message: "Stato aggiornato con successo", newStatus: status });
   } catch (err) {
     console.error("Errore updateStatus:", err);
-    res.status(500).json({ message: "Errore server" });
+    res.status(500).json({ message: "Errore server durante l'aggiornamento" });
   }
 };
