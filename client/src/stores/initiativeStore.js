@@ -238,11 +238,6 @@ export const useInitiativeStore = defineStore('initiative', () => {
       const init = initiatives.value.find((i) => i.id === initiativeId)
       if (init) init.signatures += 1
 
-      // Auto-follow locale immediato per evitare errori se si clicca stella dopo
-      if (!followedIds.value.includes(initiativeId)) {
-        followedIds.value.push(initiativeId)
-      }
-
       // Il messaggio di successo è delegato a HomeView (Toast Custom),
       // ma se serve qui: toast.showToast('Firma registrata!', 'success')
       return { success: true }
@@ -276,11 +271,18 @@ export const useInitiativeStore = defineStore('initiative', () => {
       formData.append('categoryId', payloadData.categoryId)
       formData.append('platformId', payloadData.platformId || 1)
 
-      if (payloadData.file) {
+      // --- MODIFICA QUI PER MULTI-FILE ---
+      if (payloadData.files && payloadData.files.length > 0) {
+        // Iteriamo sull'array e aggiungiamo ogni file con la stessa chiave 'attachments'
+        payloadData.files.forEach((file) => {
+          formData.append('attachments', file)
+        })
+      }
+      // Fallback per compatibilità (se per caso arrivasse ancora un singolo file)
+      else if (payloadData.file) {
         formData.append('attachments', payloadData.file)
       }
 
-      // CORREZIONE QUI: Rimosso "const response =" perché non serve
       await axios.post(`${API_URL}/initiatives`, formData, {
         headers: {
           'X-Mock-User-Id': userId,
@@ -294,12 +296,37 @@ export const useInitiativeStore = defineStore('initiative', () => {
       return true
     } catch (err) {
       console.error('Errore creazione:', err)
-      const msg = err.response?.data?.message || 'Errore durante la creazione.'
-      error.value = msg
-      toast.showToast(msg, 'error')
+
+      // Gestione specifica errore 429 (Cooldown)
+      if (err.response && err.response.status === 429) {
+        const msg = err.response.data.message || 'Cooldown attivo.'
+        // Se il backend manda remainingMs, potresti formattarlo qui,
+        // ma il toast lo mostriamo già nella view prima di chiamare questo metodo (per sicurezza).
+        error.value = msg
+        toast.showToast(msg, 'error')
+      } else {
+        const msg = err.response?.data?.message || 'Errore durante la creazione.'
+        error.value = msg
+        toast.showToast(msg, 'error')
+      }
       return false
     } finally {
       loading.value = false
+    }
+  }
+
+  const checkUserCooldown = async () => {
+    const userId = localStorage.getItem('tp_mock_id')
+    if (!userId) return { allowed: true } // Se non loggato, lasciamo gestire al router guard o login
+
+    try {
+      const res = await axios.get(`${API_URL}/initiatives/cooldown`, {
+        headers: { 'X-Mock-User-Id': userId },
+      })
+      return res.data // Ritorna { allowed: bool, remainingMs: number }
+    } catch (err) {
+      console.error('Errore check cooldown', err)
+      return { allowed: true } // In caso di errore rete, non blocchiamo l'UI preventivamente
     }
   }
 
@@ -349,6 +376,28 @@ export const useInitiativeStore = defineStore('initiative', () => {
     }
   }
 
+  const extendDeadline = async (id, currentExpirationDate) => {
+    try {
+      const userId = localStorage.getItem('tp_mock_id')
+
+      // Calcoliamo la nuova data (+60 giorni)
+      const newDate = new Date(currentExpirationDate)
+      newDate.setDate(newDate.getDate() + 60)
+      const formattedDate = newDate.toISOString().split('T')[0] // YYYY-MM-DD
+
+      await axios.patch(
+        `${API_URL}/initiatives/${id}`,
+        { expirationDate: formattedDate }, // Body
+        { headers: { 'X-Mock-User-Id': userId } },
+      )
+
+      return true
+    } catch (err) {
+      console.error('Errore estensione scadenza:', err)
+      throw err // Rilancia l'errore per gestirlo nel componente
+    }
+  }
+
   return {
     initiatives,
     categories,
@@ -359,7 +408,7 @@ export const useInitiativeStore = defineStore('initiative', () => {
     totalPages,
     totalObjects,
     followedIds,
-    followedInitiatives, // Export per compatibilità
+    followedInitiatives,
     isFollowed,
     getCategoryName,
     getPlatformName,
@@ -374,5 +423,7 @@ export const useInitiativeStore = defineStore('initiative', () => {
     fetchExpiringInitiatives,
     submitAdminReply,
     fetchInitiativeById,
+    checkUserCooldown,
+    extendDeadline,
   }
 })

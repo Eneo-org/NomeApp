@@ -1,57 +1,143 @@
 <script setup>
-import { ref, onMounted } from 'vue';
-// Assumo tu stia usando il dashboardStore per le scadenze admin.
-// Se usi un altro store, cambia questa importazione.
-import { useDashboardStore } from '../stores/dashboardStore';
+import { ref, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useInitiativeStore } from '../stores/initiativeStore';
+import { useToastStore } from '../stores/toastStore'; // Import Toast Store
 import defaultImage from '@/assets/placeholder-initiative.jpg';
 
-const dashboardStore = useDashboardStore();
+const initiativeStore = useInitiativeStore();
+const toast = useToastStore(); // Init Toast
+const router = useRouter();
 const API_URL = 'http://localhost:3000';
 
-// Variabile reattiva per le iniziative
 const initiatives = ref([]);
+const currentPage = ref(1);
+const totalPages = ref(1);
+let timerInterval = null;
 
-// --- HELPER FUNCTIONS ---
+// --- FUNZIONI UTILI ---
+const calculateTimeLeft = (expirationDate) => {
+  const now = new Date();
+  const target = new Date(expirationDate);
+  const diff = target - now;
+  if (diff <= 0) return "SCADUTA";
 
-const getDaysLeft = (dateString) => {
-  const today = new Date();
-  const target = new Date(dateString);
-  const diffTime = target - today;
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays > 0 ? diffDays : 0;
-}
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((diff / 1000 / 60) % 60);
+  const seconds = Math.floor((diff / 1000) % 60);
 
-const formatDate = (dateString) => {
-  if (!dateString) return 'N/D';
-  return new Date(dateString).toLocaleDateString('it-IT');
-}
+  let parts = [];
+  if (days > 0) parts.push(`${days}g`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  parts.push(`${seconds}s`);
 
-const getImageUrl = (item) => {
-  if (!item.attachment || !item.attachment.filePath) {
-    return defaultImage;
-  }
-  const cleanPath = item.attachment.filePath.replace(/\\/g, '/');
-  return `${API_URL}/${cleanPath}`;
+  return parts.join(" ");
 };
 
-const goToReply = (id) => {
-  // Logica di navigazione (assicurati di avere la rotta corretta)
-  // router.push('/admin/reply/' + id);
-  console.log("Vai a rispondere all'iniziativa", id);
-}
+const updateTickers = () => {
+  if (!initiatives.value.length) return;
+  initiatives.value.forEach(item => {
+    item.displayTime = calculateTimeLeft(item.expirationDate);
+    item.isUrgent = !item.displayTime.includes("g") && item.displayTime !== "SCADUTA";
+  });
+};
+
+const getImageUrl = (item) => {
+  const imageObj = item.image || item.attachment;
+  if (!imageObj) return defaultImage;
+  const path = typeof imageObj === 'string' ? imageObj : imageObj.filePath;
+  if (!path) return defaultImage;
+  return `${API_URL}/${path.replace(/\\/g, '/')}`;
+};
+
+const formatDate = (date) => new Date(date).toLocaleDateString('it-IT');
+const goToReply = (id) => router.push(`/admin/reply/${id}`);
+
+// --- LOGICA PROROGA RAPIDA ---
+const handleQuickExtend = (item) => {
+  // 1. CONTROLLO: Se è già stata prorogata (Flag locale o DB)
+  // Nota: Poiché il DB non ha ancora una colonna 'IS_EXTENDED', ci basiamo su un flag locale 'item.alreadyExtended'
+  // che settiamo a true dopo l'azione, oppure se la logica business lo prevedesse.
+  if (item.alreadyExtended) {
+    toast.showToast("⛔ Errore: Questa iniziativa è già stata prorogata una volta.", "error");
+    return;
+  }
+
+  // 2. RICHIESTA CONFERMA
+  toast.showToast(
+    `Vuoi prorogare "${item.title}" di 60 giorni?`,
+    'prompt',
+    {
+      actions: [
+        {
+          label: '✅ Sì, Proroga',
+          style: 'primary',
+          onClick: async (toastId) => {
+            toast.removeToast(toastId);
+            try {
+              // Chiamata allo store
+              await initiativeStore.extendDeadline(item.id, item.expirationDate);
+
+              toast.showToast("Scadenza aggiornata (+60gg)!", "success");
+
+              // 3. AGGIORNAMENTO LOCALE (Senza ricaricare tutto)
+              const newDate = new Date(item.expirationDate);
+              newDate.setDate(newDate.getDate() + 60);
+              item.expirationDate = newDate.toISOString(); // Aggiorna data per il timer
+              item.alreadyExtended = true; // Blocca il bottone
+              item.displayTime = calculateTimeLeft(item.expirationDate); // Ricalcola timer
+
+            } catch (err) {
+              toast.showToast("Errore durante la proroga.", "error");
+            }
+          }
+        },
+        {
+          label: 'Annulla',
+          style: 'secondary',
+          onClick: (toastId) => toast.removeToast(toastId)
+        }
+      ]
+    }
+  );
+};
 
 // --- CARICAMENTO DATI ---
-onMounted(async () => {
-  // IMPORTANTE: Qui devi chiamare la funzione del tuo store che carica le scadenze.
-  // Ho messo un nome generico 'fetchExpiringInitiatives', VERIFICA nel tuo 'dashboardStore.js' come si chiama.
-  if (dashboardStore.fetchExpiringInitiatives) {
-    await dashboardStore.fetchExpiringInitiatives();
-    // Collega la variabile locale ai dati dello store
-    initiatives.value = dashboardStore.expiringInitiatives || [];
-  } else {
-    console.warn("Attenzione: fetchExpiringInitiatives non trovata nel dashboardStore.");
-    // Fallback: se usi un altro modo per caricare i dati, inseriscilo qui.
+const loadData = async (page = 1) => {
+  if (initiativeStore.fetchExpiringInitiatives) {
+    const responseData = await initiativeStore.fetchExpiringInitiatives(page);
+
+    if (responseData && responseData.data) {
+      initiatives.value = responseData.data.map(init => ({
+        ...init,
+        displayTime: calculateTimeLeft(init.expirationDate),
+        isUrgent: false,
+        alreadyExtended: false // Inizializziamo a false (se il backend mandasse il dato, lo useremmo qui)
+      }));
+
+      if (responseData.meta) {
+        currentPage.value = responseData.meta.currentPage;
+        totalPages.value = responseData.meta.totalPages;
+      }
+      updateTickers();
+    }
   }
+};
+
+const changePage = (delta) => {
+  const newPage = currentPage.value + delta;
+  if (newPage >= 1 && newPage <= totalPages.value) loadData(newPage);
+};
+
+onMounted(() => {
+  loadData();
+  timerInterval = setInterval(updateTickers, 1000);
+});
+
+onUnmounted(() => {
+  if (timerInterval) clearInterval(timerInterval);
 });
 </script>
 
@@ -59,49 +145,62 @@ onMounted(async () => {
   <div class="admin-wrapper">
     <div class="header-section">
       <h1 class="page-title">⏳ Monitoraggio Scadenze</h1>
-      <p class="subtitle">Iniziative "Trento Partecipa" che richiedono risposta ufficiale.</p>
+      <p class="subtitle">Iniziative interne in scadenza (prossimi 3 giorni)</p>
     </div>
 
-    <div class="initiatives-list">
+    <div v-if="initiatives.length > 0" class="initiatives-list">
       <div v-for="item in initiatives" :key="item.id" class="card">
 
         <div class="card-image-wrapper">
-          <img :src="getImageUrl(item)" class="card-img" alt="Immagine iniziativa">
-          <div v-if="item.platformId !== 1" class="source-badge external">
-            🔗 {{ item.platformName || 'Esterna' }}
-          </div>
+          <img :src="getImageUrl(item)" class="card-img" alt="Immagine">
         </div>
 
         <div class="card-content">
           <div class="card-header">
             <h3>{{ item.title }}</h3>
-            <div class="days-badge">
-              - {{ getDaysLeft(item.expirationDate) }} giorni
+            <div class="timer-badge" :class="{ 'urgent': item.isUrgent, 'expired': item.displayTime === 'SCADUTA' }">
+              ⏱️ {{ item.displayTime }}
             </div>
           </div>
 
           <div class="card-meta">
             <span>📍 {{ item.place || 'Trento' }}</span>
-            <span>🏷️ {{ item.category }}</span>
             <span>📅 Scadenza: {{ formatDate(item.expirationDate) }}</span>
+            <span v-if="item.alreadyExtended" class="extended-label">✔️ Proroga attivata</span>
           </div>
 
           <div class="card-footer">
-            <div class="signatures">
-              <strong>🔥 {{ item.signatures }} Firme</strong>
+            <div class="signatures"><strong>🔥 {{ item.signatures }} Firme</strong></div>
+
+            <div class="actions-group">
+              <button class="action-btn extend" :class="{ 'disabled': item.alreadyExtended }"
+                @click="handleQuickExtend(item)" title="Estendi scadenza di 60 giorni">
+                ⏳ +60gg
+              </button>
+
+              <button class="action-btn reply" @click="goToReply(item.id)">
+                📝 Vedi e Rispondi
+              </button>
             </div>
-            <button class="action-btn" @click="goToReply(item.id)">
-              📝 Vedi e Rispondi
-            </button>
           </div>
         </div>
       </div>
+    </div>
+
+    <div v-else class="no-results">
+      <p>Nessuna iniziativa in scadenza trovata.</p>
+    </div>
+
+    <div v-if="totalPages > 1" class="pagination-controls">
+      <button :disabled="currentPage === 1" @click="changePage(-1)" class="page-btn">←</button>
+      <span>Pagina {{ currentPage }} di {{ totalPages }}</span>
+      <button :disabled="currentPage === totalPages" @click="changePage(1)" class="page-btn">→</button>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* Contenitore Principale */
+/* GENERALI */
 .admin-wrapper {
   max-width: 1200px;
   margin: 0 auto;
@@ -124,35 +223,34 @@ onMounted(async () => {
   color: var(--secondary-text);
 }
 
-/* Griglia a 1 Colonna */
+/* LISTA E CARD */
 .initiatives-list {
   display: grid;
   grid-template-columns: 1fr;
   gap: 20px;
 }
 
-/* --- STILE CARD --- */
 .card {
   display: flex;
   gap: 20px;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 12px;
-  overflow: hidden;
   height: 180px;
-  position: relative;
   box-shadow: var(--card-shadow);
   transition: transform 0.2s;
+  overflow: hidden;
 }
 
 .card:hover {
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 .card-image-wrapper {
   flex: 0 0 220px;
-  background: #333;
   position: relative;
+  background: #333;
 }
 
 .card-img {
@@ -163,7 +261,7 @@ onMounted(async () => {
 
 .card-content {
   flex: 1;
-  padding: 15px 20px 15px 0;
+  padding: 15px 20px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -181,33 +279,36 @@ onMounted(async () => {
   color: var(--text-color);
 }
 
-/* Badge Rosso */
-.days-badge {
+/* TIMER */
+.timer-badge {
   position: absolute;
   top: 0;
-  right: 15px;
-  background-color: #e74c3c;
+  right: 0;
+  background-color: #f39c12;
   color: white;
-  padding: 5px 12px;
+  padding: 6px 12px;
   border-radius: 6px;
   font-weight: bold;
   font-size: 0.9rem;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  min-width: 110px;
+  text-align: center;
 }
 
-.source-badge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  z-index: 2;
-  background-color: #d32f2f;
-  color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+.timer-badge.urgent {
+  background-color: #e74c3c;
+  animation: pulse 1s infinite alternate;
+}
+
+.timer-badge.expired {
+  background-color: #34495e;
+  animation: none;
+}
+
+@keyframes pulse {
+  to {
+    transform: scale(1.05);
+  }
 }
 
 .card-meta {
@@ -219,6 +320,13 @@ onMounted(async () => {
   margin-top: 5px;
 }
 
+.extended-label {
+  color: #27ae60;
+  font-weight: bold;
+  font-size: 0.8rem;
+}
+
+/* FOOTER E BOTTONI */
 .card-footer {
   display: flex;
   justify-content: space-between;
@@ -233,20 +341,86 @@ onMounted(async () => {
   color: var(--text-color);
 }
 
+.actions-group {
+  display: flex;
+  gap: 10px;
+}
+
 .action-btn {
-  background-color: var(--accent-color);
-  color: white;
   border: none;
   padding: 8px 16px;
   border-radius: 6px;
   cursor: pointer;
   font-weight: bold;
   font-size: 0.9rem;
-  transition: opacity 0.2s;
+  transition: all 0.2s;
+  color: white;
 }
 
-.action-btn:hover {
+/* Bottone Rispondi (Verde) */
+.action-btn.reply {
+  background-color: var(--accent-color);
+}
+
+.action-btn.reply:hover {
   opacity: 0.9;
+}
+
+/* Bottone Proroga (Arancione) */
+.action-btn.extend {
+  background-color: #f39c12;
+}
+
+.action-btn.extend:hover {
+  background-color: #e67e22;
+}
+
+/* Stato Disabilitato (Grigio) per Proroga */
+.action-btn.extend.disabled {
+  background-color: #95a5a6;
+  /* Grigio */
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Al click sul disabilitato gestiamo il toast, quindi non mettiamo pointer-events: none */
+
+.no-results {
+  text-align: center;
+  padding: 40px;
+  color: var(--secondary-text);
+  font-size: 1.1rem;
+}
+
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 30px;
+  align-items: center;
+}
+
+.page-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-btn:hover:not(:disabled) {
+  background: var(--accent-color);
+  color: white;
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
@@ -256,9 +430,7 @@ onMounted(async () => {
   }
 
   .card-image-wrapper {
-    flex: none;
     height: 160px;
-    width: 100%;
   }
 
   .card-content {
@@ -267,13 +439,27 @@ onMounted(async () => {
 
   .card-header {
     padding-right: 0;
-    margin-bottom: 40px;
+    margin-bottom: 35px;
   }
 
-  .days-badge {
+  .timer-badge {
     top: 35px;
     left: 0;
     right: auto;
+  }
+
+  .card-footer {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
+
+  .actions-group {
+    width: 100%;
+  }
+
+  .action-btn {
+    flex: 1;
   }
 }
 </style>

@@ -7,6 +7,7 @@ import { useToastStore } from '../stores/toastStore';
 import { useImage } from '@/composables/useImage';
 import ParticipatoryBudgetCard from '@/components/ParticipatoryBudgetCard.vue'
 import { useRouter } from 'vue-router';
+import { formatCooldownTime } from '@/utils/dateUtils';
 
 const initiativeStore = useInitiativeStore()
 const budgetStore = useParticipatoryBudgetStore()
@@ -15,10 +16,7 @@ const toast = useToastStore();
 const router = useRouter();
 const { getImageUrl } = useImage();
 
-// --- STATO TOAST PERSONALIZZATO ---
-const showNotificationPrompt = ref(false);
-const lastSignedInitiative = ref(null);
-
+// --- STATO PAGINA ---
 const page = ref(1);
 const sort = ref('signatures');
 const filters = ref({
@@ -80,7 +78,7 @@ const resetFilters = () => {
   applyFilters()
 }
 
-// --- LOGICA STELLINA (SEMPLIFICATA) ---
+// --- LOGICA STELLINA ---
 const handleStarClick = async (item) => {
   if (!userStore.isAuthenticated) {
     if (confirm("Devi accedere per seguire le iniziative. Vuoi andare al login?")) {
@@ -88,13 +86,29 @@ const handleStarClick = async (item) => {
     }
     return;
   }
-
-  // DELEGIAMO TUTTO ALLO STORE!
-  // Niente logica locale qui, evita conflitti e doppi messaggi.
   await initiativeStore.toggleFollow(item.id, item.title);
 };
 
-// --- LOGICA FIRMA (Invariata, ma pulita) ---
+const handleCreateClick = async () => {
+  if (!userStore.isAuthenticated) {
+    router.push('/login');
+    return;
+  }
+  const status = await initiativeStore.checkUserCooldown();
+
+  if (status && status.allowed === false) {
+    const timeString = formatCooldownTime(status.remainingMs);
+    toast.showToast(
+      `⏳ Devi attendere ancora ${timeString} prima di creare una nuova iniziativa.`,
+      'error',
+      { duration: 6000 }
+    );
+  } else {
+    router.push('/create');
+  }
+};
+
+// --- LOGICA FIRMA ---
 const handleSign = async (item) => {
   if (!userStore.isAuthenticated) {
     if (confirm("Devi accedere per firmare. Vuoi andare al login?")) {
@@ -103,29 +117,41 @@ const handleSign = async (item) => {
     return;
   }
 
+  // 1. Esegui la firma
   const result = await initiativeStore.signInitiative(item.id);
 
   if (result.success) {
-    // 1. Toast di Successo Standard
+    // 2. Toast Verde
     toast.showToast("✅ Firma registrata con successo!", "success");
 
-    // 2. Controllo Prompt (INTEGRATO NEI TOAST)
-    const hidePrompt = localStorage.getItem('hideNotificationPrompt');
-    if (!hidePrompt) {
+    // 3. DEBUG: Controlliamo le condizioni
+    // NOTA: Ho cambiato il nome della chiave aggiungendo '_v2' per resettare la tua preferenza salvata
+    const storageKey = 'hideNotificationPrompt_v2';
+    const hidePrompt = localStorage.getItem(storageKey);
+    const alreadyFollowing = initiativeStore.isFollowed(item.id);
 
-      // Creiamo il Toast "Prompt" interattivo
+    console.log("--- DEBUG FIRMA ---");
+    console.log("Iniziativa:", item.title);
+    console.log("Utente ha nascosto il prompt (localStorage)?", hidePrompt);
+    console.log("Utente segue già l'iniziativa?", alreadyFollowing);
+
+    // Mostra il prompt SOLO se:
+    // A. Non è stato nascosto per sempre
+    // B. L'utente non segue già l'iniziativa
+    if (!hidePrompt && !alreadyFollowing) {
+      console.log(">> MOSTRA IL PROMPT GIALLO");
+
       toast.showToast(
         `Vuoi ricevere notifiche sugli aggiornamenti di "${item.title}"?`,
-        'prompt', // Tipo nuovo (giallo)
+        'prompt',
         {
           actions: [
             {
               label: '🔔 Tienimi aggiornato',
               style: 'primary',
               onClick: async (toastId) => {
-                // Logica SI
                 await initiativeStore.ensureFollowed(item.id);
-                toast.removeToast(toastId); // Chiudi il prompt
+                toast.removeToast(toastId);
                 toast.showToast(`Notifiche attivate per "${item.title}"!`, 'success');
               }
             },
@@ -133,7 +159,6 @@ const handleSign = async (item) => {
               label: 'Non ora',
               style: 'secondary',
               onClick: (toastId) => {
-                // Logica NO
                 toast.removeToast(toastId);
               }
             },
@@ -141,8 +166,8 @@ const handleSign = async (item) => {
               label: 'Non chiedere più',
               style: 'secondary',
               onClick: (toastId) => {
-                // Logica MAI PIÙ
-                localStorage.setItem('hideNotificationPrompt', 'true');
+                // Salviamo la preferenza con la NUOVA chiave
+                localStorage.setItem(storageKey, 'true');
                 toast.removeToast(toastId);
                 toast.showToast('Preferenza salvata.', 'info');
               }
@@ -150,28 +175,10 @@ const handleSign = async (item) => {
           ]
         }
       );
+    } else {
+      console.log(">> PROMPT SALTATO (Condizioni non soddisfatte)");
     }
   }
-};
-
-// --- AZIONI BOTTONI TOAST ---
-const enableNotifications = async () => {
-  if (lastSignedInitiative.value) {
-    // Usiamo lo store per assicurarci che sia tra i preferiti
-    await initiativeStore.ensureFollowed(lastSignedInitiative.value.id);
-  }
-  toast.showToast(`🔔 Notifiche attivate per "${lastSignedInitiative.value?.title}"!`, "success");
-  showNotificationPrompt.value = false;
-};
-
-const ignorePrompt = () => {
-  showNotificationPrompt.value = false;
-};
-
-const disablePromptForever = () => {
-  localStorage.setItem('hideNotificationPrompt', 'true');
-  showNotificationPrompt.value = false;
-  toast.showToast("Preferenza salvata.", "info");
 };
 
 const getStatusClass = (status) => {
@@ -225,7 +232,9 @@ watch(() => filters.value.platform, applyFilters)
         </div>
         <div class="sidebar-actions" v-if="userStore.isAuthenticated">
           <hr>
-          <RouterLink to="/create"><button class="create-btn full-width">+ Crea Nuova</button></RouterLink>
+          <button @click="handleCreateClick" class="create-btn full-width">
+            + Crea Nuova
+          </button>
         </div>
       </aside>
 
@@ -296,26 +305,11 @@ watch(() => filters.value.platform, applyFilters)
       </main>
     </div>
 
-    <Transition name="slide-fade">
-      <div v-if="showNotificationPrompt" class="custom-toast">
-        <div class="toast-header">
-          <strong>Rimani aggiornato?</strong>
-          <button class="close-btn" @click="ignorePrompt">×</button>
-        </div>
-        <p>Vuoi ricevere notifiche sugli aggiornamenti di <strong>"{{ lastSignedInitiative?.title }}"</strong>?</p>
-        <div class="toast-actions">
-          <button class="btn-confirm" @click="enableNotifications">🔔 Tienimi aggiornato</button>
-          <button class="btn-ignore" @click="ignorePrompt">Ignora</button>
-        </div>
-        <button class="btn-link" @click="disablePromptForever">Non mostrare più questo messaggio</button>
-      </div>
-    </Transition>
   </div>
 </template>
 
 <style scoped>
-/* COPIA GLI STILI DI PRIMA, SONO CORRETTI */
-/* ... Styles ... */
+/* STILI INVARIATI */
 .home-wrapper {
   max-width: 1100px;
   margin: 0 auto;
@@ -676,123 +670,6 @@ watch(() => filters.value.platform, applyFilters)
   cursor: pointer;
 }
 
-.custom-toast {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  width: 340px;
-  background: var(--card-bg);
-  color: var(--text-color);
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--accent-color);
-  padding: 20px;
-  z-index: 9999;
-  font-family: 'Segoe UI', sans-serif;
-  animation: slideIn 0.3s ease-out;
-}
-
-.toast-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-  font-size: 1.1rem;
-  color: var(--accent-color);
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--secondary-text);
-  line-height: 1;
-}
-
-.custom-toast p {
-  font-size: 0.95rem;
-  color: var(--text-color);
-  margin-bottom: 20px;
-  line-height: 1.5;
-}
-
-.toast-actions {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-
-.btn-confirm {
-  flex: 1;
-  background-color: var(--accent-color);
-  color: white;
-  border: none;
-  padding: 10px;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.btn-confirm:hover {
-  background-color: var(--accent-hover);
-}
-
-.btn-ignore {
-  background: none;
-  border: 1px solid var(--header-border);
-  padding: 10px 15px;
-  border-radius: 6px;
-  color: var(--text-color);
-  cursor: pointer;
-}
-
-.btn-ignore:hover {
-  background-color: var(--header-border);
-}
-
-.btn-link {
-  background: none;
-  border: none;
-  color: var(--secondary-text);
-  font-size: 0.8rem;
-  text-decoration: underline;
-  cursor: pointer;
-  width: 100%;
-  text-align: center;
-}
-
-.btn-link:hover {
-  color: var(--text-color);
-}
-
-.slide-fade-enter-active {
-  transition: all 0.3s ease-out;
-}
-
-.slide-fade-leave-active {
-  transition: all 0.3s cubic-bezier(1, 0.5, 0.8, 1);
-}
-
-.slide-fade-enter-from,
-.slide-fade-leave-to {
-  transform: translateY(20px);
-  opacity: 0;
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
 @media (max-width: 768px) {
   .main-layout {
     grid-template-columns: 1fr;
@@ -816,13 +693,6 @@ watch(() => filters.value.platform, applyFilters)
 
   .card-content {
     padding: 15px;
-  }
-
-  .custom-toast {
-    left: 20px;
-    right: 20px;
-    width: auto;
-    bottom: 20px;
   }
 }
 </style>

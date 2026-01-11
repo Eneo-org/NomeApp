@@ -201,6 +201,36 @@ exports.createInitiative = async (req, res) => {
         .json({ message: "Header X-Mock-User-Id mancante" });
     }
 
+    // --- 🛑 CHECK COOLDOWN 🛑 ---
+    // Recuperiamo la data dell'ultima iniziativa
+    const [lastInits] = await db.execute(
+      "SELECT DATA_CREAZIONE FROM INIZIATIVA WHERE ID_AUTORE = ? ORDER BY DATA_CREAZIONE DESC LIMIT 1",
+      [mockUserId]
+    );
+
+    if (lastInits.length > 0) {
+      const lastDate = new Date(lastInits[0].DATA_CREAZIONE);
+      const now = new Date();
+      const cooldownDays = 14;
+
+      const cooldownEnd = new Date(lastDate);
+      cooldownEnd.setDate(lastDate.getDate() + cooldownDays);
+
+      // Se ADESSO è prima della FINE del cooldown -> BLOCCA
+      if (now < cooldownEnd) {
+        const remainingMs = cooldownEnd - now;
+
+        if (files) cleanupFiles(files); // Pulisci i file caricati
+
+        return res.status(429).json({
+          message: "Devi attendere prima di creare una nuova iniziativa.",
+          cooldownActive: true,
+          remainingMs: remainingMs,
+        });
+      }
+    }
+    // --- ✅ FINE CHECK COOLDOWN ---
+
     // 1. Validazione
     const { error, value } = initiativeSchema.validate(req.body, {
       abortEarly: false,
@@ -313,6 +343,45 @@ exports.createInitiative = async (req, res) => {
   }
 };
 
+// --- NUOVO METODO PER IL CHECK LEGGERO (GET) ---
+exports.checkCooldown = async (req, res) => {
+  try {
+    const userId = req.header("X-Mock-User-Id");
+    if (!userId) return res.status(400).json({ message: "No User ID" });
+
+    // Cerca l'ultima iniziativa
+    const [rows] = await db.execute(
+      "SELECT DATA_CREAZIONE FROM INIZIATIVA WHERE ID_AUTORE = ? ORDER BY DATA_CREAZIONE DESC LIMIT 1",
+      [userId]
+    );
+
+    // Se non ha mai creato iniziative, via libera
+    if (rows.length === 0) {
+      return res.status(200).json({ allowed: true });
+    }
+
+    const lastDate = new Date(rows[0].DATA_CREAZIONE);
+    const now = new Date();
+
+    // Calcola fine cooldown (14 giorni)
+    const cooldownEnd = new Date(lastDate);
+    cooldownEnd.setDate(lastDate.getDate() + 14);
+
+    if (now < cooldownEnd) {
+      // Cooldown attivo
+      return res.status(200).json({
+        allowed: false,
+        remainingMs: cooldownEnd - now,
+      });
+    }
+
+    return res.status(200).json({ allowed: true });
+  } catch (err) {
+    console.error("Errore checkCooldown:", err);
+    res.status(500).json({ message: "Errore server" });
+  }
+};
+
 exports.getInitiativeById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -353,38 +422,44 @@ exports.getInitiativeById = async (req, res) => {
 // --- ADMIN: Dashboard Iniziative in Scadenza ---
 exports.getExpiringInitiatives = async (req, res) => {
   try {
+    console.log("⚡ API getExpiringInitiatives chiamata!"); // DEBUG: Se non vedi questo, riavvia il server
+
     const userId = req.header("X-Mock-User-Id");
 
-    // Check Admin
+    // Check Admin... (codice uguale a prima)
     const [admins] = await db.query(
       "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
       [userId]
     );
-    if (admins.length === 0 || !admins[0].IS_ADMIN) {
+    if (admins.length === 0 || !admins[0].IS_ADMIN)
       return res.status(403).json({ message: "Accesso negato" });
-    }
 
     const { currentPage, objectsPerPage } = req.query;
     const page = parseInt(currentPage) || 1;
     const limit = parseInt(objectsPerPage) || 10;
     const offset = (page - 1) * limit;
 
-    // MODIFICA QUI:
-    // 1. Aggiunto "AND ID_PIATTAFORMA = 1" (Solo Trento Partecipa)
-    // 2. Ordinamento "ORDER BY DATA_SCADENZA ASC" (Dalla più vicina alla più lontana)
+    // --- QUERY CORRETTA ---
+    const whereClause = `
+        WHERE STATO = 'In corso' 
+        AND ID_PIATTAFORMA = 1 
+        AND DATA_SCADENZA > NOW()                      -- Esclude le scadute (passato)
+        AND DATA_SCADENZA <= DATE_ADD(NOW(), INTERVAL 3 DAY) -- Include solo scadenze prossime (futuro vicino)
+    `;
+
     const queryData = `
       SELECT 
         ID_INIZIATIVA, TITOLO, DESCRIZIONE, LUOGO, 
         STATO, NUM_FIRME, DATA_SCADENZA, 
-        ID_CATEGORIA, ID_AUTORE,
+        ID_CATEGORIA, ID_AUTORE, ID_PIATTAFORMA,
         (SELECT FILE_PATH FROM ALLEGATO WHERE ID_INIZIATIVA = INIZIATIVA.ID_INIZIATIVA LIMIT 1) as FILE_PATH
       FROM INIZIATIVA 
-      WHERE STATO = 'In corso' AND ID_PIATTAFORMA = 1
+      ${whereClause}
       ORDER BY DATA_SCADENZA ASC 
       LIMIT ? OFFSET ?
     `;
 
-    const queryCount = `SELECT COUNT(*) as total FROM INIZIATIVA WHERE STATO = 'In corso' AND ID_PIATTAFORMA = 1`;
+    const queryCount = `SELECT COUNT(*) as total FROM INIZIATIVA ${whereClause}`;
 
     const [rows] = await db.query(queryData, [limit, offset]);
     const [count] = await db.query(queryCount);
@@ -393,14 +468,15 @@ exports.getExpiringInitiatives = async (req, res) => {
       data: rows.map((row) => ({
         id: row.ID_INIZIATIVA,
         title: row.TITOLO,
-        description: row.DESCRIZIONE, // Serve per la card
-        place: row.LUOGO, // Serve per la card
-        signatures: row.NUM_FIRME, // Serve per la card
+        description: row.DESCRIZIONE,
+        place: row.LUOGO,
+        signatures: row.NUM_FIRME,
         expirationDate: row.DATA_SCADENZA,
         status: row.STATO,
         authorId: row.ID_AUTORE,
         categoryId: row.ID_CATEGORIA,
-        image: row.FILE_PATH, // Serve per l'immagine
+        platformId: row.ID_PIATTAFORMA,
+        image: row.FILE_PATH,
       })),
       meta: {
         currentPage: page,

@@ -7,6 +7,7 @@ const upload = require("../middleware/upload");
 
 // QUESTA deve stare prima di /:id
 router.get("/admin/expiring", initiativeController.getExpiringInitiatives);
+router.get("/cooldown", initiativeController.checkCooldown);
 
 router.get("/", initiativeController.getAllInitiatives);
 
