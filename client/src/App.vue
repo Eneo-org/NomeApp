@@ -1,27 +1,23 @@
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from './stores/userStore'
 import TheToast from './components/TheToast.vue'
-
-// 1. IMPORTA IL COMPOSABLE DEL TEMA
 import { useTheme } from '@/composables/useTheme';
 
 const router = useRouter()
 const userStore = useUserStore()
-
-// 2. ESTRAI LE VARIABILI E FUNZIONI DAL COMPOSABLE
 const { isDark, toggleTheme, initTheme } = useTheme();
 
-// --- INITIALIZZAZIONE APP ---
-onMounted(() => {
-  // 3. Inizializza il tema usando la funzione centralizzata
-  initTheme();
+// Calcola l'iniziale dell'utente per l'avatar
+const userInitial = computed(() => {
+  return userStore.user?.name ? userStore.user.name.charAt(0).toUpperCase() : 'U';
+});
 
-  // Ripristina la Sessione Utente
+onMounted(() => {
+  initTheme();
   userStore.initializeStore()
 })
-// ------------------------
 
 const logout = () => {
   userStore.logout()
@@ -36,31 +32,73 @@ const logout = () => {
 
     <nav class="navbar">
       <div class="nav-left">
-        <RouterLink to="/" class="nav-logo">Trento Partecipa</RouterLink>
+        <RouterLink to="/" class="brand-logo-inline">
+          <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="brand-icon">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+          </svg>
+
+          <span class="brand-text-inline">
+            <span class="brand-city">Trento</span><span class="brand-action">Partecipa</span>
+          </span>
+        </RouterLink>
       </div>
 
       <div class="nav-right">
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/archive">Archivio</RouterLink>
+        <RouterLink to="/" class="nav-link">Home</RouterLink>
+        <RouterLink to="/archive" class="nav-link">Archivio</RouterLink>
 
-        <RouterLink v-if="userStore.isAuthenticated" to="/dashboard">
-          📊 Dashboard
+        <RouterLink v-if="userStore.isAuthenticated" to="/dashboard" class="nav-link">
+          Dashboard
         </RouterLink>
 
         <RouterLink v-if="userStore.isAuthenticated && userStore.user?.isAdmin" to="/admin/dashboard"
-          class="admin-link">
-          🏛️ Area Admin
+          class="nav-link admin-pill">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+          Area Admin
         </RouterLink>
 
-        <RouterLink v-if="!userStore.isAuthenticated" to="/login">Accedi</RouterLink>
+        <RouterLink v-if="!userStore.isAuthenticated" to="/login" class="login-btn">
+          Accedi
+        </RouterLink>
 
-        <div v-else class="user-menu">
-          <span class="user-name-text">{{ userStore.fullName }}</span>
-          <a @click.prevent="logout" href="#" class="logout-link">Esci</a>
+        <div v-else class="user-control-panel">
+          <div class="user-info">
+            <div class="avatar-circle">{{ userInitial }}</div>
+            <span class="user-name">{{ userStore.fullName }}</span>
+          </div>
+          <div class="divider-vertical"></div>
+          <button @click="logout" class="logout-icon-btn" title="Esci">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
         </div>
 
-        <button @click="toggleTheme" class="theme-btn" title="Cambia tema">
-          {{ isDark ? '☀️' : '🌙' }}
+        <button @click="toggleTheme" class="theme-toggle-btn"
+          :title="isDark ? 'Passa a Light Mode' : 'Passa a Dark Mode'">
+          <svg v-if="isDark" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
         </button>
       </div>
     </nav>
@@ -77,45 +115,34 @@ const logout = () => {
 </template>
 
 <style>
-/* --- DEFINIZIONE VARIABILI GLOBALI (Light Mode - MODIFICATA) --- */
+/* --- VARIABILI GLOBALI (Light Mode) --- */
 :root {
-  /* 1. SFONDO GENERALE (Grigio Solido) */
   --bg-color: #E2E8F0;
-
   --text-color: #1e293b;
   --secondary-text: #64748b;
 
-  /* 2. CARD (Bianche con bordi e ombre definite) */
   --card-bg: #ffffff;
   --card-border: #94A3B8;
-  --card-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 
-  /* 3. NAVBAR LIGHT MODE (Modificata come richiesto) */
-  /* Colore scuro/grigio per la barra in Light Mode */
-  --navbar-bg: #DEE2E6;
-  /* Ombra forte per staccarla */
-  --navbar-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --header-border: #cbd5e1;
+  --navbar-bg: #FFFFFF;
+  --navbar-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --header-border: #e2e8f0;
 
-  /* INPUTS */
   --input-bg: #ffffff;
-  --input-border: #94A3B8;
+  --input-border: #cbd5e1;
 
-  /* BRAND COLORS */
-  --accent-color: #42b883;
-  --accent-hover: #3aa876;
-  --primary-color: #2563eb;
-  --primary-hover: #1d4ed8;
+  --accent-color: #10b981;
+  /* Verde Smeraldo */
+  --accent-hover: #059669;
 
-  /* OTP */
-  --otp-bg: #F1F5F9;
-  --otp-border: #64748b;
+  --user-panel-bg: #f1f5f9;
+  --nav-hover: #10b981;
 }
 
-/* --- VARIABILI DARK MODE (INVARIATA - ORIGINALE) --- */
+/* --- VARIABILI DARK MODE (ORIGINALI) --- */
 body.dark-mode,
 body.dark {
-  /* Copia esatta dei tuoi valori originali */
   --bg-color: #161616;
   --text-color: #e0e0e0;
   --secondary-text: #a0a0a0;
@@ -125,166 +152,281 @@ body.dark {
   --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 
   --header-border: #2a2a2a;
-
-  /* NAVBAR DARK MODE (Reset allo stato originale) */
   --navbar-bg: #202020;
-  /* Usa lo stesso colore delle card (come nel tuo codice originale) */
   --navbar-shadow: none;
-  /* Nessuna ombra in dark mode (come nel tuo codice originale) */
 
   --input-bg: #252525;
   --input-border: #2a2a2a;
-  /* Aggiunto per compatibilità input */
 
-  --otp-bg: #161616;
-  /* Aggiunto per compatibilità OTP */
-  --otp-border: #444444;
-  /* Aggiunto per compatibilità OTP */
+  --user-panel-bg: #2a2a2a;
+  --nav-hover: #10b981;
 }
 
-/* APPLICAZIONE VARIABILI AL BODY */
+/* BASE */
 body {
   margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif;
   background-color: var(--bg-color);
   color: var(--text-color);
-  transition: background-color 0.3s, color 0.3s;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* STILI LAYOUT APP */
 .app-layout {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-/* Navbar */
+/* --- NAVBAR STYLING --- */
 .navbar {
-  /* Usa le variabili dinamiche */
   background-color: var(--navbar-bg);
-  box-shadow: var(--navbar-shadow);
-
   border-bottom: 1px solid var(--header-border);
-  padding: 15px 30px;
+  box-shadow: var(--navbar-shadow);
+  padding: 0 40px;
+  height: 70px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 1000;
+  transition: background-color 0.3s;
 }
 
-.nav-logo {
-  font-weight: 800;
-  font-size: 1.3rem;
-  color: var(--accent-color);
+/* --- STILE LOGO BRAND (MODIFICATO: Icona e Testo Grande) --- */
+.brand-logo-inline {
   text-decoration: none;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* Più spazio tra icona grande e testo */
+  transition: opacity 0.2s;
 }
 
+.brand-logo-inline:hover {
+  opacity: 0.85;
+}
+
+/* Nuova Icona più grande */
+.brand-icon {
+  color: var(--accent-color);
+  flex-shrink: 0;
+  /* Dimensioni aumentate nel tag SVG direttamente (width="34" height="34") */
+}
+
+/* Testo su unica riga MOLTO PIÙ GRANDE */
+.brand-text-inline {
+  font-size: 1.7rem;
+  /* Dimensione notevolmente aumentata */
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.brand-city {
+  font-weight: 500;
+  /* Peso normale */
+  color: var(--text-color);
+  letter-spacing: -0.5px;
+}
+
+.brand-action {
+  font-weight: 900;
+  /* Molto grassetto */
+  /* Gradiente sul testo */
+  background: linear-gradient(90deg, var(--text-color) 15%, var(--accent-color) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -1px;
+  /* Kerning stretto per impatto */
+}
+
+
+/* --- NAVIGAZIONE DESTRA --- */
 .nav-right {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 25px;
 }
 
-.nav-right a {
+.nav-link {
   text-decoration: none;
   color: var(--text-color);
-  font-weight: 600;
-  transition: color 0.2s;
+  font-weight: 500;
   font-size: 0.95rem;
+  padding: 5px 0;
+  position: relative;
+  transition: color 0.2s;
 }
 
-.nav-right a:hover {
-  color: var(--accent-color);
+.nav-link:hover {
+  color: var(--nav-hover);
 }
 
-/* Stile speciale per il link Admin */
-.admin-link {
-  color: #10b981 !important;
-  font-weight: 800 !important;
-  border: 2px solid #10b981;
-  padding: 6px 12px;
-  border-radius: 6px;
+.nav-link.router-link-active {
+  color: var(--nav-hover);
+  font-weight: 700;
 }
 
-.admin-link:hover {
-  background-color: #10b981;
+.nav-link.router-link-active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--nav-hover);
+  border-radius: 2px;
+}
+
+/* Link Admin Pillola */
+.nav-link.admin-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--accent-color) !important;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.nav-link.admin-pill::after {
+  display: none;
+}
+
+.nav-link.admin-pill:hover {
+  background-color: var(--accent-color);
   color: white !important;
 }
 
-.user-menu {
+/* Bottone Accedi */
+.login-btn {
+  background-color: var(--accent-color);
+  color: white;
+  text-decoration: none;
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.login-btn:hover {
+  background-color: var(--accent-hover);
+}
+
+/* --- AREA UTENTE --- */
+.user-control-panel {
   display: flex;
   align-items: center;
-  gap: 15px;
+  background-color: var(--user-panel-bg);
+  padding: 4px 6px 4px 12px;
+  border-radius: 30px;
+  border: 1px solid var(--header-border);
+  gap: 10px;
 }
 
-.user-name-text {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--primary-color);
-  border-right: 2px solid var(--header-border);
-  padding-right: 15px;
-  cursor: default;
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.logout-link {
-  cursor: pointer;
-  color: #ef4444 !important;
-  font-weight: 600;
-}
-
-/* Pulsante Tema */
-.theme-btn {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 8px;
-  width: 40px;
-  height: 40px;
-  cursor: pointer;
+.avatar-circle {
+  width: 28px;
+  height: 28px;
+  background-color: var(--accent-color);
+  color: white;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
-  transition: all 0.2s;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.user-name {
+  font-size: 0.9rem;
+  font-weight: 600;
   color: var(--text-color);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.theme-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  border-color: var(--accent-color);
+.divider-vertical {
+  width: 1px;
+  height: 20px;
+  background-color: var(--secondary-text);
+  opacity: 0.3;
 }
 
-/* Contenuto */
-.main-content {
-  flex: 1;
-  padding: 30px 20px;
+.logout-icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--secondary-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 6px;
+  border-radius: 50%;
+  transition: all 0.2s;
 }
 
-/* Footer */
+.logout-icon-btn:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+/* TOGGLE THEME */
+.theme-toggle-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--secondary-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background 0.2s, color 0.2s;
+  margin-left: 5px;
+}
+
+.theme-toggle-btn:hover {
+  background-color: var(--user-panel-bg);
+  color: var(--text-color);
+}
+
+/* FOOTER */
 .app-footer {
   text-align: center;
-  padding: 30px;
-  /* Il footer usa lo stesso sfondo della navbar per coerenza */
+  padding: 25px;
   background-color: var(--navbar-bg);
-  color: var(--secondary-text);
-  font-size: 0.9rem;
   border-top: 1px solid var(--header-border);
+  color: var(--secondary-text);
+  font-size: 0.85rem;
   margin-top: auto;
 }
 
-.nav-right a.router-link-active {
-  color: var(--accent-color);
-  border-bottom: 2px solid var(--accent-color);
-}
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 15px;
+    height: auto;
+    flex-direction: column;
+    gap: 15px;
+  }
 
-.nav-right a.router-link-active.admin-link {
-  border-bottom: 2px solid #10b981;
-  background-color: #10b981;
-  color: white !important;
+  .nav-right {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+  }
 }
 </style>

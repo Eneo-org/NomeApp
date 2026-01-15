@@ -14,9 +14,10 @@ export const useInitiativeStore = defineStore('initiative', () => {
   const categories = ref([])
   const platforms = ref([])
 
-  // FIX CRITICO: Inizializziamo sempre come array vuoto per evitare errori "includes of undefined"
   const followedIds = ref([])
   const followedInitiatives = followedIds // Alias per compatibilità con HomeView
+
+  const signedIds = ref([])
 
   const loading = ref(false)
   const error = ref(null)
@@ -39,6 +40,9 @@ export const useInitiativeStore = defineStore('initiative', () => {
 
   // Check sicuro: usa opzionale chaining o verifica array
   const isFollowed = (id) => followedIds.value?.includes(id)
+
+  // --- NUOVO: Getter per controllare se l'utente ha firmato ---
+  const hasSigned = (id) => signedIds.value?.includes(id)
 
   // --- ACTIONS ---
 
@@ -81,10 +85,11 @@ export const useInitiativeStore = defineStore('initiative', () => {
       }
 
       await fetchUserFollowedIds()
+      // Possiamo chiamare fetchUserSignedIds qui se volessimo vedere lo stato in home,
+      // ma per ora lo chiamiamo nel dettaglio per ottimizzare.
     } catch (err) {
       console.error('Errore fetch initiatives:', err)
       error.value = 'Impossibile caricare la lista.'
-      // Nessun toast qui per non disturbare al caricamento pagina
     } finally {
       loading.value = false
     }
@@ -137,6 +142,26 @@ export const useInitiativeStore = defineStore('initiative', () => {
     }
   }
 
+  // --- NUOVO: GESTIONE FIRME (Fetch iniziale) ---
+  const fetchUserSignedIds = async () => {
+    const userId = localStorage.getItem('tp_mock_id')
+    if (!userId) {
+      signedIds.value = []
+      return
+    }
+    try {
+      // Assumiamo che il backend supporti relation='signed'
+      const res = await axios.get(`${API_URL}/users/me/initiatives`, {
+        params: { relation: 'signed', objectsPerPage: 100 },
+        headers: { 'X-Mock-User-Id': userId },
+      })
+      signedIds.value = res.data.data.map((item) => item.id)
+    } catch (err) {
+      console.error('Errore sync firme:', err)
+      // Non resettiamo signedIds qui per evitare "flash", ma gestiamo l'errore
+    }
+  }
+
   const toggleFollow = async (id = 'questa iniziativa') => {
     const userId = localStorage.getItem('tp_mock_id')
     if (!userId) {
@@ -148,38 +173,25 @@ export const useInitiativeStore = defineStore('initiative', () => {
 
     if (alreadyFollowed) {
       // --- UNFOLLOW (Rimuovi) ---
-
-      // 1. Aggiornamento Ottimistico: Rimuovi subito dalla lista locale
       followedIds.value = followedIds.value.filter((itemId) => itemId !== id)
-
-      // 2. Feedback immediato
       toast.showToast('Rimossa dai preferiti', 'info')
 
       try {
-        // 3. Chiamata API
         await axios.delete(`${API_URL}/initiatives/${id}/unfollows`, {
           headers: { 'X-Mock-User-Id': userId },
         })
       } catch (err) {
-        // 4. Gestione Errori Intelligente
         if (err.response && err.response.status === 404) {
-          // SE 404: Il backend dice "Non c'era nulla da cancellare".
-          // Per noi va bene! Significa che siamo sincronizzati.
           console.warn('Sync Unfollow: Risorsa già rimossa (404 ignorato).')
         } else {
-          // ERRORE VERO: Dobbiamo rimettere la stellina (Revert)
           console.error(err)
-          followedIds.value.push(id)
+          followedIds.value.push(id) // Revert
           toast.showToast('Errore rete: impossibile rimuovere.', 'error')
         }
       }
     } else {
       // --- FOLLOW (Aggiungi) ---
-
-      // 1. Aggiornamento Ottimistico
       if (!followedIds.value.includes(id)) followedIds.value.push(id)
-
-      // 2. Feedback immediato
       toast.showToast('Aggiunta ai preferiti! ⭐', 'success')
 
       try {
@@ -190,18 +202,15 @@ export const useInitiativeStore = defineStore('initiative', () => {
         )
       } catch (err) {
         if (err.response && err.response.status === 409) {
-          // 409 Conflict: Già seguita. Va bene così.
           console.warn('Sync Follow: Già seguita.')
         } else {
-          // ERRORE VERO: Revert
-          followedIds.value = followedIds.value.filter((itemId) => itemId !== id)
+          followedIds.value = followedIds.value.filter((itemId) => itemId !== id) // Revert
           toast.showToast('Errore rete: impossibile aggiungere.', 'error')
         }
       }
     }
   }
 
-  // Helper per il bottone del Toast "Tienimi Aggiornato"
   const ensureFollowed = async (id) => {
     if (!isFollowed(id)) {
       const userId = localStorage.getItem('tp_mock_id')
@@ -238,12 +247,19 @@ export const useInitiativeStore = defineStore('initiative', () => {
       const init = initiatives.value.find((i) => i.id === initiativeId)
       if (init) init.signatures += 1
 
-      // Il messaggio di successo è delegato a HomeView (Toast Custom),
-      // ma se serve qui: toast.showToast('Firma registrata!', 'success')
+      // --- NUOVO: Aggiornamento ottimistico dello stato firma ---
+      if (!signedIds.value.includes(initiativeId)) {
+        signedIds.value.push(initiativeId)
+      }
+
       return { success: true }
     } catch (err) {
       if (err.response && err.response.status === 409) {
-        toast.showToast('Hai già firmato questa iniziativa!', 'info') // Info invece di errore rosso
+        // Se il backend dice "Già firmato", aggiorniamo lo store locale per allinearci
+        if (!signedIds.value.includes(initiativeId)) {
+          signedIds.value.push(initiativeId)
+        }
+        toast.showToast('Hai già firmato questa iniziativa!', 'info')
       } else {
         console.error('Errore firma:', err)
         toast.showToast('Si è verificato un errore durante la firma.', 'error')
@@ -271,15 +287,11 @@ export const useInitiativeStore = defineStore('initiative', () => {
       formData.append('categoryId', payloadData.categoryId)
       formData.append('platformId', payloadData.platformId || 1)
 
-      // --- MODIFICA QUI PER MULTI-FILE ---
       if (payloadData.files && payloadData.files.length > 0) {
-        // Iteriamo sull'array e aggiungiamo ogni file con la stessa chiave 'attachments'
         payloadData.files.forEach((file) => {
           formData.append('attachments', file)
         })
-      }
-      // Fallback per compatibilità (se per caso arrivasse ancora un singolo file)
-      else if (payloadData.file) {
+      } else if (payloadData.file) {
         formData.append('attachments', payloadData.file)
       }
 
@@ -290,18 +302,15 @@ export const useInitiativeStore = defineStore('initiative', () => {
         },
       })
 
-      await fetchInitiatives() // Ricarica dati home page
+      await fetchInitiatives()
 
       toast.showToast('Iniziativa creata con successo! 🎉', 'success')
       return true
     } catch (err) {
       console.error('Errore creazione:', err)
 
-      // Gestione specifica errore 429 (Cooldown)
       if (err.response && err.response.status === 429) {
         const msg = err.response.data.message || 'Cooldown attivo.'
-        // Se il backend manda remainingMs, potresti formattarlo qui,
-        // ma il toast lo mostriamo già nella view prima di chiamare questo metodo (per sicurezza).
         error.value = msg
         toast.showToast(msg, 'error')
       } else {
@@ -317,16 +326,16 @@ export const useInitiativeStore = defineStore('initiative', () => {
 
   const checkUserCooldown = async () => {
     const userId = localStorage.getItem('tp_mock_id')
-    if (!userId) return { allowed: true } // Se non loggato, lasciamo gestire al router guard o login
+    if (!userId) return { allowed: true }
 
     try {
       const res = await axios.get(`${API_URL}/initiatives/cooldown`, {
         headers: { 'X-Mock-User-Id': userId },
       })
-      return res.data // Ritorna { allowed: bool, remainingMs: number }
+      return res.data
     } catch (err) {
       console.error('Errore check cooldown', err)
-      return { allowed: true } // In caso di errore rete, non blocchiamo l'UI preventivamente
+      return { allowed: true }
     }
   }
 
@@ -380,21 +389,20 @@ export const useInitiativeStore = defineStore('initiative', () => {
     try {
       const userId = localStorage.getItem('tp_mock_id')
 
-      // Calcoliamo la nuova data (+60 giorni)
       const newDate = new Date(currentExpirationDate)
       newDate.setDate(newDate.getDate() + 60)
-      const formattedDate = newDate.toISOString().split('T')[0] // YYYY-MM-DD
+      const formattedDate = newDate.toISOString().split('T')[0]
 
       await axios.patch(
         `${API_URL}/initiatives/${id}`,
-        { expirationDate: formattedDate }, // Body
+        { expirationDate: formattedDate },
         { headers: { 'X-Mock-User-Id': userId } },
       )
 
       return true
     } catch (err) {
       console.error('Errore estensione scadenza:', err)
-      throw err // Rilancia l'errore per gestirlo nel componente
+      throw err
     }
   }
 
@@ -409,6 +417,9 @@ export const useInitiativeStore = defineStore('initiative', () => {
     totalObjects,
     followedIds,
     followedInitiatives,
+    signedIds,
+    hasSigned,
+    fetchUserSignedIds,
     isFollowed,
     getCategoryName,
     getPlatformName,

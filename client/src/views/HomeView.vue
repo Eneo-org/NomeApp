@@ -3,17 +3,17 @@ import { ref, onMounted, watch } from 'vue'
 import { useInitiativeStore } from '../stores/initiativeStore'
 import { useParticipatoryBudgetStore } from '../stores/participatoryBudgetStore'
 import { useUserStore } from '../stores/userStore'
-import { useToastStore } from '../stores/toastStore';
 import { useImage } from '@/composables/useImage';
 import ParticipatoryBudgetCard from '@/components/ParticipatoryBudgetCard.vue'
 import { useRouter } from 'vue-router';
+import { useToastStore } from '../stores/toastStore';
 import { formatCooldownTime } from '@/utils/dateUtils';
 
 const initiativeStore = useInitiativeStore()
 const budgetStore = useParticipatoryBudgetStore()
 const userStore = useUserStore()
-const toast = useToastStore();
 const router = useRouter();
+const toast = useToastStore();
 const { getImageUrl } = useImage();
 
 // --- STATO PAGINA ---
@@ -89,6 +89,7 @@ const handleStarClick = async (item) => {
   await initiativeStore.toggleFollow(item.id, item.title);
 };
 
+// --- LOGICA CREAZIONE ---
 const handleCreateClick = async () => {
   if (!userStore.isAuthenticated) {
     router.push('/login');
@@ -108,79 +109,6 @@ const handleCreateClick = async () => {
   }
 };
 
-// --- LOGICA FIRMA ---
-const handleSign = async (item) => {
-  if (!userStore.isAuthenticated) {
-    if (confirm("Devi accedere per firmare. Vuoi andare al login?")) {
-      router.push('/login');
-    }
-    return;
-  }
-
-  // 1. Esegui la firma
-  const result = await initiativeStore.signInitiative(item.id);
-
-  if (result.success) {
-    // 2. Toast Verde
-    toast.showToast("✅ Firma registrata con successo!", "success");
-
-    // 3. DEBUG: Controlliamo le condizioni
-    // NOTA: Ho cambiato il nome della chiave aggiungendo '_v2' per resettare la tua preferenza salvata
-    const storageKey = 'hideNotificationPrompt_v2';
-    const hidePrompt = localStorage.getItem(storageKey);
-    const alreadyFollowing = initiativeStore.isFollowed(item.id);
-
-    console.log("--- DEBUG FIRMA ---");
-    console.log("Iniziativa:", item.title);
-    console.log("Utente ha nascosto il prompt (localStorage)?", hidePrompt);
-    console.log("Utente segue già l'iniziativa?", alreadyFollowing);
-
-    // Mostra il prompt SOLO se:
-    // A. Non è stato nascosto per sempre
-    // B. L'utente non segue già l'iniziativa
-    if (!hidePrompt && !alreadyFollowing) {
-      console.log(">> MOSTRA IL PROMPT GIALLO");
-
-      toast.showToast(
-        `Vuoi ricevere notifiche sugli aggiornamenti di "${item.title}"?`,
-        'prompt',
-        {
-          actions: [
-            {
-              label: '🔔 Tienimi aggiornato',
-              style: 'primary',
-              onClick: async (toastId) => {
-                await initiativeStore.ensureFollowed(item.id);
-                toast.removeToast(toastId);
-                toast.showToast(`Notifiche attivate per "${item.title}"!`, 'success');
-              }
-            },
-            {
-              label: 'Non ora',
-              style: 'secondary',
-              onClick: (toastId) => {
-                toast.removeToast(toastId);
-              }
-            },
-            {
-              label: 'Non chiedere più',
-              style: 'secondary',
-              onClick: (toastId) => {
-                // Salviamo la preferenza con la NUOVA chiave
-                localStorage.setItem(storageKey, 'true');
-                toast.removeToast(toastId);
-                toast.showToast('Preferenza salvata.', 'info');
-              }
-            }
-          ]
-        }
-      );
-    } else {
-      console.log(">> PROMPT SALTATO (Condizioni non soddisfatte)");
-    }
-  }
-};
-
 const getStatusClass = (status) => {
   if (!status) return 'status-default';
   const s = status.toLowerCase();
@@ -197,168 +125,234 @@ watch(() => filters.value.platform, applyFilters)
 
 <template>
   <div class="home-wrapper">
-    <div class="app-header">
-      <h1 class="main-title">TRENTO PARTECIPA</h1>
-      <p class="subtitle">La piattaforma per i cittadini attivi</p>
+
+    <div class="hero-section">
+      <div class="search-hero">
+        <input v-model="filters.search" type="text" placeholder="🔍 Cerca iniziative, quartieri, temi..."
+          @keyup.enter="applyFilters">
+        <button @click="applyFilters" class="search-btn">Cerca</button>
+      </div>
+    </div>
+
+    <div class="budget-section">
+      <ParticipatoryBudgetCard />
     </div>
 
     <div class="main-layout">
       <aside class="sidebar">
         <div class="sidebar-header">
-          <h3>🔍 Filtra Iniziative</h3>
-          <button @click="resetFilters" class="reset-link">Azzera</button>
+          <h3>Filtra Risultati</h3>
+          <button @click="resetFilters" class="reset-link" title="Rimuovi tutti i filtri">Resetta</button>
         </div>
-        <div class="filter-group">
-          <label>Cerca</label>
-          <input v-model="filters.search" type="text" placeholder="Parole chiave..." @keyup.enter="applyFilters">
-        </div>
+
         <div class="filter-group">
           <label>Categoria</label>
-          <select v-model="filters.category" @change="applyFilters">
-            <option value="">Tutte le categorie</option>
-            <option v-for="cat in initiativeStore.categories" :key="cat.id" :value="cat.id">
-              {{ cat.name }}
-            </option>
-          </select>
+          <div class="select-wrapper">
+            <select v-model="filters.category" @change="applyFilters">
+              <option value="">Tutte le categorie</option>
+              <option v-for="cat in initiativeStore.categories" :key="cat.id" :value="cat.id">
+                {{ cat.name }}
+              </option>
+            </select>
+          </div>
         </div>
+
         <div class="filter-group">
           <label>Piattaforma</label>
-          <select v-model="filters.platform" @change="applyFilters">
-            <option value="">Tutte le piattaforme</option>
-            <option v-for="p in initiativeStore.platforms" :key="p.id" :value="p.id">
-              {{ p.platformName }}
-            </option>
-          </select>
+          <div class="select-wrapper">
+            <select v-model="filters.platform" @change="applyFilters">
+              <option value="">Tutte le piattaforme</option>
+              <option v-for="p in initiativeStore.platforms" :key="p.id" :value="p.id">
+                {{ p.platformName }}
+              </option>
+            </select>
+          </div>
         </div>
+
         <div class="sidebar-actions" v-if="userStore.isAuthenticated">
-          <hr>
           <button @click="handleCreateClick" class="create-btn full-width">
-            + Crea Nuova
+            <span>+</span> Nuova Iniziativa
           </button>
         </div>
       </aside>
 
       <main class="content-area">
-        <ParticipatoryBudgetCard />
+
         <div class="results-header">
           <h2>Esplora le Iniziative</h2>
-          <span class="count-badge">{{ initiativeStore.totalObjects }} Iniziative attive</span>
+          <span class="count-badge">{{ initiativeStore.totalObjects }} attive</span>
         </div>
 
-        <div v-if="initiativeStore.loading" class="loading-msg">Caricamento in corso...</div>
+        <div v-if="initiativeStore.loading" class="loading-container">
+          <div class="spinner"></div>
+          <p>Caricamento in corso...</p>
+        </div>
 
         <div v-else-if="initiativeStore.initiatives.length > 0" class="cards-container">
           <div v-for="item in initiativeStore.initiatives" :key="item.id" class="card">
+
             <div class="card-image-wrapper">
               <div v-if="item.platformId !== 1" class="source-badge external">
-                🔗 {{ initiativeStore.getPlatformName(item.platformId) }}
+                {{ initiativeStore.getPlatformName(item.platformId) }} ↗
               </div>
               <img :src="getImageUrl(item)" class="card-img" alt="Immagine iniziativa">
             </div>
 
             <div class="card-content">
+
+              <div class="card-top-row">
+                <div class="status-badge-mini" :class="getStatusClass(item.status)">
+                  <span class="status-dot"></span>
+                  {{ item.status }}
+                </div>
+
+                <button v-if="item.status && item.status.toLowerCase() === 'in corso'" class="follow-btn-wrapper"
+                  @click.prevent="handleStarClick(item)" title="Segui questa iniziativa">
+                  <span v-if="initiativeStore.isFollowed(item.id)" class="followed-badge">★ Segui già</span>
+                  <span v-else class="unfollowed-badge">☆ Segui aggiornamenti</span>
+                </button>
+              </div>
+
               <div class="card-header">
                 <h3>{{ item.title }}</h3>
-                <div class="status-wrapper">
-                  <span class="badge-status" :class="getStatusClass(item.status)">
-                    {{ item.status.toUpperCase() }}
-                  </span>
-                  <button v-if="item.status && item.status.toLowerCase() === 'in corso'" class="follow-btn"
-                    :class="{ 'active': initiativeStore.isFollowed(item.id) }" @click.prevent="handleStarClick(item)"
-                    title="Segui questa iniziativa">
-                    {{ initiativeStore.isFollowed(item.id) ? '⭐' : '☆' }}
-                  </button>
-                </div>
+                <span class="category-tag">{{ initiativeStore.getCategoryName(item.categoryId) }}</span>
               </div>
+
               <div class="card-meta">
-                <span>📍 <strong>{{ item.place || 'Trento' }}</strong></span>
-                <span>🏷️ {{ initiativeStore.getCategoryName(item.categoryId) }}</span>
-                <div class="date-row"><span>📅 {{ formatDate(item.creationDate) }}</span></div>
+                <span>📍 {{ item.place || 'Trento' }}</span>
+                <span>📅 {{ formatDate(item.creationDate) }}</span>
               </div>
+
               <div class="card-footer">
-                <div class="signatures"><strong>Firme: {{ item.signatures }}</strong></div>
+                <span class="signatures-text">Firme raccolte: {{ item.signatures }}</span>
+
                 <div class="actions">
-                  <div v-if="item.platformId === 1" class="internal-actions">
-                    <RouterLink :to="'/initiative/' + item.id"><button class="action-btn">Dettagli</button></RouterLink>
-                    <button v-if="item.status === 'In corso' && userStore.canVote" @click="handleSign(item)"
-                      class="sign-btn">✍️ Firma</button>
-                    <span v-else-if="item.status === 'In corso' && userStore.isAuthenticated && !userStore.canVote"
-                      class="no-vote-label">⛔ Solo Cittadini</span>
+                  <div v-if="item.platformId === 1">
+                    <RouterLink :to="'/initiative/' + item.id">
+                      <button class="action-btn">Vedi dettagli</button>
+                    </RouterLink>
                   </div>
-                  <a v-else :href="item.externalURL || '#'" target="_blank"><button class="external-btn">Su {{
-                    initiativeStore.getPlatformName(item.platformId) }} ↗</button></a>
+                  <a v-else :href="item.externalURL || '#'" target="_blank">
+                    <button class="external-btn">Vedi su {{ initiativeStore.getPlatformName(item.platformId) }}
+                      ↗</button>
+                  </a>
                 </div>
               </div>
             </div>
           </div>
+
           <div class="pagination-controls">
-            <button @click="prevPage" :disabled="initiativeStore.currentPage === 1" class="page-btn">←</button>
-            <span class="page-info">Pagina {{ initiativeStore.currentPage }} di {{ initiativeStore.totalPages }}</span>
+            <button @click="prevPage" :disabled="initiativeStore.currentPage === 1" class="page-btn arrow">←</button>
+            <span class="page-info">{{ initiativeStore.currentPage }} / {{ initiativeStore.totalPages }}</span>
             <button @click="nextPage" :disabled="initiativeStore.currentPage >= initiativeStore.totalPages"
-              class="page-btn">→</button>
+              class="page-btn arrow">→</button>
           </div>
         </div>
+
         <div v-else class="no-results">
-          <p>Nessuna iniziativa trovata.</p>
-          <button @click="resetFilters" class="clear-btn">Ricarica Tutto</button>
+          <p>Nessuna iniziativa trovata con questi filtri.</p>
+          <button @click="resetFilters" class="clear-btn">Mostra tutte</button>
         </div>
       </main>
     </div>
-
   </div>
 </template>
 
 <style scoped>
-/* STILI INVARIATI */
+/* --- LAYOUT GENERALE --- */
 .home-wrapper {
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
   color: var(--text-color);
+  font-family: 'Segoe UI', Roboto, sans-serif;
 }
 
-.app-header {
-  text-align: center;
+/* --- HERO & SEARCH --- */
+.hero-section {
   margin-bottom: 30px;
-  border-bottom: 1px solid var(--header-border);
-  padding-bottom: 20px;
+  text-align: center;
 }
 
-.main-title {
-  font-size: 3rem;
-  margin: 0;
-  color: var(--accent-color);
-  text-transform: uppercase;
-  font-weight: 800;
+.search-hero {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
-.subtitle {
-  color: var(--secondary-text);
-  margin-top: 5px;
+.search-hero input {
+  flex: 1;
+  padding: 14px 24px;
+  border-radius: 50px;
+  border: 1px solid var(--header-border);
+  background-color: var(--input-bg);
+  color: var(--text-color);
+  outline: none;
+  font-size: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s;
 }
 
+.search-hero input:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.search-btn {
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 0 28px;
+  border-radius: 50px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 1rem;
+}
+
+.search-btn:hover {
+  background: var(--accent-hover);
+}
+
+/* --- BUDGET SECTION --- */
+.budget-section {
+  margin-bottom: 40px;
+}
+
+/* --- MAIN GRID --- */
 .main-layout {
   display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 30px;
+  grid-template-columns: 280px 1fr;
+  gap: 40px;
   align-items: start;
 }
 
+/* --- SIDEBAR FILTRI --- */
 .sidebar {
   background: var(--card-bg);
-  padding: 20px;
-  border-radius: 12px;
+  padding: 25px;
+  border-radius: 16px;
   border: 1px solid var(--card-border);
   box-shadow: var(--card-shadow);
   position: sticky;
-  top: 100px;
+  top: 20px;
 }
 
 .sidebar-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 25px;
+  border-bottom: 1px solid var(--header-border);
+  padding-bottom: 15px;
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
 }
 
 .reset-link {
@@ -366,8 +360,14 @@ watch(() => filters.value.platform, applyFilters)
   border: none;
   color: var(--secondary-text);
   cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.reset-link:hover {
+  color: var(--accent-color);
   text-decoration: underline;
-  font-size: 0.9rem;
 }
 
 .filter-group {
@@ -377,39 +377,47 @@ watch(() => filters.value.platform, applyFilters)
 .filter-group label {
   display: block;
   margin-bottom: 8px;
-  font-weight: bold;
+  font-weight: 600;
   font-size: 0.9rem;
-  color: var(--text-color);
+  color: var(--secondary-text);
 }
 
-.filter-group input,
 .filter-group select {
   width: 100%;
-  padding: 10px;
-  border-radius: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
   border: 1px solid var(--header-border);
   background-color: var(--input-bg);
   color: var(--text-color);
-  box-sizing: border-box;
+  font-size: 0.95rem;
+  cursor: pointer;
 }
 
+/* BOTTONE CREA NUOVA */
 .create-btn.full-width {
   width: 100%;
   background: var(--accent-color);
   color: white;
   border: none;
-  padding: 12px;
-  border-radius: 6px;
+  padding: 14px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: bold;
-  margin-top: 10px;
-  transition: background 0.2s;
+  font-weight: 700;
+  font-size: 1rem;
+  margin-top: 15px;
+  transition: transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .create-btn.full-width:hover {
   background: var(--accent-hover);
+  transform: translateY(-1px);
 }
 
+/* --- HEADER RISULTATI --- */
 .results-header {
   display: flex;
   justify-content: space-between;
@@ -417,36 +425,46 @@ watch(() => filters.value.platform, applyFilters)
   margin-bottom: 20px;
 }
 
-.count-badge {
-  background: var(--card-border);
-  padding: 5px 10px;
-  border-radius: 15px;
-  font-size: 0.85rem;
-  color: var(--text-color);
+.results-header h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
 }
 
+.count-badge {
+  background: var(--input-bg);
+  border: 1px solid var(--header-border);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* --- LISTA CARD --- */
 .cards-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 25px;
 }
 
 .card {
   display: flex;
-  gap: 20px;
+  gap: 0;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 12px;
   overflow: hidden;
-  height: 180px;
   box-shadow: var(--card-shadow);
-  transition: transform 0.2s;
+  /* 1. Altezza minima ridotta per compattezza */
+  min-height: 180px;
 }
 
 .card-image-wrapper {
-  flex: 0 0 220px;
-  background: #333;
+  /* Larghezza ridotta */
+  flex: 0 0 230px;
+  background: #2c3e50;
   position: relative;
+  overflow: hidden;
 }
 
 .card-img {
@@ -455,222 +473,265 @@ watch(() => filters.value.platform, applyFilters)
   object-fit: cover;
 }
 
-.card-content {
-  flex: 1;
-  padding: 15px 20px 15px 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.card-header h3 {
-  margin: 0;
-  font-size: 1.2rem;
-  line-height: 1.2;
-  flex: 1;
-  color: var(--text-color);
-  font-weight: 700;
-}
-
-.status-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.badge-status {
-  padding: 5px 10px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: bold;
-  color: white;
-  text-transform: uppercase;
-}
-
-.status-active {
-  background-color: #3498db;
-}
-
-.status-success {
-  background-color: #27ae60;
-}
-
-.status-danger {
-  background-color: #e74c3c;
-}
-
-.status-muted {
-  background-color: #95a5a6;
-}
-
-.status-default {
-  background-color: #7f8c8d;
-}
-
-.follow-btn {
-  background: transparent;
-  border: none;
-  font-size: 1.6rem;
-  cursor: pointer;
-  line-height: 1;
-  transition: transform 0.2s;
-  color: #ccc;
-  padding: 0;
-}
-
-.follow-btn.active {
-  color: #f1c40f;
-  filter: drop-shadow(0 0 2px rgba(241, 196, 15, 0.5));
-}
-
-.follow-btn:hover {
-  transform: scale(1.2);
-  color: #f1c40f;
-}
-
-.card-meta {
-  font-size: 0.9rem;
-  color: var(--secondary-text);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 5px;
-}
-
-.date-row {
-  display: flex;
-  gap: 15px;
-  font-size: 0.85rem;
-  margin-top: 5px;
-}
-
-.card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: auto;
-}
-
-.internal-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.action-btn,
-.external-btn {
-  background-color: var(--card-bg);
-  color: var(--text-color);
-  border: 1px solid var(--header-border);
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
-  font-size: 0.9rem;
-}
-
-.action-btn:hover,
-.external-btn:hover {
-  border-color: var(--accent-color);
-  color: var(--accent-color);
-}
-
-.sign-btn {
-  background-color: #2c3e50;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background 0.2s;
-}
-
-.sign-btn:hover {
-  background-color: var(--accent-color);
-}
-
+/* SOURCE BADGE */
 .source-badge {
   position: absolute;
   top: 10px;
   left: 10px;
-  padding: 4px 8px;
+  padding: 4px 10px;
   border-radius: 4px;
   font-size: 0.75rem;
-  font-weight: bold;
+  font-weight: 700;
   text-transform: uppercase;
   z-index: 2;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .source-badge.external {
-  background-color: #d32f2f;
+  background-color: #e74c3c;
   color: white;
 }
 
-.no-vote-label {
-  font-size: 0.8rem;
-  color: #666;
-  cursor: help;
+/* CONTENUTO CARD */
+.card-content {
+  flex: 1;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
+.card-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+/* 2. STATUS BADGE (più piccolo e compatto) */
+.status-badge-mini {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: white;
+}
+
+.status-badge-mini .status-dot {
+  background: white;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+/* Colori status */
+.status-active {
+  background: #3498db;
+}
+
+.status-success {
+  background: #27ae60;
+}
+
+.status-danger {
+  background: #e74c3c;
+}
+
+.status-muted {
+  background: #95a5a6;
+}
+
+.status-default {
+  background: #7f8c8d;
+}
+
+.card-header {
+  margin-bottom: 8px;
+}
+
+/* 3. Titolo più grande */
+.card-header h3 {
+  margin: 0 0 5px 0;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  color: var(--text-color);
+  font-weight: 800;
+}
+
+.category-tag {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--secondary-text);
+  background: var(--input-bg);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--header-border);
+}
+
+/* 3. BOTTONE FOLLOW */
+.follow-btn-wrapper {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.followed-badge,
+.unfollowed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.followed-badge {
+  border: 2px solid #f1c40f;
+  color: #f39c12;
+  background: rgba(241, 196, 15, 0.1);
+}
+
+.unfollowed-badge {
+  border: 1px solid var(--secondary-text);
+  color: var(--secondary-text);
+  background: transparent;
+}
+
+/* 1. Hover Giallo per Segui Aggiornamenti */
+.follow-btn-wrapper:hover .unfollowed-badge {
+  border-color: #f1c40f;
+  color: #f1c40f;
+  background: rgba(241, 196, 15, 0.05);
+}
+
+/* META DATA */
+.card-meta {
+  display: flex;
+  gap: 20px;
+  font-size: 0.85rem;
+  color: var(--secondary-text);
+  margin-bottom: 12px;
+}
+
+/* FOOTER CARD */
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 15px;
+  border-top: 1px solid var(--header-border);
+}
+
+/* 4. Firme più grandi */
+.signatures-text {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+/* 5. AZIONI (Stile unificato) */
+.action-btn,
+.external-btn {
+  background: transparent;
+  border: 1px solid var(--secondary-text);
+  /* Neutro inizialmente */
+  color: var(--text-color);
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+}
+
+/* Hover verde solo quando ci passi sopra */
+.action-btn:hover,
+.external-btn:hover {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+/* PAGINAZIONE */
 .pagination-controls {
   display: flex;
   justify-content: center;
-  gap: 20px;
-  margin-top: 20px;
+  gap: 15px;
+  margin-top: 40px;
   align-items: center;
 }
 
 .page-btn {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  color: var(--text-color);
   width: 40px;
   height: 40px;
   border-radius: 50%;
+  border: 1px solid var(--header-border);
+  background: var(--card-bg);
+  color: var(--text-color);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-weight: bold;
+  transition: all 0.2s;
 }
 
 .page-btn:hover:not(:disabled) {
-  background: var(--accent-color);
-  color: white;
+  border-color: var(--accent-color);
+  color: var(--accent-color);
 }
 
 .page-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
+.page-info {
+  font-weight: 600;
+  color: var(--secondary-text);
+}
+
+/* LOADING & EMPTY */
+.loading-container,
 .no-results {
   text-align: center;
-  padding: 40px;
+  padding: 60px;
   background: var(--card-bg);
   border-radius: 12px;
   border: 1px solid var(--card-border);
+  color: var(--secondary-text);
 }
 
-.clear-btn {
-  margin-top: 15px;
-  padding: 10px 20px;
-  background: var(--accent-color);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
+.spinner {
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-top: 3px solid var(--accent-color);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 15px;
 }
 
-@media (max-width: 768px) {
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
   .main-layout {
     grid-template-columns: 1fr;
   }
@@ -689,10 +750,6 @@ watch(() => filters.value.platform, applyFilters)
     flex: none;
     height: 180px;
     width: 100%;
-  }
-
-  .card-content {
-    padding: 15px;
   }
 }
 </style>
