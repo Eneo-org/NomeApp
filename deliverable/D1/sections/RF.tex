@@ -6,13 +6,10 @@
 Il sistema deve consentire l’accesso esclusivamente tramite i sistemi di identità digitale riconosciuti dallo Stato (SPID o CIE).
 L'autenticazione tramite SPID/CIE è richiesta per ogni sessione di un utente già profilato.
 
-
-
 \RF{Creazione profilo al primo accesso.} \label{rf:creazione_profilo}
 Il sistema gestisce il primo accesso di un utente non ancora registrato. Al momento dell'autenticazione tramite SPID/CIE, il sistema recupera il Codice Fiscale dell'utente e procede alla verifica dei requisiti per la creazione del profilo, distinguendo due casistiche:
 
 \subRF{Registrazione Cittadini Residenti.} \label{subRf:reg_cittadini}
-
 Il sistema verifica automaticamente se l'utente risiede nel Comune di Trento.
 Se la verifica è positiva, il sistema richiede all'utente l'inserimento di un indirizzo e-mail valido e crea un nuovo profilo assegnando il \textbf{ruolo di ``Cittadino''}.
 Questo ruolo abilita l'utente a tutte le funzionalità partecipative (Sezione \ref{sec:RF_cittadini}).
@@ -58,8 +55,11 @@ La pagina di dettaglio deve mostrare tutte le informazioni associate all'iniziat
     
 \end{itemize}
 
+\subsection{Requisiti funzionali per gli utenti autenticati}
+\RF{Logout.} \label{rf:logout}
+L'utente che ha fatto l'accesso al proprio account deve potersi anche disconnettere.
 
-\subsubsection{Requisiti funzionali per l’amministrazione}
+\subsection{Requisiti funzionali per l’amministrazione}
 \label{sec:RF_amministrazione}
 \RF{Analisi delle richieste.}   \label{rf:analisi_richieste} %ancora da discutere
 Il sistema deve fornire agli amministratori strumenti di analisi sui dati raccolti. Le richieste devono essere aggregate per categoria, quartiere di provenienza, tempo medio di presa in carico. Tali informazioni devono essere visualizzabili tramite tabelle e grafici interattivi. L’obiettivo è supportare decisioni basate su evidenze, permettendo all’amministrazione di individuare priorità e temi emergenti.
@@ -111,7 +111,7 @@ Per ragioni di sicurezza, un Amministratore non può revocare i privilegi a sé 
 L'esistenza del primo utente Amministratore ("super-utente") è garantita dalla configurazione manuale nel database al momento dell'installazione della piattaforma.
 Questo utente sarà il primo a poter utilizzare RF\ref{subRf:assegnazione_privilegi} per nominare altri amministratori.
 
-\subsubsection{Requisiti funzionali per i cittadini autenticati}
+\subsection{Requisiti funzionali per i cittadini autenticati}
 \label{sec:RF_cittadini}
 
 \RF{Firma.}  \label{rf:firma}
@@ -186,32 +186,6 @@ Il sistema deve inviare notifiche agli utenti nei seguenti casi:
 \end{itemize}
 Le notifiche devono essere inviate sia all’interno della piattaforma sia tramite e-mail all'indirizzo definito durante la creazione del profilo (RF\ref{rf:creazione_profilo}).
 %% IDEA: creare impostazioni utente per gestione notifiche
-
-\section{Requisiti Non Funzionali}
-\RNF{Compatibilità.}  \label{rf:login}
-Il sistema deve essere pienamente utilizzabile sia da desktop che da dispositivi mobili (smartphone, tablet), con un design responsivo che adatti automaticamente le interfacce alle diverse dimensioni dello schermo. Deve essere garantito il supporto ai principali browser: Chrome (versione 80 o superiore), Firefox (versione 75 o superiore), Safari (versione 13 o superiore), Microsoft Edge (versione 85 o superiore).  
-
-\RNF{Prestazioni.}  \label{rnf:prestazioni}
-Le operazioni più comuni, come login, caricamento della lista di iniziative e votazione, devono completarsi entro un tempo massimo di 2.5 secondi nel 90\% dei casi. Il sistema deve essere in grado di gestire contemporaneamente almeno 300 richieste al secondo senza degradare l’esperienza utente.  
-
-\RNF{Scalabilità.}  \label{rnf:scalabilità}
-L’architettura deve essere progettata per supportare un aumento progressivo del numero di utenti. Il sistema deve scalare fino a 20.000 utenti simultanei, mantenendo tempi di risposta conformi al requisito RNF\ref{rnf:prestazioni}. Devono essere previste politiche di bilanciamento del carico e possibilità di aggiungere risorse hardware senza modificare la logica applicativa.
-
-
-\RNF{Affidabilità e disponibilità.}  \label{rnf:aff_e_fisponibilita}
-La piattaforma deve garantire un’affidabilità elevata, con una disponibilità minima del 99.5\% annuo (pari a circa 1 giorno e 20 ore di downtime massimo). Devono essere implementati sistemi di backup automatico giornaliero e procedure di disaster recovery in grado di ripristinare i dati entro 2 ore in caso di guasto critico.
-
-\RNF{Sicurezza.}  \label{rnf:sicurezza}
-Il sistema deve rispettare le normative GDPR per la protezione dei dati personali. Le comunicazioni tra client e server devono essere cifrate tramite protocollo HTTPS. Le sessioni utente devono scadere automaticamente dopo un periodo di inattività configurabile. L’integrazione con SPID deve rispettare i protocolli di sicurezza stabiliti a livello nazionale.  
-
-\RNF{Usabilità.} \label{rnf:usabilita} %riferimento a Limite d'applicazione 2
-L’interfaccia deve essere intuitiva e utilizzabile da un cittadino medio senza necessità di formazione. Deve essere possibile comprendere le principali funzionalità (creare una richiesta, votare, commentare) entro un tempo massimo di 15 minuti di utilizzo autonomo. Devono essere adottate linee guida di design coerenti (colori, pulsanti, icone) per garantire un’esperienza uniforme.  
-
-\RNF{Accessibilità.}  \label{rnf:accessibilita}
-Il sistema deve essere conforme alle linee guida WCAG 2.1 livello AA, garantendo l’accesso anche a utenti con disabilità. Ciò include il supporto per screen reader, testi alternativi per immagini, contrasto elevato, navigazione da tastiera e font leggibili.  
-
-\RNF{Manutenibilità.}  \label{rnf:manutenibilita}
-Il software deve essere sviluppato seguendo principi di modularità e documentazione del codice, in modo da permettere futuri aggiornamenti e correzioni senza compromettere la stabilità del sistema. Devono essere previste procedure di test automatici per ridurre il rischio di regressioni.
 
 \newpage %Ivan
 \titleformat{\paragraph}[block]{\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}

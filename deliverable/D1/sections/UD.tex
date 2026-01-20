@@ -4,7 +4,7 @@ RF\ref{rf:creazione_profilo}: Creazione nuovo profilo
 
 \begin{figure}[h!]
   \centering % \raggedright se si vuole mettere l'immagine a sinistra
-  \fbox{\includegraphics[width=0.9\textwidth]{img/Login Diagram.png}}
+  \fbox{\includegraphics[width=0.9\textwidth]{img/RF1 RF2.png}}
   \label{fig:usecase_login}
 \end{figure}
 
@@ -45,15 +45,15 @@ RF\ref{rf:consultazione_iniziative}: Consultazione delle iniziative\\
 RF\ref{rf:consultazione_singola_iniz}: Consultazione di una singola iniziativa\\
 \begin{figure}[h!]
   \centering
-  \fbox{\includegraphics[width=0.9\textwidth]{img/iniziative.png}}
+  \fbox{\includegraphics[width=0.9\textwidth]{img/RF3 RF4.png}}
   \label{fig:iniziative}
 \end{figure}
 
 \paragraph{\large Use case RF\ref{rf:consultazione_iniziative}: Consultazione delle iniziative}
 \noindent
 1. L'utente visualizza come default la home page.\\
-2. L'utente consulta il catalogo pubblico delle iniziative presenti
-2. Nella barra di ricerca, una volta inserite le parole chiave e scelti strumenti aggiuntivi (vedi RF\ref{rf:consultazione_iniziative}), viene premuto il pulsante RICERCA. [Eccezione 1]\\
+2. L'utente consulta il catalogo pubblico delle iniziative presenti\\
+3. Nella barra di ricerca, una volta inserite le parole chiave e scelti strumenti aggiuntivi (vedi RF\ref{rf:consultazione_iniziative}), viene premuto il pulsante RICERCA. [Eccezione 1]\\
 4. Il sistema, collegandosi al database, mostra le iniziative che rispettano i criteri di ricerca. [eccezione 1]\\
 
 \paragraph{Eccezioni} \noindent
@@ -70,7 +70,7 @@ RF5: Analisi delle richieste\\
 RF6: Gestione iniziative
 \begin{figure}[h!]
   \centering
-  \fbox{\includegraphics[width=0.9\textwidth]{img/analisi_gestione.png}}
+  \fbox{\includegraphics[width=0.9\textwidth]{img/RF5 RF6.png}}
   \label{fig:analisi_gestione}
 \end{figure}
 
@@ -98,7 +98,7 @@ RF\ref{rf:creazione_bilancio_partecipativo}: Creazione bilancio partecipativo \\
 RF\ref{rf:consultazione_archivio_bilancio_partecipativo}: Consultazione Archivio Bilanci Partecipativi
 \begin{figure}[h!]
   \centering
-  \fbox{\includegraphics[width=0.9\textwidth]{img/bilanci_part.png}}
+  \fbox{\includegraphics[width=0.9\textwidth]{img/RF7 RF8.png}}
   \label{fig:bilanci_part}
 \end{figure}
 
@@ -134,9 +134,9 @@ RF\ref{rf:consultazione_archivio_bilancio_partecipativo}: Consultazione Archivio
 
 \newpage \noindent
 RF\ref{rf:ruoli_amministrativi}: Gestione Ruoli Amministrativi
-\begin{figure}[!h]
+\begin{figure}[H]
   \centering
-  \fbox{\includegraphics[width=0.9\textwidth]{img/ruoli_amministrativi.png}}
+  \fbox{\includegraphics[width=0.9\textwidth]{img/RF9.png}}
   \label{fig:ruoli_amministrativi}
 \end{figure}
 
@@ -155,7 +155,17 @@ RF\ref{rf:ruoli_amministrativi}: Gestione Ruoli Amministrativi
 3. Se si verifica un errore durante l’aggiornamento del database, il sistema notifica l’amministratore e annulla la modifica.
 
 \paragraph{Estensioni} \noindent
-1. L’amministratore può effettuare una ricerca con Codice Fiscale per individuare un utente da gestire.
+1. L’amministratore può effettuare una ricerca con Codice Fiscale per individuare un utente da gestire. \\
+
+\noindent
+RF\ref{rf:firma}: Firma\\
+RF\ref{rf:dashboard_personale}: Dashboard personale\\
+RF\ref{rf:voto}: Votazione del bilancio partecipativo
+\begin{figure}[!h]
+  \centering
+  \fbox{\includegraphics[width=0.9\textwidth]{img/RF10 RF11 RF14.png}}
+  \label{fig:ruoli_amministrativi}
+\end{figure}
 
 \paragraph{\large Use case RF\ref{rf:firma}: Firma}
 1. L'utente visualizza come default la home page. \\
@@ -183,6 +193,32 @@ RF\ref{rf:ruoli_amministrativi}: Gestione Ruoli Amministrativi
 \paragraph{Eccezioni} \noindent
 1. Se l’utente non ha ancora: creato iniziative, supportato iniziative o seguito iniziative, il sistema mostra una dashboard vuota, con messaggi informativi e link utili per iniziare.
 
+\paragraph{\large Use Case RF\ref{rf:voto}: Votazione del bilancio partecipativo} \noindent
+1. L'utente visualizza come default la home page. \\
+2. Apre la sezione dedicata ai bilanci partecipativi. \\
+3. Il sistema mostra l’elenco dei bilanci partecipativi attualmente attivi. [Eccezione 1] \\
+4. L’utente seleziona il sondaggio. [Eccezione 2] \\
+5. Il sistema mostra il modulo di voto.
+6. L’utente seleziona una delle opzioni proposte e conferma il voto.\\
+7. Il sistema registra la preferenza dell’utente nel database e aggiorna il conteggio delle votazioni.\\
+8. Al termine del voto, viene mostrato un messaggio di conferma.\\
+9. Alla chiusura del periodo di votazione, il sistema invia automaticamente all’utente una notifica sui risultati finali, come previsto in RF19.
+
+\paragraph{Eccezioni} \noindent
+1. Se non esiste alcun bilancio attivo, il sistema mostra un messaggio: “Nessun bilancio partecipativo attivo al momento.” \\
+2. Se l'utente ha già votato, il sistema mostra un avviso: “Hai già votato questo bilancio partecipativo.” \\
+3. Se il database o il servizio interno non risponde, il sistema mostra un errore temporaneo.\\
+
+\noindent
+RF\ref{rf:creazione_iniziativa}: Creazione di una iniziativa\\
+RF\ref{rf:tracciamento_stato}: Tracciamento stato
+
+\begin{figure}[!h]
+  \centering
+  \fbox{\includegraphics[width=0.9\textwidth]{img/RF12 RF13.png}}
+  \label{fig:ruoli_amministrativi}
+\end{figure}
+
 \paragraph{\large Use case RF\ref{rf:creazione_iniziativa}: Creazione di una iniziativa}
 \noindent
 1. L'utente, dalla home page, seleziona il tasto "Crea".\\
@@ -204,26 +240,10 @@ RF\ref{rf:ruoli_amministrativi}: Gestione Ruoli Amministrativi
 3. Sceglie l’opzione “Segui iniziativa / Aggiungi alla dashboard personale”. \\
 4. Il sistema aggiunge l’iniziativa all’elenco personale dell’utente (dashboard, RF13). \\
 5. Il sistema monitora lo stato dell’iniziativa in base al suo flusso di vita definito in RF18. [Estensione 1] \\
-8. L’utente visualizza sempre lo stato aggiornato dell’iniziativa nella propria dashboard personale.
+6. L’utente visualizza sempre lo stato aggiornato dell’iniziativa nella propria dashboard personale.
 
 \paragraph{Estensioni} \noindent
 1. Se lo stato dell’iniziativa cambia il sistema notifica tempestivamente l’utente.
-
-\paragraph{\large Use Case RF\ref{rf:voto}: Votazione del bilancio partecipativo} \noindent
-1. L'utente visualizza come default la home page. \\
-2. Apre la sezione dedicata ai bilanci partecipativi. \\
-3. Il sistema mostra l’elenco dei bilanci partecipativi attualmente attivi. [Eccezione 1] \\
-4. L’utente seleziona il sondaggio. [Eccezione 2] \\
-5. Il sistema mostra il modulo di voto.
-6. L’utente seleziona una delle opzioni proposte e conferma il voto.
-7. Il sistema registra la preferenza dell’utente nel database e aggiorna il conteggio delle votazioni.
-8. Al termine del voto, viene mostrato un messaggio di conferma.
-9. Alla chiusura del periodo di votazione, il sistema invia automaticamente all’utente una notifica sui risultati finali, come previsto in RF19.
-
-\paragraph{Eccezioni} \noindent
-1. Se non esiste alcun bilancio attivo, il sistema mostra un messaggio: “Nessun bilancio partecipativo attivo al momento.” \\
-2. Se l'utente ha già votato, il sistema mostra un avviso: “Hai già votato questo bilancio partecipativo.” \\
-3. Se il database o il servizio interno non risponde, il sistema mostra un errore temporaneo.
 
 \paragraph{\large Use case RF\ref{rf:controllo_duplicati}: Controllo duplicati}
 1. L’utente compila il modulo per la creazione di una nuova iniziativa (titolo, descrizione, luogo, categoria, allegati).\\

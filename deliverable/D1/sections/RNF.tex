@@ -1,0 +1,26 @@
+\section{Requisiti Non Funzionali}
+
+\RNF{Compatibilità.}  \label{rnf:compatibilita}
+Il sistema deve essere pienamente utilizzabile sia da desktop che da dispositivi mobili (smartphone, tablet), con un design responsivo che adatti automaticamente le interfacce alle diverse dimensioni dello schermo. Deve essere garantito il supporto ai principali browser: Chrome (versione 80 o superiore), Firefox (versione 75 o superiore), Safari (versione 13 o superiore), Microsoft Edge (versione 85 o superiore).  
+
+\RNF{Prestazioni.}  \label{rnf:prestazioni}
+Le operazioni più comuni quali login, caricamento della lista di iniziative e votazione, devono completarsi entro un tempo massimo di 2 secondi, in modo da mantenere una esperienza di navigazione ottimale per l'utente. Queste prestazioni devono essere garantite anche durante i picchi d'utenza, perciò il sistema deve essere in grado di gestire almeno 100 utenti connessi simultaneamente senza compromettere la riuscita corretta ed efficiente delle funzionalità.  
+
+\RNF{Scalabilità.}  \label{rnf:scalabilità}
+L’architettura deve essere progettata per supportare un aumento progressivo del numero di utenti. Il sistema deve scalare fino a 20.000 utenti simultanei, mantenendo tempi di risposta conformi al requisito RNF\ref{rnf:prestazioni}. Devono essere previste politiche di bilanciamento del carico e possibilità di aggiungere risorse hardware senza modificare la logica applicativa.
+
+% -- hey
+\RNF{Affidabilità e disponibilità.}  \label{rnf:aff_e_disponibilita}
+La piattaforma deve garantire un’affidabilità elevata, con una disponibilità minima del 99.5\% annuo (pari a circa 1 giorno e 20 ore di downtime massimo). Devono essere implementati sistemi di backup automatico giornaliero e procedure di disaster recovery in grado di ripristinare i dati entro 2 ore in caso di guasto critico.
+
+\RNF{Sicurezza.}  \label{rnf:sicurezza}
+Il sistema deve rispettare le normative GDPR per la protezione dei dati personali. Le comunicazioni tra client e server devono essere cifrate tramite protocollo HTTPS. Le sessioni utente devono scadere automaticamente dopo un periodo di inattività configurabile. L’integrazione con SPID deve rispettare i protocolli di sicurezza stabiliti a livello nazionale. Il sistema deve assicurarsi che gli utenti non autorizzati non possano accedere tramite backend a dati a loro non accessibili. 
+
+\RNF{Usabilità.} \label{rnf:usabilita} %riferimento a Limite d'applicazione 2
+L’interfaccia deve essere intuitiva e utilizzabile da un cittadino medio senza necessità di formazione. Deve essere possibile comprendere le principali funzionalità (creare una iniziativa, votare a un bilancio partecipativo, firmare) entro un tempo massimo di 15 minuti di utilizzo autonomo. Devono essere adottate linee guida di design coerenti (colori, pulsanti, icone) per garantire un’esperienza uniforme.  
+
+\RNF{Accessibilità.}  \label{rnf:accessibilita}
+Il sistema deve essere conforme alle linee guida WCAG 2.1 livello AA, garantendo l’accesso anche a utenti con disabilità. Ciò include il supporto per screen reader, testi alternativi per immagini, contrasto elevato, navigazione da tastiera e font leggibili.  
+
+\RNF{Manutenibilità.}  \label{rnf:manutenibilita}
+Il software deve essere sviluppato seguendo principi di modularità e documentazione del codice, in modo da permettere futuri aggiornamenti e correzioni senza compromettere la stabilità del sistema. Devono essere previste procedure di test automatici per ridurre il rischio di regressioni.

@@ -1,0 +1,261 @@
+\section{Analisi dei componenti}
+\subsection{Definizione dei componenti}
+Di seguito viene riportata, sulla base dei requisiti funzionali precedentemente descritti, la definizione dei vari componenti del nostro sistema.
+
+% - CMP riguardanti accesso / creazione profilo / autenticazione
+\CMP{Gestione accesso e autenticazione}\label{cmp:accesso_autenticazione}
+Il componente si occupa di gestire l'accesso degli utenti al sistema e di verificarne l'identità tramite un sistema di identità digitale. Fornisce informazioni riguardanti il ruolo dell'utente (Cittadino/Amministratore) ai vari componenti che gestiscono azioni da utente autenticato.
+\paragraph{Interfacce richieste:}
+\begin{itemize}
+    \item \textbf{Richiesta di login:} richiesta da parte dell'utente di poter essere reindirizzato all'identity provider scelto per fare l'accesso.
+    \item \textbf{Risposta dell'identity provider:} restituzione dei dati identificativi dell'utente da parte dell'identity provider scelto per l'accesso.
+    \item \textbf{Conferma di esistenza del profilo:} flag di conferma dell'esistenza dell'utente nel database fornito dal componente "Gestione database" (CMP\ref{cmp:gestione_database}).
+\end{itemize}
+\paragraph{Interfacce fornite:}
+\begin{itemize}
+    \item \textbf{Richiesta all'identity provider:} reindirizzamento dell'utente verso il sistema di autenticazione digitale scelto.
+    \item \textbf{Autenticazione:} notifica al resto del sistema riguardo i privilegi dell'utente.
+    \item \textbf{Richiesta di creazione profilo:} reindirizzamento al flusso di creazione del profilo qualora l'utente non risultasse registrato.
+\end{itemize}
+
+\CMP{Gestione creazione profilo}\label{cmp:creazione_profilo}
+Il componente si occupa di gestire la creazione di un nuovo profilo da parte di un utente non registrato.
+\paragraph{Interfacce richieste:}
+\begin{itemize}
+    \item \textbf{Richiesta di creazione profilo:} richiesta di creazione di un nuovo profilo (proveniente da CMP\ref{cmp:accesso_autenticazione}) dopo un login concluso con il non riconoscimento dell'utente nel database.
+    \item \textbf{Recapito mail:} inserimento da parte dell'utente di un recapito mail.
+\end{itemize}
+\paragraph{Interfacce fornite:}
+\begin{itemize}
+    \item \textbf{Registrazione utente:} invio dei dati dell'utente al componente "Gestione database" (CMP\ref{cmp:gestione_database}) per registrarne il profilo in caso di buona riuscita della procedura di creazione.
+\end{itemize}
+
+% - CMP riguardanti le iniziative
+\CMP{Gestione visualizzazione iniziative}\label{cmp:visual_iniziative}
+Il componente si occupa di gestire la visualizzazione da parte dell'utente delle iniziative presenti nel database e l'applicazione di criteri di ricerca ad essa.
+\paragraph{Interfacce richieste:}
+\begin{itemize}
+    \item \textbf{Criteri di ricerca:} eventuale inserimento da parte dell'utente di criteri di ricerca per restringere l'insieme di iniziative mostrate.
+    \item \textbf{Lista di iniziative:} lista delle iniziative richieste proveniente dal database (CMP\ref{cmp:gestione_database}), ottenuta applicando eventualmente dei criteri di ricerca (di default, la lista comprende tutte le iniziative). 
+\end{itemize}
+\paragraph{Interfacce fornite:}
+\begin{itemize}
+    \item \textbf{Visualizzazione lista di iniziative:} visualizzazione grafica della lista di iniziative all'utente.
+\end{itemize}
+
+\CMP{Gestione creazione iniziative}\label{cmp:creazione_iniz}
+Il componente si occupa di gestire la creazione di nuove iniziative da parte degli utenti autorizzati, inserendo i nuovi dati nel database.
+\paragraph{Interfacce richieste:}
+\begin{itemize}
+    \item \textbf{Dati iniziativa:} inserimento da parte dell'utente dei dati relativi all'iniziativa.
+    \item \textbf{Autenticazione:} informazioni di autenticazione provenienti dal componente "Gestione accesso e autenticazione" (CMP\ref{cmp:accesso_autenticazione}), che stabiliscono se l'utente è autorizzato a creare una nuova iniziativa.
+\end{itemize}
+\paragraph{Interfacce fornite:}
+\begin{itemize}
+    \item \textbf{Bozza nuova iniziativa:} invio dei dati riguardanti la nuova iniziativa al componente "Gestione controllo duplicati" (CMP\ref{cmp:controllo_duplicati}).
+\end{itemize}
+
+\CMP{Gestione controllo duplicati}\label{cmp:controllo_duplicati}
+Il componente funge da intermediario tra il database e il componente "Gestione creazione iniziative" (CMP\ref{cmp:creazione_iniz}). Gestisce il controllo duplicati di cui si parla in RF\ref{rf:controllo_duplicati}. 
+\paragraph{Interfacce richieste:}
+\begin{itemize}
+    \item \textbf{Lista iniziative in corso:} lista delle iniziative nel database che risultano in corso.
+    \item \textbf{Bozza nuova iniziativa:} dati di una nuova iniziativa a cui applicare l'algoritmo di controllo duplicati, provenienti dal componente "Gestione creazione iniziative" (CMP\ref{cmp:creazione_iniz}).
+\end{itemize}
+\paragraph{Interfacce fornite:}
+\begin{itemize}
+    \item \textbf{Nuova iniziativa:} inserimento di una nuova iniziativa nel database dopo il superamento del controllo.
+    \item \textbf{Controllo non superato:} invio dei dati relativi all'iniziativa al componente "Gestione notifiche" (CMP\ref{cmp:notifiche}) dopo il non superamento del controllo.
+\end{itemize}
+
+
+\CMP{Gestione firma iniziative} \label{cmp:firma}
+Il componente si occupa di gestire la firma delle iniziative, aggiornando opportunamente il database.
+\paragraph{Interfacce richieste:}
+\begin{itemize}
+    \item \textbf{Selezione firma:} comando dell'utente per firmare l'iniziativa.
+    \item \textbf{Autenticazione:} informazioni di autenticazione provenienti dal componente "Gestione accesso e autenticazione" (CMP\ref{cmp:accesso_autenticazione}), che stabiliscono se l'utente è autorizzato a firmare una iniziativa.
+\end{itemize}
+\paragraph{Interfacce fornite:}
+\begin{itemize}
+    \item \textbf{Nuova firma:} inserimento della nuova firma nel database.
+    \item \textbf{Reindirizzamento piattaforma esterna:} reindirizzamento alla piattaforma esterna in caso l'utente voglia firmare una iniziativa proveniente da essa.
+\end{itemize}
+
+\CMP{Gestione aggiunte ai preferiti}\label{cmp:preferiti}
+Il componente si occupa della gestione delle aggiunte e delle rimozioni di iniziative dalla lista delle iniziative seguite dall'utente.
+\paragraph{Interfacce richieste:}
+\begin{itemize}
+    \item \textbf{Aggiunta ai preferiti dell'utente:} selezione dell'utente di un'iniziativa da seguire.
+    \item \textbf{Rimozione dai preferiti dell'utente:} selezione dell'utente di un'iniziativa da smettere di seguire.
+    \item \textbf{Autenticazione:} informazioni di autenticazione provenienti dal componente "Gestione accesso e autenticazione" (CMP\ref{cmp:accesso_autenticazione}), che stabiliscono se l'utente è autorizzato a selezionare una iniziativa da seguire.
+\end{itemize}
+\paragraph{Interfacce fornite:}
+\begin{itemize}
+    \item \textbf{Aggiunta ai preferiti:} aggiunta di una nuova iniziativa salvata nel database.
+    \item \textbf{Rimozione dai preferiti:} rimozione di una iniziativa salvata dal database.
+\end{itemize}
+
+\CMP{Gestione risposte del Comune}\label{cmp:risposte}
+Il componente si occupa di gestire le interazioni degli utenti amministratori con le iniziative, ossia i cambiamenti di data di scadenza e l'invio di risposte.
+\paragraph{Interfacce richieste:}
+\begin{itemize}
+    \item \textbf{Autenticazione:} informazioni di autenticazione provenienti dal componente "Gestione accesso e autenticazione" (CMP\ref{cmp:accesso_autenticazione}), che stabiliscono se l'utente è amministratore.
+    \item \textbf{Nuova data di scadenza:} inserimento di una nuova data di scadenza per un'iniziativa.
+    \item \textbf{Risposta:} inserimento di una risposta ad una iniziativa.
+\end{itemize}
+\paragraph{Interfacce fornite:}
+\begin{itemize}
+    \item \textbf{Nuova risposta:} inserimento della risposta nel database.
+    \item \textbf{Aggiornamento data di scadenza:} invio dell'aggiornamento della data di scadenza al database.
+\end{itemize}
+
+\CMP{Gestione fonti esterne}\label{cmp:fonti_esterne}
+Il componente si occupa di gestire l'importazione delle iniziative provenienti dalle piattaforme esterne monitorate e del loro aggiornamento.
+\paragraph{Interfacce richieste:}
+\begin{itemize}
+    \item \textbf{Dati esterni:} dati relativi a un'iniziativa ottenuta da una piattaforma esterna.
+    \item \textbf{Iniziative esterne:} lista di iniziative importate da altre piattaforme presenti nel database. 
+\end{itemize}
+\paragraph{Interfacce fornite:}
+\begin{itemize}
+    \item \textbf{Aggiornamento dati esterni:} inserimento dei dati provenienti da fonti esterne nel database; se questi riguardano un'iniziativa già presente nel database si tratta di un aggiornamento, altrimenti di un inserimento.
+\end{itemize}
+
+% - bilancio partecipativo
+\CMP{Gestione visualizzazione bilancio partecipativo}\label{cmp:visual_bp}
+Il componente si occupa di gestire la visualizzazione del bilancio partecipativo attualmente in corso.
+\paragraph{Interfacce richieste:}
+\begin{itemize}
+    \item \textbf{Bilancio partecipativo corrente:} dati relativi al bilancio partecipativo attualmente in corso.
+\end{itemize}
+\paragraph{Interfacce fornite:}
+\begin{itemize}
+    \item \textbf{Visualizzazione bilancio partecipativo:} visualizzazione grafica del bilancio partecipativo attualmente in corso.
+\end{itemize}
+
+\CMP{Gestione voto bilancio partecipativo}\label{cmp:voto}
+Il componente si occupa di gestire le votazioni al bilancio partecipativo.
+\paragraph{Interfacce richieste:}
+\begin{itemize}
+    \item \textbf{Opzione votata:} opzione selezionata dall'utente.
+    \item \textbf{Autenticazione:} informazioni di autenticazione provenienti dal componente "Gestione accesso e autenticazione" (CMP\ref{cmp:accesso_autenticazione}), che stabiliscono se l'utente è autorizzato a votare al bilancio partecipativo.
+\end{itemize}
+\paragraph{Interfacce fornite:}
+\begin{itemize}
+    \item \textbf{Nuovo voto:} Inserimento del nuovo voto nel database.
+\end{itemize}
+
+\CMP{Gestione visualizzazione archivio bilanci partecipativi}\label{cmp:visual_bp_archive}
+Il componente si occupa di gestire la visualizzazione dell'archivio dei bilanci partecipativi da parte degli utenti amministratori.
+\paragraph{Interfacce richieste:}
+\begin{itemize}
+    \item \textbf{Lista di bilanci partecipativi:} lista dei bilanci partecipativi presenti nel database.
+    \item \textbf{Autenticazione:} informazioni di autenticazione provenienti dal componente "Gestione accesso e autenticazione" (CMP\ref{cmp:accesso_autenticazione}), che stabiliscono se l'utente è amministratore.
+\end{itemize}
+\paragraph{Interfacce fornite:}
+\begin{itemize}
+    \item \textbf{Visualizzazione archivio bilanci partecipativi:} visualizzazione grafica della lista di bilanci partecipativi.
+\end{itemize}
+
+\CMP{Gestione creazione bilanci partecipativi}\label{cmp:creazione_bp}
+Il componente si occupa di gestire la creazione di nuovi bilanci partecipativi.
+\paragraph{Interfacce richieste:}
+\begin{itemize}
+    \item \textbf{Dati bilancio:} dati relativi al bilancio partecipativo da creare, inseriti dall'utente.
+    \item \textbf{Conferma di assenza di bilanci partecipativi in corso:} conferma dal database riguardo l'assenza di bilanci partecipativi già in corso.
+    \item \textbf{Autenticazione:} informazioni di autenticazione provenienti dal componente "Gestione accesso e autenticazione" (CMP\ref{cmp:accesso_autenticazione}), che stabiliscono se l'utente è amministratore e può quindi creare bilanci partecipativi.
+\end{itemize}
+\paragraph{Interfacce fornite:}
+\begin{itemize}
+    \item \textbf{Nuovo bilancio partecipativo:} inserimento del nuovo bilancio partecipativo nel database.
+\end{itemize}
+
+
+% - dashboard e notifiche
+\CMP{Gestione dashboard}\label{cmp:dashboard}
+Il componente si occupa della visualizzazione delle iniziative d'interesse per l'utente e delle sue notifiche, raccolte nella sua dashboard personale.
+\paragraph{Interfacce richieste:}
+\begin{itemize}
+    \item \textbf{Autenticazione:} informazioni di autenticazione provenienti dal componente "Gestione accesso e autenticazione" (CMP\ref{cmp:accesso_autenticazione}), che stabiliscono se l'utente è un cittadino registrato e può quindi avere una dashboard.
+    \item \textbf{Iniziative create:} lista delle iniziative nel database create dall'utente.
+    \item \textbf{Iniziative firmate:} lista delle iniziative nel database firmate dall'utente.
+    \item \textbf{Iniziative salvate:} lista delle iniziative nel database di cui l'utente segue l'avanzamento.
+    \item \textbf{Notifiche:} lista delle notifiche dell'utente nel database.
+\end{itemize}
+\paragraph{Interfacce fornite:}
+\begin{itemize}
+    \item \textbf{Visualizzazione iniziative create:} visualizzazione grafica della lista di iniziative create dall'utente.
+    \item \textbf{Visualizzazione iniziative firmate:} visualizzazione grafica della lista di iniziative supportate dall'utente.
+    \item \textbf{Visualizzazione iniziative salvate:} visualizzazione grafica della lista di iniziative di cui l'utente segue lo stato d'avanzamento.
+    \item \textbf{Visualizzazione notifiche:} visualizzazione grafica della lista di notifiche dell'utente.
+\end{itemize}
+
+\CMP{Gestione notifiche}\label{cmp:notifiche}
+Il componente si occupa di gestire l'invio di notifiche sulla dashboard personale dell'utente e via e-mail nei casi riportati in RF\ref{rf:notifiche}.
+\paragraph{Interfacce richieste:}
+\begin{itemize}
+    \item \textbf{Controllo non superato:} dati relativi a un'iniziativa che non ha superato il controllo duplicati, inviati dal componente "Gestione controllo duplicati" (CMP\ref{cmp:controllo_duplicati}).
+    \item \textbf{Cambiamento di stato:} dati relativi a un'iniziativa seguita dall'utente che ha subito un cambiamento di stato, inviati dal componente "Gestione database" (CMP\ref{cmp:gestione_database}).
+    \item \textbf{Bilancio concluso:} dati relativi a un bilancio partecipativo concluso votato dall'utente, inviati dal componente "Gestione database" (CMP\ref{cmp:gestione_database}).
+    \item \textbf{Recapito mail per notifica:} recapito mail dell'utente, inviati dal componente "Gestione database" (CMP\ref{cmp:gestione_database}).
+\end{itemize}
+\paragraph{Interfacce fornite:}
+\begin{itemize}
+    \item \textbf{Contenuto mail:} contenuto effettivo della mail di notifica.
+    \item \textbf{Nuova notifica:} inserimento nel database della notifica generata, che sarà quindi visualizzabile nella dashboard tramite l'interfaccia "Notifiche".
+\end{itemize}
+
+% - amministrazione ruoli
+\CMP{Gestione ruoli amministrativi}\label{cmp:ruoli_amm}
+Il componente si occupa di gestire la ricerca, da parte degli amministratori, di utenti amministratori tramite codice fiscale, della promozione / pre-autorizzazione di utenti e della revoca dei privilegi.
+\paragraph{Interfacce richieste:}
+\begin{itemize}
+    \item \textbf{Inserimento CF:} inserimento, da parte dell'utente amministratore, di un codice fiscale per cercarlo nella lista degli amministratori.
+    \item \textbf{Selezione promozione:} comando dell'amministratore per aggiungere un utente alla lista degli amministratori.
+    \item \textbf{Selezione revoca:} comando dell'amministratore per rimuovere un utente dalla lista degli amministratori.
+    \item \textbf{Lista utenti amministratori:} lista degli utenti nel database con ruolo di amministratore.
+    \item \textbf{Autenticazione:} informazioni di autenticazione provenienti dal componente "Gestione accesso e autenticazione" (CMP\ref{cmp:accesso_autenticazione}), che stabiliscono se l'utente è autorizzato a operare sulla lista degli amministratori.
+\end{itemize}
+\paragraph{Interfacce fornite:}
+\begin{itemize}
+    \item \textbf{Aggiornamento privilegi:} aggiornamento nel database che riflette i cambi di privilegio effettuati.
+\end{itemize}
+
+% - database
+\CMP{Gestione database}\label{cmp:gestione_database}
+Il componente si occupa di gestire la raccolta dei dati utilizzati dal sistema. Invia dati agli altri componenti, qualora venissero richiesti, e riceve da essi nuovi dati con i quali aggiornare il database.
+\paragraph{Interfacce richieste:}
+\begin{itemize}
+    \item \textbf{Registrazione utente:} ricevimento dei dati riguardanti un nuovo utente da parte del componente "Gestione creazione profilo" (CMP\ref{cmp:creazione_profilo}).
+    \item \textbf{Nuova iniziativa:} ricevimento dei dati di una nuova iniziativa da parte del componente "Gestione controllo duplicati" (CMP\ref{cmp:controllo_duplicati}).
+    \item \textbf{Nuova firma:} ricevimento dei dati di una nuova firma da parte del componente "Gestione firma iniziative" (CMP\ref{cmp:firma}).
+    \item \textbf{Aggiunta ai preferiti:} ricevimento dei dati di una nuova iniziativa salvata da parte del componente "Gestione aggiunte ai preferiti" (CMP\ref{cmp:preferiti}).
+    \item \textbf{Rimozione dai preferiti:} ricevimento dei dati di una iniziativa salvata da rimuovere dal database da parte del componente "Gestione aggiunte ai preferiti" (CMP\ref{cmp:preferiti}).
+    \item \textbf{Nuova risposta:} ricevimento di una nuova risposta a un'iniziativa da parte del componente "Gestione risposte del Comune" (CMP\ref{cmp:risposte}).
+    \item \textbf{Aggiornamento data di scadenza:} ricevimento di un aggiornamento della data di scadenza di un'iniziativa da parte del CMP\ref{cmp:risposte}.
+    \item \textbf{Aggiornamento dati esterni:} ricevimento dei dati provenienti da fonti esterne da parte del componente "Gestione risposte del Comune" (CMP\ref{cmp:risposte}).
+    \item \textbf{Aggiornamento privilegi:} notifica da parte del componente "Gestione ruoli amministrativi" (CMP\ref{cmp:ruoli_amm}) riguardo a cambi di privilegio effettuati sugli utenti, in modo da aggiornare opportunamente il database.
+    \item \textbf{Nuovo voto:} ricevimento dei dati di un nuovo voto da parte del componente "Gestione voto bilancio partecipativo" (CMP\ref{cmp:voto}).
+    \item \textbf{Nuovo bilancio partecipativo:} ricevimento dei dati di un nuovo bilancio partecipativo da parte del componente "Gestione creazione bilanci partecipativi" (CMP\ref{cmp:creazione_bp}).
+\end{itemize}
+\paragraph{Interfacce fornite:}
+\begin{itemize}
+    \item \textbf{Conferma di esistenza del profilo:} conferma dell'esistenza dell'utente nel database, inviata al componente "Gestione accesso e autenticazione" (CMP\ref{cmp:accesso_autenticazione}).
+    \item \textbf{Lista di iniziative:} invio della lista di iniziative nel database (o di un suo sottoinsieme) al componente "Gestione visualizzazione iniziative" (CMP\ref{cmp:visual_iniziative}).
+    \item \textbf{Iniziative esterne:} invio della lista di iniziative importate da altre piattaforme al componente "Gestione fonti esterne" (CMP\ref{cmp:fonti_esterne}).
+    \item \textbf{Bilancio partecipativo corrente:} invio del bilancio partecipativo attualmente in corso al componente "Gestione visualizzazione bilancio partecipativo" (CMP\ref{cmp:visual_bp}).
+    \item \textbf{Lista di bilanci partecipativi:} invio della lista di bilanci partecipativi nel database al componente "Gestione visualizzazione archivio bilanci partecipativi" (CMP\ref{cmp:visual_bp_archive}).
+    \item \textbf{Conferma di assenza di bilanci partecipativi in corso:} conferma dell'assenza di un bilancio partecipativo in corso nel database, inviata al componente "Gestione creazione bilanci partecipativi" (CMP\ref{cmp:creazione_bp}).
+    \item \textbf{Iniziative create:} invio della lista di iniziative create da un utente al componente "Gestione dashboard" (CMP\ref{cmp:dashboard}).
+    \item \textbf{Iniziative firmate:} invio della lista di iniziative firmate da un utente al componente "Gestione dashboard" (CMP\ref{cmp:dashboard}).
+    \item \textbf{Iniziative seguite:} invio della lista di iniziative seguite da un utente al componente "Gestione dashboard" (CMP\ref{cmp:dashboard}).
+    \item \textbf{Notifiche:} invio della lista delle notifiche di un utente al componente "Gestione dashboard" (CMP\ref{cmp:dashboard}).
+    \item \textbf{Cambiamento di stato:} invio dei dati relativi a un'iniziativa seguita da un utente che ha subito un cambiamento di stato, inviati al componente "Gestione notifiche" (CMP\ref{cmp:notifiche}).
+    \item \textbf{Bilancio concluso:} invio dei dati relativi a un bilancio partecipativo concluso votato da un utente, inviati al componente "Gestione notifiche" (CMP\ref{cmp:notifiche}).
+    \item \textbf{Recapito mail per notifica:} invio del recapito mail di un utente, inviato al componente "Gestione notifiche" (CMP\ref{cmp:notifiche}).
+    \item \textbf{Lista utenti amministratori:} invio della lista di utenti con ruolo di amministratore al componente "Gestione ruoli amministrativi" (CMP\ref{cmp:ruoli_amm}).
+\end{itemize}
+
+\subsection{Diagramma dei componenti}
+Viene riportato di seguito il diagramma dei componenti definiti nel paragrafo precedente, con le loro interconnessioni.
