@@ -6,6 +6,19 @@
 \usepackage{titlesec}
 \usepackage{hyperref}
 
+\makeatletter
+% RF
+\def\toclevel@RF{2}
+\def\toclevel@subRF{3}
+
+% RNF
+\def\toclevel@RNF{2}
+\def\toclevel@subRNF{3}
+
+% User Stories
+\def\toclevel@US{2}
+
+
 % --- Section format ---
 \titleformat{\section}
   {\normalfont\LARGE\bfseries}  % Font style: normal + Large + bold
@@ -88,26 +101,9 @@
   \subsection*{User story \arabic{userStories}: #1}%
 }
 
-% ---------------------------
-% Components (CMP)
-% ---------------------------
-
-\newcounter{components}
-
-\makeatletter
-% stile voce in TOC per le CMP (uguale a quello delle US)
-\newcommand{\l@CMP}{\@dottedtocline{2}{1.5em}{2.3em}}
-\makeatother
-
-\newcommand{\CMP}[1]{%
-  \refstepcounter{components}%
-  \addcontentsline{toc}{CMP}{CMP \arabic{components}: #1}%
-  \subsection*{CMP\arabic{components}: #1}%
-}
 
 
-
-\title{\Huge TRENTO PARTECIPA}
+\title{\Huge TRENTO PARTECIPA - D1}
 \author{\LARGE D'Angiò Enea, Mattarolo Alessandro, Nedeljkovic Ivan}
 \date{September 2025}
 
@@ -125,9 +121,5 @@
 \include{sections/RNF}
 \include{sections/UD}
 \include{sections/US}
-\include{sections/CMP}
-\include{sections/D4}
-
-
 
 \end{document}

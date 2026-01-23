@@ -1,0 +1,53 @@
+\documentclass[11pt]{extarticle}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{float}
+\usepackage[italian]{babel}
+\usepackage[a4paper, left=3cm, right=3cm]{geometry}
+\usepackage{titlesec}
+\usepackage{hyperref}
+
+% Components
+\def\toclevel@CMP{2}
+\makeatother
+
+% --- Section format ---
+\titleformat{\section}
+  {\normalfont\LARGE\bfseries}  % Font style: normal + Large + bold
+  {\thesection}                 % Section number format
+  {6pt}                         % Space between number and title
+  {}
+
+% ---------------------------
+% Components (CMP)
+% ---------------------------
+
+\newcounter{components}
+
+\makeatletter
+\newcommand{\l@CMP}{\@dottedtocline{2}{1.5em}{2.3em}}
+\makeatother
+
+\newcommand{\CMP}[1]{%
+  \refstepcounter{components}%
+  \addcontentsline{toc}{CMP}{CMP \arabic{components}: #1}%
+  \subsection*{CMP\arabic{components}: #1}%
+}
+
+\title{\Huge TRENTO PARTECIPA - D3}
+\author{\LARGE D'Angiò Enea, Mattarolo Alessandro, Nedeljkovic Ivan}
+\date{January 2026}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\section{Introduzione}
+Il seguente documento approfondisce gli aspetti di \textbf{progettazione e analisi} del progetto \textbf{\texttt{"TRENTO PARTECIPA"}}. In particolare, viene riportata l'analisi dei componenti e il corrispondente diagramma.
+
+\newpage
+
+\include{sections/CMP}
+
+\end{document}
