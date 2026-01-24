@@ -219,6 +219,7 @@ Il componente si occupa di gestire la ricerca, da parte degli amministratori, di
     \item \textbf{Selezione promozione:} comando dell'amministratore per aggiungere un utente alla lista degli amministratori.
     \item \textbf{Selezione revoca:} comando dell'amministratore per rimuovere un utente dalla lista degli amministratori.
     \item \textbf{Lista utenti amministratori:} lista degli utenti nel database con ruolo di amministratore.
+    \item \textbf{Conferma di esistenza del profilo:} flag di conferma dell'esistenza dell'utente nel database, in modo da distiguere la promozione di un cittadino già registrato da una pre-autorizzazione.
     \item \textbf{Autenticazione:} informazioni di autenticazione provenienti dal componente "Gestione accesso e autenticazione" (CMP\ref{cmp:accesso_autenticazione}), che stabiliscono se l'utente è autorizzato a operare sulla lista degli amministratori.
 \end{itemize}
 \paragraph{Interfacce fornite:}
@@ -246,7 +247,7 @@ Il componente si occupa di gestire la raccolta dei dati utilizzati dal sistema. 
 \end{itemize}
 \paragraph{Interfacce fornite:}
 \begin{itemize}
-    \item \textbf{Conferma di esistenza del profilo:} conferma dell'esistenza dell'utente nel database, inviata al componente "Gestione accesso e autenticazione" (CMP\ref{cmp:accesso_autenticazione}).
+    \item \textbf{Conferma di esistenza del profilo:} conferma dell'esistenza di un utente nel database, fornita al componente "Gestione accesso e autenticazione" (CMP\ref{cmp:accesso_autenticazione}) e al componente "Gestione ruoli amministrativi" (CMP\ref{cmp:ruoli_amm}).
     \item \textbf{Lista di iniziative:} invio della lista di iniziative nel database (o di un suo sottoinsieme) al componente "Gestione visualizzazione iniziative" (CMP\ref{cmp:visual_iniziative}).
     \item \textbf{Iniziative in corso:} invio della lista delle iniziative nel database che risultano in corso al componente "Gestione controllo duplicati" (CMP\ref{cmp:controllo_duplicati}).
     \item \textbf{Iniziativa già firmata:} flag di controllo inviato al componente "Gestione firma iniziative" (CMP\ref{cmp:firma}) che indica se un utente ha già firmato una certa iniziativa.
