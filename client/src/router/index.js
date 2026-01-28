@@ -3,7 +3,7 @@ import { useUserStore } from '../stores/userStore'
 
 // Import delle View
 import HomeView from '../views/HomeView.vue'
-import ArchiveView from '../views/ArchiveView.vue'
+import InitiativesView from '../views/InitiativesView.vue'
 import InitiativeDetail from '../views/InitiativeDetail.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
@@ -13,7 +13,7 @@ import AdminCreateBudgetView from '../views/AdminCreateBudgetView.vue'
 import AdminUsersView from '../views/AdminUsersView.vue'
 import AdminExpiringView from '../views/AdminExpiringView.vue'
 import AdminDashboardView from '../views/AdminDashboardView.vue'
-import AdminModerationView from '../views/AdminModerationView.vue'
+import AdminBudgetArchiveView from '../views/AdminBudgetArchiveView.vue'
 import AdminInitiativeReplyView from '../views/AdminInitiativeReplyView.vue'
 import ParticipatoryBudgetResultsView from '../views/ParticipatoryBudgetResultsView.vue'
 
@@ -26,9 +26,9 @@ const router = createRouter({
       component: HomeView,
     },
     {
-      path: '/archive',
-      name: 'archive',
-      component: ArchiveView,
+      path: '/initiatives',
+      name: 'initiatives',
+      component: InitiativesView,
     },
     {
       path: '/initiative/:id',
@@ -76,8 +76,8 @@ const router = createRouter({
       component: AdminDashboardView,
     },
     {
-      path: '/admin/moderation',
-      component: AdminModerationView,
+      path: '/admin/budget-archive',
+      component: AdminBudgetArchiveView,
     },
     {
       path: '/admin/reply/:id',

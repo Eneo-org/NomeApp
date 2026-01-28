@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from './stores/userStore'
 import TheToast from './components/TheToast.vue'
@@ -8,6 +8,13 @@ import { useTheme } from '@/composables/useTheme';
 const router = useRouter()
 const userStore = useUserStore()
 const { isDark, toggleTheme, initTheme } = useTheme();
+
+const searchTerm = ref('');
+
+const handleSearch = () => {
+  router.push({ path: '/initiatives', query: { search: searchTerm.value.trim() } });
+  searchTerm.value = '';
+};
 
 // Calcola l'iniziale dell'utente per l'avatar
 const userInitial = computed(() => {
@@ -44,9 +51,22 @@ const logout = () => {
         </RouterLink>
       </div>
 
+      <div class="nav-center">
+        <form @submit.prevent="handleSearch" class="nav-search-form">
+          <input type="text" v-model="searchTerm" placeholder="Cerca iniziative..." class="nav-search-input">
+          <button type="submit" class="nav-search-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
+        </form>
+      </div>
+
       <div class="nav-right">
         <RouterLink to="/" class="nav-link">Home</RouterLink>
-        <RouterLink to="/archive" class="nav-link">Archivio</RouterLink>
+        <RouterLink to="/initiatives" class="nav-link">Iniziative</RouterLink>
 
         <RouterLink v-if="userStore.isAuthenticated" to="/dashboard" class="nav-link">
           Dashboard
@@ -129,8 +149,10 @@ const logout = () => {
   --navbar-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   --header-border: #e2e8f0;
 
-  --input-bg: #ffffff;
+  --input-bg: #f8fafc;
   --input-border: #cbd5e1;
+  --otp-bg: #FFFFFF;
+  --otp-border: #94A3B8;
 
   --accent-color: #10b981;
   /* Verde Smeraldo */
@@ -157,6 +179,8 @@ body.dark {
 
   --input-bg: #252525;
   --input-border: #2a2a2a;
+  --otp-bg: #2a2a2a;
+  --otp-border: #5a5a5a;
 
   --user-panel-bg: #2a2a2a;
   --nav-hover: #10b981;
@@ -182,24 +206,27 @@ body {
   background-color: var(--navbar-bg);
   border-bottom: 1px solid var(--header-border);
   box-shadow: var(--navbar-shadow);
-  padding: 0 40px;
+  padding: 0 25px;
   height: 70px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 20px;
   position: sticky;
   top: 0;
   z-index: 1000;
   transition: background-color 0.3s;
 }
 
-/* --- STILE LOGO BRAND (MODIFICATO: Icona e Testo Grande) --- */
+.nav-left {
+  flex-shrink: 0;
+}
+
+/* --- STILE LOGO BRAND --- */
 .brand-logo-inline {
   text-decoration: none;
   display: flex;
   align-items: center;
   gap: 12px;
-  /* Più spazio tra icona grande e testo */
   transition: opacity 0.2s;
 }
 
@@ -207,39 +234,88 @@ body {
   opacity: 0.85;
 }
 
-/* Nuova Icona più grande */
 .brand-icon {
   color: var(--accent-color);
   flex-shrink: 0;
-  /* Dimensioni aumentate nel tag SVG direttamente (width="34" height="34") */
 }
 
-/* Testo su unica riga MOLTO PIÙ GRANDE */
 .brand-text-inline {
   font-size: 1.7rem;
-  /* Dimensione notevolmente aumentata */
   line-height: 1;
   display: flex;
   align-items: center;
   gap: 2px;
+  white-space: nowrap;
 }
 
 .brand-city {
   font-weight: 500;
-  /* Peso normale */
   color: var(--text-color);
   letter-spacing: -0.5px;
 }
 
 .brand-action {
   font-weight: 900;
-  /* Molto grassetto */
-  /* Gradiente sul testo */
   background: linear-gradient(90deg, var(--text-color) 15%, var(--accent-color) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: -1px;
-  /* Kerning stretto per impatto */
+}
+
+/* --- NAV SEARCH (REFACTORED) --- */
+.nav-center {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  min-width: 200px;
+}
+
+.nav-search-form {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 480px;
+  background-color: var(--input-bg);
+  border: 1px solid var(--header-border);
+  border-radius: 22px;
+  transition: all 0.2s;
+}
+
+.nav-search-form:focus-within {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.nav-search-input {
+  flex-grow: 1;
+  width: 100%;
+  height: 42px;
+  padding: 0 20px;
+  background-color: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-color);
+  font-size: 0.95rem;
+}
+
+.nav-search-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.nav-search-btn:hover {
+  background: var(--accent-hover);
 }
 
 
@@ -247,7 +323,8 @@ body {
 .nav-right {
   display: flex;
   align-items: center;
-  gap: 25px;
+  gap: 20px;
+  flex-shrink: 0;
 }
 
 .nav-link {
@@ -258,6 +335,7 @@ body {
   padding: 5px 0;
   position: relative;
   transition: color 0.2s;
+  white-space: nowrap;
 }
 
 .nav-link:hover {
@@ -280,7 +358,6 @@ body {
   border-radius: 2px;
 }
 
-/* Link Admin Pillola */
 .nav-link.admin-pill {
   display: flex;
   align-items: center;
@@ -303,7 +380,6 @@ body {
   color: white !important;
 }
 
-/* Bottone Accedi */
 .login-btn {
   background-color: var(--accent-color);
   color: white;
@@ -415,12 +491,39 @@ body {
 }
 
 /* RESPONSIVE */
+@media (max-width: 1024px) {
+  .user-name {
+    display: none;
+  }
+  .nav-right {
+    gap: 10px;
+  }
+}
+
 @media (max-width: 768px) {
   .navbar {
     padding: 15px;
     height: auto;
     flex-direction: column;
     gap: 15px;
+  }
+  .nav-center {
+    min-width: 100%;
+    padding: 0;
+    order: 3;
+  }
+  .nav-right {
+    order: 2;
+  }
+  .nav-left {
+    order: 1;
+  }
+
+  .nav-link {
+    display: inline-block;
+  }
+  .user-name {
+    display: inline-block;
   }
 
   .nav-right {

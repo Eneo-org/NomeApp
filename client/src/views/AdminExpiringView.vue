@@ -145,7 +145,7 @@ onUnmounted(() => {
   <div class="admin-wrapper">
     <div class="header-section">
       <h1 class="page-title">⏳ Monitoraggio Scadenze</h1>
-      <p class="subtitle">Iniziative interne in scadenza (prossimi 3 giorni)</p>
+      <p class="subtitle">Iniziative interne in scadenza in ordine di data</p>
     </div>
 
     <div v-if="initiatives.length > 0" class="initiatives-list">

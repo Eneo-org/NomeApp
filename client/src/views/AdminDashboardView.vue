@@ -12,12 +12,6 @@ const userStore = useUserStore();
 
     <div class="dashboard-grid">
 
-      <RouterLink to="/admin/moderation" class="dash-card blue">
-        <div class="icon">🛡️</div>
-        <h3>Moderazione Iniziative</h3>
-        <p>Approva o respingi le nuove proposte dei cittadini.</p>
-      </RouterLink>
-
       <RouterLink to="/admin/expiring" class="dash-card red">
         <div class="icon">⏳</div>
         <h3>Monitoraggio Scadenze</h3>
@@ -34,6 +28,12 @@ const userStore = useUserStore();
         <div class="icon">👥</div>
         <h3>Gestione Personale</h3>
         <p>Visualizza la lista degli amministratori e utenti.</p>
+      </RouterLink>
+
+      <RouterLink to="/admin/budget-archive" class="dash-card orange">
+        <div class="icon">🗃️</div>
+        <h3>Archivio Bilanci</h3>
+        <p>Visualizza i risultati dei bilanci partecipativi conclusi.</p>
       </RouterLink>
 
     </div>
@@ -120,5 +120,9 @@ const userStore = useUserStore();
 
 .dash-card.purple:hover {
   border-color: #9b59b6;
+}
+
+.dash-card.orange:hover {
+  border-color: #e67e22;
 }
 </style>

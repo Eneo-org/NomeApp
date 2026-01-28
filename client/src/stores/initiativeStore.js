@@ -66,7 +66,7 @@ export const useInitiativeStore = defineStore('initiative', () => {
         currentPage: page,
         objectsPerPage: 10,
         sortBy: sortBy,
-        order: 'desc',
+        order: filters.order || 'desc',
         ...(filters.search && { search: filters.search }),
         ...(filters.category && { category: filters.category }),
         ...(filters.platform && { platform: filters.platform }),
@@ -74,6 +74,7 @@ export const useInitiativeStore = defineStore('initiative', () => {
         ...(filters.not_status && { not_status: filters.not_status }),
       }
 
+      console.log('API Params:', params);
       const response = await axios.get(`${API_URL}/initiatives`, { params })
 
       initiatives.value = response.data.data
@@ -344,7 +345,7 @@ export const useInitiativeStore = defineStore('initiative', () => {
     try {
       const storedId = localStorage.getItem('tp_mock_id')
       const response = await axios.get(
-        `${API_URL}/initiatives/admin/expiring?currentPage=${page}&objectsPerPage=10`,
+        `${API_URL}/initiatives/admin/expiring?currentPage=${page}&objectsPerPage=5`,
         { headers: { 'X-Mock-User-Id': storedId } },
       )
       return response.data

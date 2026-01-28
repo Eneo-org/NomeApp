@@ -189,8 +189,14 @@ exports.sendOtp = async (req, res) => {
       `,
     };
 
-    await transporter.sendMail(mailOptions);
-    res.status(200).json({ message: "Codice inviato" });
+    // Se le credenziali email non sono configurate, salta l'invio e usa la modalità dev
+    if (process.env.MAIL_USER && process.env.MAIL_PASS) {
+      await transporter.sendMail(mailOptions);
+      res.status(200).json({ message: "Codice inviato" });
+    } else {
+      console.log("⚠️  [MODALITÀ SVILUPPO] Le credenziali email non sono impostate. L'invio è stato saltato.");
+      res.status(200).json({ message: "Check console (DevMode)", devMode: true });
+    }
   } catch (error) {
     console.error("Errore sendOtp:", error);
     if (otpStore[email]) {
@@ -254,8 +260,8 @@ exports.registerUser = async (req, res) => {
 
     // Tentativo di inserimento nel DB
     const query = `
-        INSERT INTO UTENTE (NOME, COGNOME, EMAIL, CODICE_FISCALE, IS_ADMIN, IS_CITTADINO, PASSWORD, CREATED_AT)
-        VALUES (?, ?, ?, ?, ?, ?, 'GOOGLE_AUTH_SPID', NOW())
+        INSERT INTO UTENTE (NOME, COGNOME, EMAIL, CODICE_FISCALE, IS_ADMIN, IS_CITTADINO, CREATED_AT)
+        VALUES (?, ?, ?, ?, ?, ?, NOW())
     `;
 
     const [result] = await db.query(query, [

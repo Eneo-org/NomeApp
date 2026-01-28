@@ -339,7 +339,6 @@ h2 {
   font-weight: bold;
   border-radius: 8px;
 
-  /* Usa variabili globali (aggiunte in App.vue per comodità o mappate qui) */
   border: 1px solid var(--otp-border);
   background-color: var(--otp-bg);
   color: var(--text-color);

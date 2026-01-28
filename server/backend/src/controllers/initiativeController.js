@@ -444,7 +444,6 @@ exports.getExpiringInitiatives = async (req, res) => {
         WHERE STATO = 'In corso' 
         AND ID_PIATTAFORMA = 1 
         AND DATA_SCADENZA > NOW()                      -- Esclude le scadute (passato)
-        AND DATA_SCADENZA <= DATE_ADD(NOW(), INTERVAL 3 DAY) -- Include solo scadenze prossime (futuro vicino)
     `;
 
     const queryData = `
