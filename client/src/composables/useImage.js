@@ -9,15 +9,21 @@ export function useImage() {
   const { isDark } = useTheme()
 
   const getImageUrl = (item) => {
-    // 1. Immagine reale se esiste
-    if (item && item.attachment && item.attachment.filePath) {
-      const cleanPath = item.attachment.filePath.replace(/\\/g, '/')
-      return `${API_URL}/${cleanPath}`
+    // 1. Logica aggiornata: controlla prima l'array `attachments`
+    if (item && item.attachments && item.attachments.length > 0) {
+      const cleanPath = item.attachments[0].filePath.replace(/\\/g, '/');
+      return `${API_URL}/${cleanPath}`;
     }
 
-    // 2. Placeholder reattivo: Vue ricalcola questa riga appena isDark cambia!
-    return isDark.value ? defaultImageDark : defaultImageLight
-  }
+    // 2. Fallback alla vecchia logica per compatibilità
+    if (item && item.attachment && item.attachment.filePath) {
+      const cleanPath = item.attachment.filePath.replace(/\\/g, '/');
+      return `${API_URL}/${cleanPath}`;
+    }
+
+    // 3. Placeholder reattivo al tema
+    return isDark.value ? defaultImageDark : defaultImageLight;
+  };
 
   return { getImageUrl }
 }

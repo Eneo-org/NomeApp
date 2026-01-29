@@ -4,8 +4,9 @@
   "description": "Backend per la gestione iniziative",
   "main": "src/app.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js"
+    "test": "jest --detectOpenHandles",
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
   },
   "keywords": [],
   "author": "",

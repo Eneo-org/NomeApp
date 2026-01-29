@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import axios from 'axios'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -77,6 +77,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
+  const unreadCount = computed(() => notifications.value.filter(n => !n.isRead).length);
+
   // 4. Segna notifica come letta
   const markAsRead = async (id) => {
     const userId = localStorage.getItem('tp_mock_id')
@@ -94,6 +96,21 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
+  // 5. Segna tutte le notifiche come lette
+  const markAllAsRead = async () => {
+    const userId = localStorage.getItem('tp_mock_id');
+    try {
+      await axios.patch(
+        `${API_URL}/users/me/notifications/mark-all-as-read`,
+        {},
+        { headers: { 'X-Mock-User-Id': userId } },
+      );
+      notifications.value.forEach(n => n.isRead = true);
+    } catch (err) {
+      console.error('Errore nel segnare tutte le notifiche come lette:', err);
+    }
+  };
+
   return {
     myInitiatives,
     expiringInitiatives, // Esportiamo la nuova lista
@@ -101,9 +118,11 @@ export const useDashboardStore = defineStore('dashboard', () => {
     loading,
     currentPage,
     totalPages,
+    unreadCount,
     fetchDashboardData,
     fetchExpiringInitiatives, // Esportiamo la nuova funzione
     fetchNotifications,
     markAsRead,
+    markAllAsRead,
   }
 })

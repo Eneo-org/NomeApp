@@ -2,11 +2,11 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useInitiativeStore } from '../stores/initiativeStore';
-import { useToastStore } from '../stores/toastStore'; // Import Toast Store
+import { useToastStore } from '../stores/toastStore';
 import defaultImage from '@/assets/placeholder-initiative.jpg';
 
 const initiativeStore = useInitiativeStore();
-const toast = useToastStore(); // Init Toast
+const toast = useToastStore();
 const router = useRouter();
 const API_URL = 'http://localhost:3000';
 
@@ -57,15 +57,11 @@ const goToReply = (id) => router.push(`/admin/reply/${id}`);
 
 // --- LOGICA PROROGA RAPIDA ---
 const handleQuickExtend = (item) => {
-  // 1. CONTROLLO: Se è già stata prorogata (Flag locale o DB)
-  // Nota: Poiché il DB non ha ancora una colonna 'IS_EXTENDED', ci basiamo su un flag locale 'item.alreadyExtended'
-  // che settiamo a true dopo l'azione, oppure se la logica business lo prevedesse.
   if (item.alreadyExtended) {
     toast.showToast("⛔ Errore: Questa iniziativa è già stata prorogata una volta.", "error");
     return;
   }
 
-  // 2. RICHIESTA CONFERMA
   toast.showToast(
     `Vuoi prorogare "${item.title}" di 60 giorni?`,
     'prompt',
@@ -77,18 +73,10 @@ const handleQuickExtend = (item) => {
           onClick: async (toastId) => {
             toast.removeToast(toastId);
             try {
-              // Chiamata allo store
               await initiativeStore.extendDeadline(item.id, item.expirationDate);
-
               toast.showToast("Scadenza aggiornata (+60gg)!", "success");
-
-              // 3. AGGIORNAMENTO LOCALE (Senza ricaricare tutto)
-              const newDate = new Date(item.expirationDate);
-              newDate.setDate(newDate.getDate() + 60);
-              item.expirationDate = newDate.toISOString(); // Aggiorna data per il timer
-              item.alreadyExtended = true; // Blocca il bottone
-              item.displayTime = calculateTimeLeft(item.expirationDate); // Ricalcola timer
-
+              // Ricarica i dati per vedere l'ordinamento aggiornato
+              loadData(currentPage.value);
             } catch (err) {
               toast.showToast("Errore durante la proroga.", "error");
             }
@@ -106,33 +94,35 @@ const handleQuickExtend = (item) => {
 
 // --- CARICAMENTO DATI ---
 const loadData = async (page = 1) => {
-  if (initiativeStore.fetchExpiringInitiatives) {
-    const responseData = await initiativeStore.fetchExpiringInitiatives(page);
+  const responseData = await initiativeStore.fetchExpiringInitiatives(page);
 
-    if (responseData && responseData.data) {
-      initiatives.value = responseData.data.map(init => ({
-        ...init,
-        displayTime: calculateTimeLeft(init.expirationDate),
-        isUrgent: false,
-        alreadyExtended: false // Inizializziamo a false (se il backend mandasse il dato, lo useremmo qui)
-      }));
+  if (responseData && responseData.data) {
+    initiatives.value = responseData.data.map(init => ({
+      ...init,
+      displayTime: calculateTimeLeft(init.expirationDate),
+      isUrgent: false,
+      alreadyExtended: false // Se il backend non fornisce questo dato
+    }));
 
-      if (responseData.meta) {
-        currentPage.value = responseData.meta.currentPage;
-        totalPages.value = responseData.meta.totalPages;
-      }
-      updateTickers();
+    if (responseData.meta) {
+      currentPage.value = responseData.meta.currentPage;
+      totalPages.value = responseData.meta.totalPages;
     }
+    updateTickers();
+  } else {
+    initiatives.value = []; // Pulisci in caso di errore
   }
 };
 
 const changePage = (delta) => {
   const newPage = currentPage.value + delta;
-  if (newPage >= 1 && newPage <= totalPages.value) loadData(newPage);
+  if (newPage >= 1 && newPage <= totalPages.value) {
+    loadData(newPage);
+  }
 };
 
 onMounted(() => {
-  loadData();
+  loadData(1); // Carica la prima pagina
   timerInterval = setInterval(updateTickers, 1000);
 });
 

@@ -3,16 +3,16 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useInitiativeStore } from '../stores/initiativeStore';
 import { useToastStore } from '../stores/toastStore';
-import defaultImage from '@/assets/placeholder-initiative.jpg';
+import { useImage } from '@/composables/useImage';
 
 const route = useRoute();
 const router = useRouter();
 const store = useInitiativeStore();
 const toast = useToastStore();
+const { getImageUrl } = useImage();
 
 const initiative = ref(null);
 const loading = ref(true);
-const API_URL = 'http://localhost:3000';
 
 // Stato locale per i file
 const selectedFiles = ref([]); // Array per gestire i file aggiunti/rimossi
@@ -29,14 +29,6 @@ const loadDetail = async () => {
   if (data) initiative.value = data;
   loading.value = false;
 };
-
-const getImageUrl = computed(() => {
-  if (!initiative.value) return defaultImage;
-  const attachment = initiative.value.attachment || initiative.value.image;
-  const path = attachment?.filePath || attachment;
-  if (!path) return defaultImage;
-  return `${API_URL}/${path.replace(/\\/g, '/')}`;
-});
 
 // --- GESTIONE FILE AVANZATA ---
 
@@ -142,7 +134,7 @@ onMounted(() => loadDetail());
         </div>
         <h1>{{ initiative.title }}</h1>
         <div class="detail-image-wrapper">
-          <img :src="getImageUrl" alt="Immagine iniziativa" class="detail-img" />
+          <img :src="getImageUrl(initiative)" alt="Immagine iniziativa" class="detail-img" />
         </div>
         <div class="meta-info">
           <span>📍 {{ initiative.place }}</span>

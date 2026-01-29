@@ -6,40 +6,60 @@ import { useRouter } from 'vue-router';
 const store = useParticipatoryBudgetStore();
 const router = useRouter();
 
-// Stato del form
+// Stato del form - Ora parte con 3 opzioni
 const form = ref({
   title: '',
   expirationDate: '',
-  // 5 Opzioni vuote pre-generate (Posizione fissa 1-5)
   options: [
-    { text: '', position: 1 },
-    { text: '', position: 2 },
-    { text: '', position: 3 },
-    { text: '', position: 4 },
-    { text: '', position: 5 }
+    { text: '' },
+    { text: '' },
+    { text: '' }
   ]
 });
 
+// Funzione per aggiungere una nuova opzione
+const addOption = () => {
+  if (form.value.options.length < 5) {
+    form.value.options.push({ text: '' });
+  }
+};
+
+// Funzione per rimuovere un'opzione
+const removeOption = (index) => {
+  if (form.value.options.length > 3) {
+    form.value.options.splice(index, 1);
+  }
+};
+
 const handleSubmit = async () => {
-  // Validazione locale base
+  // Validazione di base
   if (!form.value.title || !form.value.expirationDate) {
     alert("Inserisci titolo e data di scadenza.");
     return;
   }
 
-  // Verifica che tutte le 5 opzioni siano compilate
-  const emptyOptions = form.value.options.some(opt => !opt.text.trim());
-  if (emptyOptions) {
-    alert("Devi compilare tutte e 5 le opzioni obbligatorie.");
+  // Filtra le opzioni vuote e assegna le posizioni
+  const filledOptions = form.value.options
+    .map((opt, index) => ({ ...opt, position: index + 1 }))
+    .filter(opt => opt.text && opt.text.trim() !== '');
+
+  // Validazione sul numero di opzioni compilate
+  if (filledOptions.length < 3) {
+    alert("Devi compilare almeno 3 opzioni.");
     return;
   }
 
-  // Invio allo store
-  const success = await store.createParticipatoryBudget(form.value);
+  // Prepara l'oggetto da inviare
+  const payload = {
+    ...form.value,
+    options: filledOptions
+  };
+
+  const success = await store.createParticipatoryBudget(payload);
 
   if (success) {
     alert("Bilancio creato con successo! 🎉");
-    router.push('/'); // Torna alla home per vederlo subito
+    router.push('/');
   }
 };
 </script>
@@ -71,14 +91,34 @@ const handleSubmit = async () => {
         <hr>
 
         <div class="section">
-          <h3>2. Opzioni di Voto (Esattamente 5)</h3>
-          <p class="info-text">Inserisci le 5 proposte tra cui i cittadini dovranno scegliere.</p>
+          <h3>2. Opzioni di Voto (Da 3 a 5)</h3>
+          <p class="info-text">Inserisci da 3 a 5 proposte tra cui i cittadini sceglieranno.</p>
 
           <div class="options-grid">
             <div v-for="(opt, index) in form.options" :key="index" class="option-input-group">
               <span class="option-number">#{{ index + 1 }}</span>
-              <input v-model="opt.text" type="text" :placeholder="'Opzione ' + (index + 1)" required maxlength="250" />
+              <input v-model="opt.text" type="text" :placeholder="'Testo opzione ' + (index + 1)" required maxlength="250" />
+              <button
+                v-if="form.options.length > 3"
+                @click="removeOption(index)"
+                type="button"
+                class="option-btn remove-btn"
+                title="Rimuovi opzione"
+              >
+                &ndash;
+              </button>
             </div>
+          </div>
+
+          <div class="add-option-container">
+            <button
+              v-if="form.options.length < 5"
+              @click="addOption"
+              type="button"
+              class="option-btn add-btn"
+            >
+              + Aggiungi opzione
+            </button>
           </div>
         </div>
 
@@ -239,5 +279,45 @@ hr {
   text-align: center;
   margin-top: 15px;
   font-weight: bold;
+}
+
+.add-option-container {
+  margin-top: 15px;
+}
+
+.option-btn {
+  border: none;
+  cursor: pointer;
+  border-radius: 6px;
+  font-weight: bold;
+  transition: all 0.2s;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+}
+
+.add-btn {
+  background-color: #2c3e50;
+  color: white;
+  border: 1px solid #34495e;
+}
+
+.add-btn:hover {
+  background-color: #34495e;
+}
+
+.remove-btn {
+  background-color: #c0392b;
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-btn:hover {
+  background-color: #e74c3c;
 }
 </style>
