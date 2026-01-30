@@ -1,10 +1,110 @@
 // --- Gestione Profilo e Dashboard ---
 
 const db = require("../config/db");
+const {
+  CLIENT_ID,
+  client,
+  otpStore,
+  generateDeterministicFiscalCode,
+} = require("../utils/authUtils");
+
+exports.userRegistration = async (req, res) => {
+  const { googleToken, email, otp } = req.body;
+
+  // 1. Recupero OTP dallo store
+  const storedOtp = otpStore[email];
+
+  // A. Controllo esistenza e corrispondenza codice
+  // Se non c'è l'OTP in memoria o il codice digitato non combacia
+  if (!storedOtp || storedOtp.code !== otp) {
+    return res.status(400).json({ message: "Codice OTP errato." });
+  }
+
+  // B. Controllo SCADENZA (Nuova logica aggiunta)
+  // Se l'orario attuale è maggiore della scadenza impostata
+  if (Date.now() > storedOtp.expires) {
+    // Cancelliamo il codice scaduto per pulizia, così non può essere riusato
+    delete otpStore[email];
+    // Restituiamo ESATTAMENTE il messaggio che il frontend si aspetta per mostrare l'errore in rosso
+    return res
+      .status(400)
+      .json({ message: "Codice OTP scaduto, generane un altro" });
+  }
+
+  // --- Da qui in poi procediamo con la verifica Google e il salvataggio DB ---
+
+  // Verifica Token Google e Ricalcolo CF (Sicurezza)
+  let payload;
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: googleToken,
+      audience: CLIENT_ID,
+    });
+    payload = ticket.getPayload();
+  } catch (err) {
+    return res
+      .status(401)
+      .json({ message: "Token Google scaduto o non valido." });
+  }
+
+  // Ricalcoliamo lo stesso CF deterministico usato nel login
+  const deterministicCF = generateDeterministicFiscalCode(payload.sub);
+
+  const firstName = payload.given_name || "Utente";
+  const lastName = payload.family_name || "Google";
+
+  try {
+    const isAdmin = email.toLowerCase().includes("admin") ? 1 : 0;
+    const isCitizen = isAdmin ? 0 : 1;
+
+    // Tentativo di inserimento nel DB
+    const query = `
+        INSERT INTO UTENTE (NOME, COGNOME, EMAIL, CODICE_FISCALE, IS_ADMIN, IS_CITTADINO, CREATED_AT)
+        VALUES (?, ?, ?, ?, ?, ?, NOW())
+    `;
+
+    const [result] = await db.query(query, [
+      firstName,
+      lastName,
+      email,
+      deterministicCF,
+      isAdmin,
+      isCitizen,
+    ]);
+
+    // Recuperiamo l'utente appena creato per restituirlo al frontend
+    const [rows] = await db.query("SELECT * FROM UTENTE WHERE ID_UTENTE = ?", [
+      result.insertId,
+    ]);
+    const user = rows[0];
+
+    // Pulizia finale: rimuoviamo l'OTP usato con successo
+    delete otpStore[email];
+
+    res.status(201).json({
+      status: "REGISTRATION_SUCCESS",
+      user: {
+        id: user.ID_UTENTE,
+        firstName: user.NOME,
+        lastName: user.COGNOME,
+        email: user.EMAIL,
+        isAdmin: Boolean(user.IS_ADMIN),
+        isCitizen: Boolean(user.IS_CITTADINO),
+      },
+    });
+  } catch (err) {
+    console.error("Errore DB:", err);
+    // Gestione specifica duplicati (se nel frattempo qualcuno ha preso l'email)
+    if (err.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ message: "Email già registrata." });
+    }
+    res.status(500).json({ message: "Errore durante il salvataggio utente." });
+  }
+};
 
 exports.getUser = async (req, res) => {
   try {
-    const userId = req.user.id; // ID fornito dal middleware di autenticazione
+    const userId = req.user.id;
 
     // 2. Query al Database
     const query = `
@@ -53,21 +153,13 @@ exports.getUser = async (req, res) => {
   }
 };
 
+
 // ... (imports e getUser già presenti)
 
 exports.initiativesDashboard = async (req, res) => {
   try {
-    // 1. Autenticazione e autorizzazione
-    const userId = req.user.id; // ID fornito dal middleware
+    const userId = req.user.id;
 
-    // Controllo che l'utente sia un cittadino
-    const [userRows] = await db.query("SELECT IS_CITTADINO FROM UTENTE WHERE ID_UTENTE = ?", [userId]);
-    if (userRows.length === 0 || !userRows[0].IS_CITTADINO) {
-      return res.status(403).json({
-        timeStamp: new Date().toISOString(),
-        message: "Accesso negato: solo i cittadini possono visualizzare questa dashboard.",
-      });
-    }
     // 2. Lettura Parametri Query
     const relation = req.query.relation; // 'created', 'signed', 'followed'
     const currentPage = parseInt(req.query.currentPage) || 1;
@@ -163,7 +255,8 @@ exports.initiativesDashboard = async (req, res) => {
       platformId: row.ID_PIATTAFORMA,
       externalURL: row.URL_ESTERNO,
       // Nota: Gli allegati richiederebbero una query separata o una JOIN complessa.
-      attachment: row.FILE_PATH ? { filePath: row.FILE_PATH } : null,
+      // Per la dashboard lista, spesso si lascia null o si mette un placeholder.
+      attachments: row.FILE_PATH ? { filePath: row.FILE_PATH } : null,
       reply: null,
     }));
 
@@ -191,20 +284,159 @@ exports.initiativesDashboard = async (req, res) => {
     });
   }
 };
-// --- Gestione Amministrativa e Registrazione ---
 
-exports.userRegistration = async (req, res) => {
-  //da fare dopo aver implementato google auth
-  // Registra un nuovo utente (dopo il primo login Google)
-  res.status(200).json({
-    message: "TODO: Implementare userRegistration",
-  });
+exports.notificationsList = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // 2. Lettura Parametri Query
+    // read: 'true', 'false', o undefined
+    const { read, currentPage, objectsPerPage } = req.query;
+
+    const page = parseInt(currentPage) || 1;
+    const limit = parseInt(objectsPerPage) || 10;
+    const offset = (page - 1) * limit;
+
+    // 3. Costruzione Query Dinamica
+    // Costruiamo una base comune per WHERE per usarla sia nel COUNT che nella SELECT dati
+    let whereClause = "WHERE ID_UTENTE = ?";
+    let queryParams = [userId];
+
+    // Gestione filtro "read" (LETTA nel DB)
+    if (read === "false") {
+      whereClause += " AND LETTA = 0";
+    } else if (read === "true") {
+      whereClause += " AND LETTA = 1";
+    }
+
+    // 4. Esecuzione Query
+
+    // A) Conteggio totale (per i metadati)
+    const sqlCount = `SELECT COUNT(*) as total FROM NOTIFICA ${whereClause}`;
+    const [countRows] = await db.query(sqlCount, queryParams);
+    const totalObjects = countRows[0].total;
+
+    // B) Recupero dati effettivi
+    const sqlData = `
+            SELECT ID_NOTIFICA, TESTO, LETTA, DATA_CREAZIONE, LINK_RIF
+            FROM NOTIFICA
+            ${whereClause}
+            ORDER BY DATA_CREAZIONE DESC
+            LIMIT ? OFFSET ?
+        `;
+
+    // Aggiungiamo limit e offset ai parametri per la seconda query
+    const dataParams = [...queryParams, limit, offset];
+    const [rows] = await db.query(sqlData, dataParams);
+
+    // 5. Mappatura Dati DB -> JSON (Notification Schema)
+    const formattedData = rows.map((row) => ({
+      id: row.ID_NOTIFICA,
+      text: row.TESTO,
+      isRead: Boolean(row.LETTA), // Converte 0/1 in false/true
+      creationDate: row.DATA_CREAZIONE,
+      linkRef: row.LINK_RIF || null,
+    }));
+
+    const totalPages = Math.ceil(totalObjects / limit);
+
+    // 6. Invio Risposta
+    res.status(200).json({
+      data: formattedData,
+      meta: {
+        currentPage: page,
+        objectsPerPage: limit,
+        totalObjects: totalObjects,
+        totalPages: totalPages,
+      },
+    });
+  } catch (err) {
+    console.error("Errore notificationsList:", err);
+    res.status(500).json({
+      timeStamp: new Date().toISOString(),
+      message: "Errore interno durante il recupero delle notifiche",
+      details:
+        process.env.NODE_ENV === "development"
+          ? [{ field: "database", issue: err.message }]
+          : undefined,
+    });
+  }
 };
 
+exports.readNotification = async (req, res) => {
+  try {
+    const notificationId = req.params.id;
+    const userId = req.user.id;
+
+    // 2. Validazione Body RIGOROSA
+    // Accettiamo SOLO { "isRead": true }
+    const { isRead } = req.body;
+
+    if (isRead !== true) {
+      return res.status(400).json({
+        timeStamp: new Date().toISOString(),
+        message:
+          "Operazione non valida. È possibile solo segnare una notifica come letta (isRead: true). Non è possibile impostarla come non letta.",
+      });
+    }
+
+    // 3. Verifica Esistenza e Proprietà
+    const checkQuery = `
+            SELECT ID_NOTIFICA, TESTO, LETTA, DATA_CREAZIONE, LINK_RIF 
+            FROM NOTIFICA 
+            WHERE ID_NOTIFICA = ? AND ID_UTENTE = ?
+        `;
+
+    const [rows] = await db.query(checkQuery, [notificationId, userId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        timeStamp: new Date().toISOString(),
+        message: "Notifica non trovata o non appartenente all'utente",
+      });
+    }
+
+    const currentNotification = rows[0];
+
+    // 4. Aggiornamento Idempotente (Solo se non è già letta)
+    // Non usiamo variabili dinamiche, forziamo 1.
+    if (currentNotification.LETTA === 0) {
+      await db.query("UPDATE NOTIFICA SET LETTA = 1 WHERE ID_NOTIFICA = ?", [
+        notificationId,
+      ]);
+      // Aggiorniamo l'oggetto in memoria
+      currentNotification.LETTA = 1;
+    }
+
+    // 5. Mappatura Risposta
+    const responseData = {
+      id: currentNotification.ID_NOTIFICA,
+      text: currentNotification.TESTO,
+      isRead: true, // Ora è sicuramente true
+      creationDate: currentNotification.DATA_CREAZIONE,
+      linkRef: currentNotification.LINK_RIF || null,
+    };
+
+    res.status(200).json(responseData);
+  } catch (err) {
+    console.error("Errore readNotification:", err);
+    res.status(500).json({
+      timeStamp: new Date().toISOString(),
+      message: "Errore interno durante l'aggiornamento della notifica",
+      details:
+        process.env.NODE_ENV === "development"
+          ? [{ field: "database", issue: err.message }]
+          : undefined,
+    });
+  }
+};
+// --- Gestione Amministrativa e Registrazione ---
 
 exports.showAdminUsers = async (req, res) => {
   try {
-    const requesterId = req.user.id; // ID fornito dal middleware
+    const requesterId = req.user.id;
+
+    // 2. Controllo Permessi Admin
     const [requesters] = await db.query(
       "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
       [requesterId]
@@ -269,7 +501,7 @@ exports.changePrivileges = async (req, res) => {
   try {
     const targetUserId = req.params.id; // L'ID dell'utente da modificare
     const requesterId = req.user.id; // Chi sta facendo la richiesta
-    
+
     // 2. Validazione Body
     const { isAdmin } = req.body;
     if (typeof isAdmin !== "boolean") {
@@ -338,7 +570,7 @@ exports.changePrivileges = async (req, res) => {
 
 exports.searchUserByFiscalCode = async (req, res) => {
   try {
-    const requesterId = req.user.id; // ID fornito dal middleware
+    const requesterId = req.user.id;
 
     // Controllo che il richiedente sia un admin
     const [requesters] = await db.query(
@@ -391,7 +623,7 @@ exports.searchUserByFiscalCode = async (req, res) => {
 
 exports.preAuthorizeAdmin = async (req, res) => {
   try {
-    const requesterId = req.user.id; // ID fornito dal middleware
+    const requesterId = req.user.id;
 
     // --- AGGIUNTA: Controllo Permessi Admin ---
     const [requesters] = await db.query(

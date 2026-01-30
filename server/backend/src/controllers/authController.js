@@ -1,11 +1,11 @@
-const { OAuth2Client } = require("google-auth-library");
 const db = require("../config/db");
 const nodemailer = require("nodemailer");
-
-// ID CLIENT (Deve coincidere con quello del Frontend)
-const CLIENT_ID =
-  "86056164816-hta85akkjjfc5h53p17vrgoo531ebsv7.apps.googleusercontent.com";
-const client = new OAuth2Client(CLIENT_ID);
+const {
+  CLIENT_ID,
+  client,
+  otpStore,
+  generateDeterministicFiscalCode,
+} = require("../utils/authUtils");
 
 // Configurazione Nodemailer
 const transporter = nodemailer.createTransport({
@@ -16,13 +16,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Store temporaneo OTP
-const otpStore = {};
 
-// Helper: Genera CF fisso basato sull'ID univoco di Google
-const generateDeterministicFiscalCode = (googleSub) => {
-  return `GOOG${googleSub.slice(-12)}`;
-};
 
 // --- 1. LOGIN: Cerca SOLO per Codice Fiscale ---
 exports.googleLogin = async (req, res) => {
@@ -208,100 +202,7 @@ exports.sendOtp = async (req, res) => {
   }
 };
 
-// --- 3. REGISTRAZIONE FINALE ---
-exports.registerUser = async (req, res) => {
-  const { googleToken, email, otp } = req.body;
 
-  // 1. Recupero OTP dallo store
-  const storedOtp = otpStore[email];
-
-  // A. Controllo esistenza e corrispondenza codice
-  // Se non c'è l'OTP in memoria o il codice digitato non combacia
-  if (!storedOtp || storedOtp.code !== otp) {
-    return res.status(400).json({ message: "Codice OTP errato." });
-  }
-
-  // B. Controllo SCADENZA (Nuova logica aggiunta)
-  // Se l'orario attuale è maggiore della scadenza impostata
-  if (Date.now() > storedOtp.expires) {
-    // Cancelliamo il codice scaduto per pulizia, così non può essere riusato
-    delete otpStore[email];
-    // Restituiamo ESATTAMENTE il messaggio che il frontend si aspetta per mostrare l'errore in rosso
-    return res
-      .status(400)
-      .json({ message: "Codice OTP scaduto, generane un altro" });
-  }
-
-  // --- Da qui in poi procediamo con la verifica Google e il salvataggio DB ---
-
-  // Verifica Token Google e Ricalcolo CF (Sicurezza)
-  let payload;
-  try {
-    const ticket = await client.verifyIdToken({
-      idToken: googleToken,
-      audience: CLIENT_ID,
-    });
-    payload = ticket.getPayload();
-  } catch (err) {
-    return res
-      .status(401)
-      .json({ message: "Token Google scaduto o non valido." });
-  }
-
-  // Ricalcoliamo lo stesso CF deterministico usato nel login
-  const deterministicCF = generateDeterministicFiscalCode(payload.sub);
-
-  const firstName = payload.given_name || "Utente";
-  const lastName = payload.family_name || "Google";
-
-  try {
-    const isAdmin = email.toLowerCase().includes("admin") ? 1 : 0;
-    const isCitizen = isAdmin ? 0 : 1;
-
-    // Tentativo di inserimento nel DB
-    const query = `
-        INSERT INTO UTENTE (NOME, COGNOME, EMAIL, CODICE_FISCALE, IS_ADMIN, IS_CITTADINO, CREATED_AT)
-        VALUES (?, ?, ?, ?, ?, ?, NOW())
-    `;
-
-    const [result] = await db.query(query, [
-      firstName,
-      lastName,
-      email,
-      deterministicCF,
-      isAdmin,
-      isCitizen,
-    ]);
-
-    // Recuperiamo l'utente appena creato per restituirlo al frontend
-    const [rows] = await db.query("SELECT * FROM UTENTE WHERE ID_UTENTE = ?", [
-      result.insertId,
-    ]);
-    const user = rows[0];
-
-    // Pulizia finale: rimuoviamo l'OTP usato con successo
-    delete otpStore[email];
-
-    res.status(201).json({
-      status: "REGISTRATION_SUCCESS",
-      user: {
-        id: user.ID_UTENTE,
-        firstName: user.NOME,
-        lastName: user.COGNOME,
-        email: user.EMAIL,
-        isAdmin: Boolean(user.IS_ADMIN),
-        isCitizen: Boolean(user.IS_CITTADINO),
-      },
-    });
-  } catch (err) {
-    console.error("Errore DB:", err);
-    // Gestione specifica duplicati (se nel frattempo qualcuno ha preso l'email)
-    if (err.code === "ER_DUP_ENTRY") {
-      return res.status(409).json({ message: "Email già registrata." });
-    }
-    res.status(500).json({ message: "Errore durante il salvataggio utente." });
-  }
-};
 
 exports.logout = async (req, res) => {
   res.status(200).json({ message: "Logout effettuato" });

@@ -1,3 +1,5 @@
+
+
 const db = require("../config/db");
 const {
   createBudgetSchema,
@@ -7,16 +9,7 @@ const {
 // --- 1. Recupero Archivio (SOLO ADMIN & SOLO SCADUTI) ---
 exports.getArchivedBudgets = async (req, res) => {
   try {
-    // const userId = req.header("X-Mock-User-Id");
-    const userId = req.user.id; // ID fornito da authMiddleware
-
-    // A. Validazione Autenticazione
-    if (!userId) {
-      return res.status(401).json({
-        timeStamp: new Date().toISOString(),
-        message: "Autenticazione richiesta: Header X-Mock-User-Id mancante",
-      });
-    }
+    const userId = req.user.id;
 
     // B. Controllo Ruolo: SOLO ADMIN
     const [users] = await db.query(
@@ -65,9 +58,6 @@ exports.getArchivedBudgets = async (req, res) => {
     if (budgets.length > 0) {
       const budgetIds = budgets.map((b) => b.ID_BIL);
 
-      // --- CORREZIONE QUI ---
-      // Ho cambiato COUNT(vb.ID_VOTO) -> COUNT(vb.ID_UTENTE)
-      // Perché ID_VOTO non esiste, ma ID_UTENTE sì e rappresenta il voto univoco.
       const queryOptions = `SELECT ob.*, COUNT(vb.ID_UTENTE) as vote_count 
        FROM OPZIONI_BILANCIO ob
        LEFT JOIN VOTI_BILANCIO vb ON ob.ID_OB = vb.OPTION_ID
@@ -117,7 +107,7 @@ exports.getArchivedBudgets = async (req, res) => {
 exports.createParticipatoryBudget = async (req, res) => {
   let connection;
   try {
-    const userId = req.user.id; // ID fornito da authMiddleware
+    const userId = req.user.id;
 
     // Validazione Input
     const { error, value } = createBudgetSchema.validate(req.body, {
@@ -226,7 +216,6 @@ exports.getActiveParticipatoryBudget = async (req, res) => {
     const [rows] = await db.query(queryBudget);
 
     if (rows.length === 0) {
-      // Nota: Restituiamo un 200 con data null o array vuoto per non rompere il frontend
       return res.status(200).json({
         data: null,
         message: "Nessun bilancio attivo",
@@ -247,7 +236,9 @@ exports.getActiveParticipatoryBudget = async (req, res) => {
 
     // 3. Controllo se l'utente ha già votato
     let votedPosition = null;
-    const userId = req.user?.id; // ID opzionale, la rotta è pubblica
+    // Supporto per auth opzionale: se il middleware è passato, usiamo req.user.id
+    // Altrimenti controlliamo l'header manualmente per retrocompatibilità o accesso pubblico
+    const userId = req.user?.id || req.header("X-Mock-User-Id");
 
     if (userId) {
       const queryVote = `
@@ -294,7 +285,7 @@ exports.voteParticipatoryBudget = async (req, res) => {
   let connection;
   try {
     const budgetId = req.params.id;
-    const userId = req.user.id; // ID fornito da authMiddleware
+    const userId = req.user.id;
 
     // 1. Validazione input (Position)
     const { error, value } = voteBudgetSchema.validate(req.body);
@@ -430,3 +421,4 @@ exports.voteParticipatoryBudget = async (req, res) => {
     if (connection) connection.release();
   }
 };
+

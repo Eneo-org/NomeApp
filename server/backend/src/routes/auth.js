@@ -11,8 +11,7 @@ router.post("/google-login", authController.googleLogin);
 // 2. Invio OTP: Manda la mail con il codice (per i nuovi utenti)
 router.post("/send-otp", authController.sendOtp);
 
-// 3. Registrazione Finale: Controlla OTP e crea l'utente nel DB
-router.post("/register", authController.registerUser);
+
 
 // --- ALTRE ROTTE ---
 router.post("/logout", authController.logout);

@@ -193,19 +193,13 @@ exports.createInitiative = async (req, res) => {
   const files = req.files;
 
   try {
-    const mockUserId = req.header("X-Mock-User-Id");
-    if (!mockUserId) {
-      if (files) cleanupFiles(files);
-      return res
-        .status(400)
-        .json({ message: "Header X-Mock-User-Id mancante" });
-    }
+    const userId = req.user.id;
 
     // --- 🛑 CHECK COOLDOWN 🛑 ---
     // Recuperiamo la data dell'ultima iniziativa
     const [lastInits] = await db.execute(
       "SELECT DATA_CREAZIONE FROM INIZIATIVA WHERE ID_AUTORE = ? ORDER BY DATA_CREAZIONE DESC LIMIT 1",
-      [mockUserId]
+      [userId]
     );
 
     if (lastInits.length > 0) {
@@ -269,7 +263,7 @@ exports.createInitiative = async (req, res) => {
       description,
       place,
       categoryId,
-      mockUserId,
+      userId,
       finalPlatformId, // <--- Ora passiamo l'ID corretto (1)
       now,
       expiration,
@@ -320,7 +314,7 @@ exports.createInitiative = async (req, res) => {
       signatures: 0,
       creationDate: now.toISOString(),
       expirationDate: expiration.toISOString(),
-      authorId: parseInt(mockUserId),
+      authorId: parseInt(userId),
       categoryId: parseInt(categoryId),
       platformId: parseInt(finalPlatformId), // <--- Ritorniamo l'ID corretto
       externalURL: null,
@@ -346,8 +340,7 @@ exports.createInitiative = async (req, res) => {
 // --- NUOVO METODO PER IL CHECK LEGGERO (GET) ---
 exports.checkCooldown = async (req, res) => {
   try {
-    const userId = req.header("X-Mock-User-Id");
-    if (!userId) return res.status(400).json({ message: "No User ID" });
+    const userId = req.user.id;
 
     // Cerca l'ultima iniziativa
     const [rows] = await db.execute(
@@ -422,9 +415,7 @@ exports.getInitiativeById = async (req, res) => {
 // --- ADMIN: Dashboard Iniziative in Scadenza ---
 exports.getExpiringInitiatives = async (req, res) => {
   try {
-    console.log("⚡ API getExpiringInitiatives chiamata!"); // DEBUG: Se non vedi questo, riavvia il server
-
-    const userId = req.header("X-Mock-User-Id");
+    const userId = req.user.id;
 
     // Check Admin... (codice uguale a prima)
     const [admins] = await db.query(
@@ -444,6 +435,7 @@ exports.getExpiringInitiatives = async (req, res) => {
         WHERE STATO = 'In corso' 
         AND ID_PIATTAFORMA = 1 
         AND DATA_SCADENZA > NOW()                      -- Esclude le scadute (passato)
+        AND DATA_SCADENZA <= DATE_ADD(NOW(), INTERVAL 3 DAY) -- Include solo scadenze prossime (futuro vicino)
     `;
 
     const queryData = `
@@ -493,15 +485,7 @@ exports.getExpiringInitiatives = async (req, res) => {
 exports.changeExpirationDate = async (req, res) => {
   try {
     const initiativeId = req.params.id;
-    const userId = req.header("X-Mock-User-Id");
-
-    // 1. Validazione Header
-    if (!userId) {
-      return res.status(401).json({
-        timeStamp: new Date().toISOString(),
-        message: "Autenticazione richiesta: Header X-Mock-User-Id mancante",
-      });
-    }
+    const userId = req.user.id;
 
     // 2. Validazione Body (Joi)
     const { error, value } = changeExpirationSchema.validate(req.body);
@@ -573,7 +557,51 @@ exports.changeExpirationDate = async (req, res) => {
 };
 
 exports.updateInitiative = async (req, res) => {
-  res.json({ message: "TODO" });
+  try {
+    const initiativeId = req.params.id;
+    const userId = req.user.id;
+    const { title, description, place, categoryId } = req.body;
+
+    // 1. Verifica esistenza e proprietà
+    const [rows] = await db.query(
+      "SELECT ID_AUTORE, STATO FROM INIZIATIVA WHERE ID_INIZIATIVA = ?",
+      [initiativeId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Iniziativa non trovata" });
+    }
+
+    const initiative = rows[0];
+
+    // 2. Controllo permessi (solo autore può modificare)
+    if (initiative.ID_AUTORE !== parseInt(userId)) {
+      return res.status(403).json({ message: "Non sei l'autore di questa iniziativa" });
+    }
+
+    // 3. Controllo stato (solo 'In corso' modificabile)
+    if (initiative.STATO !== 'In corso') {
+      return res.status(400).json({ message: "Impossibile modificare un'iniziativa non in corso" });
+    }
+
+    // 4. Update
+    const updateQuery = `
+      UPDATE INIZIATIVA 
+      SET TITOLO = COALESCE(?, TITOLO), 
+          DESCRIZIONE = COALESCE(?, DESCRIZIONE), 
+          LUOGO = COALESCE(?, LUOGO), 
+          ID_CATEGORIA = COALESCE(?, ID_CATEGORIA)
+      WHERE ID_INIZIATIVA = ?
+    `;
+
+    await db.query(updateQuery, [title, description, place, categoryId, initiativeId]);
+
+    res.status(200).json({ message: "Iniziativa aggiornata con successo" });
+
+  } catch (err) {
+    console.error("Errore updateInitiative:", err);
+    res.status(500).json({ message: "Errore interno del server" });
+  }
 };
 
 // Assicurati di importare lo schema di validazione all'inizio del file se non c'è già
@@ -586,12 +614,7 @@ exports.createReply = async (req, res) => {
 
   try {
     const initiativeId = req.params.id;
-    const adminId = req.header("X-Mock-User-Id");
-
-    if (!adminId) {
-      cleanupFiles(files);
-      return res.status(401).json({ message: "Autenticazione richiesta" });
-    }
+    const adminId = req.user.id;
 
     const { error, value } = administrationReplySchema.validate(req.body, {
       abortEarly: false,
@@ -734,11 +757,7 @@ exports.signInitiative = async (req, res) => {
   let connection;
   try {
     const initiativeId = req.params.id;
-
-    // TODO: In produzione usa req.user.id (dal middleware auth)
-    const userId = req.user ? req.user.id : req.header("X-Mock-User-Id");
-
-    if (!userId) return res.status(401).json({ message: "Auth mancante" });
+    const userId = req.user.id;
 
     connection = await db.getConnection();
     await connection.beginTransaction();
@@ -826,11 +845,7 @@ exports.signInitiative = async (req, res) => {
 exports.followInitiative = async (req, res) => {
   try {
     const initiativeId = req.params.id;
-    const userId = req.header("X-Mock-User-Id"); // O req.user.id in produzione
-
-    if (!userId) {
-      return res.status(401).json({ message: "Autenticazione richiesta" });
-    }
+    const userId = req.user.id;
 
     // USA "INSERT IGNORE" invece di INSERT normale
     // Questo evita l'errore ER_DUP_ENTRY se esiste già
@@ -859,15 +874,7 @@ exports.followInitiative = async (req, res) => {
 exports.unfollowInitiative = async (req, res) => {
   try {
     const initiativeId = req.params.id;
-
-    // 1. Validazione Header Utente
-    const userId = req.header("X-Mock-User-Id");
-    if (!userId) {
-      return res.status(401).json({
-        timeStamp: new Date().toISOString(),
-        message: "Autenticazione richiesta: Header X-Mock-User-Id mancante",
-      });
-    }
+    const userId = req.user.id;
 
     // 2. Query di Eliminazione
     const query = `
@@ -1033,14 +1040,11 @@ const notifySingleUser = async (userId, message, link) => {
 exports.updateInitiativeStatus = async (req, res) => {
   try {
     const initiativeId = req.params.id;
-
-    // MODIFICA PER PRODUZIONE: Usa req.user.id se hai il middleware auth
-    // Altrimenti mantieni req.header se sei ancora in fase di test puro
-    const userId = req.user ? req.user.id : req.header("X-Mock-User-Id");
+    const userId = req.user.id;
 
     const { status } = req.body;
 
-    if (!userId || !status)
+    if (!status)
       return res.status(400).json({ message: "Dati mancanti" });
 
     // 1. Controllo Admin
