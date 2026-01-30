@@ -1,16 +1,15 @@
 \section{User Stories} %% ale
 
-%\subsection*{User story 1: Accesso utente (Login).} 
 \US{Accesso utente (Login)}
 Come \textit{utente già registrato} (cittadino o operatore del Comune) voglio poter accedere al mio profilo tramite SPID o CIE in modo da usufruire delle funzionalità a me riservate. \\ (Riferito a RF\ref{rf:login})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
-    \item L'utente, partendo dall'interfaccia di default dell'applicazione, può visualizzare le opzioni d'accesso permesse (SPID o CIE) e scegliere tra le due dopo aver premuto sul tasto apposito.
+    \item L'utente può visualizzare le opzioni d'accesso permesse (SPID o CIE) e scegliere tra le due dopo aver premuto sul tasto apposito.
     \item L'utente viene reindirizzato all'interfaccia di scelta per il login anche quando prova a compiere un'azione da utente registrato (ad esempio firmare una petizione o votare al bilancio partecipativo).
     \item Selezionando un'opzione, il sistema reindirizza l'utente al provider scelto.
     \item Autenticandosi con la modalità scelta, vengono restituiti al sistema i dati identificativi dell'utente.
-    \item Il sistema verifica  l'esistenza dell'utente nel database. 
-    \item Dopo un login riuscito, il sistema reindirizza l'utente alla dashboard corrispondente al proprio ruolo.
+    \item Il sistema verifica l'esistenza dell'utente nel database. 
+    \item Dopo un login riuscito, il sistema reindirizza l'utente alla home page.
     \item Se loggato, l'utente è abilitato a tutte le funzionalità a lui dedicate.
     \item Se l'identificativo fornito dal provider non è presente nel database del sistema, l'utente viene guidato al flusso di creazione del profilo.
     \item In caso di errore di autenticazione viene mostrato un messaggio d'errore.
@@ -18,9 +17,9 @@ Come \textit{utente già registrato} (cittadino o operatore del Comune) voglio p
 \paragraph{Tasks:}
 \begin{itemize}
     \item Aggiungere alla UI un tasto per il login che mostri le opzioni d'accesso una volta cliccato.
-    \item Implementare il reindirizzamento alla scelta del delle opzioni d'accesso nel caso in cui un utente provi a compiere azioni da utente registrato senza aver fatto login.
+    \item Implementare il reindirizzamento alla scelta  delle opzioni d'accesso nel caso in cui un utente provi a compiere azioni da utente registrato senza aver fatto login.
     \item Implementare il reindirizzamento verso i provider SPID/CIE e gestire il callback di ritorno.
-    \item Testare l'accesso per gli utenti registrati (partendo ad esempio dal "super-utente" - RF\ref{rf:ruoli_amministrativi}), per assicurarsi che dopo l'autenticazione vengano reindirizzati alla propria dashboard dedicata.
+    \item Testare l'accesso per gli utenti registrati (partendo ad esempio dal "super-utente" - RF\ref{rf:ruoli_amministrativi}), per assicurarsi che dopo l'autenticazione vengano reindirizzati alla home modificata in base ai loro privilegi.
     \item Testare inoltre che dopo il login gli utenti possano svolgere le attività che caratterizzano il loro ruolo.
     \item Testare il reindirizzamento alla fase di creazione del profilo in caso di account inesistente.
     \item Implementare e verificare il messaggio d'errore in caso di errore di autenticazione.
@@ -71,7 +70,7 @@ Come \textit{utente} voglio poter cercare un'iniziativa pubblicata inserendo del
 \end{itemize}
 \paragraph{Tasks:}
 \begin{itemize}
-    \item Aggiungere una barra di ricerca sulla stessa pagina di visualizzazione delle iniziative.
+    \item Aggiungere una barra di ricerca.
     \item Implementare un algoritmo che selezioni le iniziative da mostrare sulla base delle parole chiave.
     \item Verificare che dopo aver inserito le parole e  premuto il tasto di ricerca venga aggiornata la pagina e vengano mostrate le iniziative selezionate dall'algoritmo.
     \item Implementare e verificare il messaggio informativo in caso di mancanza di corrispondenze nella ricerca.
@@ -104,21 +103,18 @@ Come \textit{utente} voglio poter visualizzare tutte le informazioni relative a 
     \item Implementare il reindirizzamento alla pagina di dettaglio quando l'utente clicca sull'iniziativa.
 \end{itemize}
 
-%% MANCA ANALISI RICHIESTE: non è facile stabilire cosa bisogna fare per risolvere il compito se non abbiamo definito precisamente il compito e i sottocompiti
-
 \US{Aggiornamento dello stato di un'iniziativa}
 Come \textit{operatore del Comune} devo poter aggiornare lo stato di un'iniziativa, in modo da far vedere ai cittadini se il Comune l'ha esplicitamente respinta o accettata. \\ Inoltre, devo poter motivare la scelta allegando note o documenti di risposta, in modo che le motivazioni del Comune siano trasparenti ai cittadini. \\ (Riferito a RF\ref{rf:gestione_iniziative})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
-    \item L'operatore, cliccando su un pulsante nella sua interfaccia di visualizzazione dell'iniziativa, può selezionare una nuova tipologia di stato.
-    \item Quando cambia lo stato ad un'iniziativa, l'operatore vede inserire delle note o allegare dei documenti.
+    \item L'operatore, cliccando su un pulsante nella sua interfaccia di visualizzazione delle iniziative, deve poter compilare una risposta ad un'iniziativa, decidendo se approvarla o respingerla.
+    \item Quando cambia lo stato ad un'iniziativa, l'operatore deve inserire delle note e allegare eventualmente dei documenti.
     \item Una volta premuto un pulsante "Salva", le modifiche apportate si riflettono sul database.
     \item Dopo le modifiche, tutti gli utenti possono vedere il nuovo stato dell'iniziativa e visualizzare le note / gli allegati che l'operatore ha caricato.
 \end{itemize}
 \paragraph{Tasks:}
 \begin{itemize}
-    \item Aggiungere all'interfaccia di visualizzazione dell'iniziativa lato operatore un pulsante per aggiornarne lo stato, scegliendo tra "Respinta" e "Approvata".
-    \item Aggiungere inoltre un box per digitare delle note o allegare dei documenti.
+    \item Aggiungere all'interfaccia dell'operatore un pulsante per rispondere a un'iniziativa che conduca a un box dove possa selezionarne il nuovo stato, digitare una nota di risposta e allegare documenti.
     \item Aggiungere un pulsante salva per applicare la modifica.
     \item Implementare l'aggiornamento del database.
     \item Testare che gli utenti visualizzino il cambiamento di stato e i caricamenti dell'operatore.
@@ -147,9 +143,7 @@ Come \textit{operatore del Comune} devo poter creare un sondaggio per il bilanci
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
     \item Gli utenti amministratori dispongono di un'interfaccia per creare un nuovo bilancio partecipativo.
-    \item L'interfaccia di creazione richiede di inserire una domanda, delle opzioni 
-    %,una data di inizio 
-    e una data di scadenza, rispettando i vincoli descritti in RF\ref{rf:creazione_bilancio_partecipativo}.
+    \item L'interfaccia di creazione richiede di inserire una domanda, delle opzioni e una data di scadenza, rispettando i vincoli descritti in RF\ref{rf:creazione_bilancio_partecipativo}.
     \item Il sistema impedisce la pubblicazione del sondaggio qualora ce ne fosse già uno attivo.
     \item Se l'operatore prova a pubblicare un sondaggio con dei campi incompleti o errati, oppure tenta di pubblicare un sondaggio quando ne è già attivo uno, vengono mostrati degli adeguati messaggi d'errore.
     \item Prima di pubblicare il sondaggio, l'operatore ne visualizza un'anteprima e preme un pulsante per confermare la compilazione dei campi.
@@ -357,6 +351,5 @@ Come \textit{cittadino del Comune di Trento} voglio poter ricevere delle notific
     \item Implementare l'invio delle notifiche ai cittadini.
 \end{itemize}
 
-% COMPONENTI (ANALISI E DIAGRAMMA) -----------------------------------------------
 
 \newpage 

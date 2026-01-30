@@ -31,29 +31,30 @@ Gli utenti devono avere a disposizione strumenti di filtro e ordinamento (in bas
 
 \RF{Consultazione di una singola iniziativa}
 \label{rf:consultazione_singola_iniz}
-Il sistema deve permettere a tutti gli utenti, inclusi i non registrati, di accedere alla pagina di dettaglio di una singola iniziativa (cliccando su di essa dalla lista definita in RF\ref{rf:consultazione_iniziative}, o dalla Home).
+Il sistema deve permettere a tutti gli utenti, inclusi i non registrati, di accedere alla pagina di dettaglio di una singola iniziativa (cliccando su di essa dalla lista definita in RF\ref{rf:consultazione_iniziative}, o dalla Home). 
 
-La pagina di dettaglio deve mostrare tutte le informazioni associate all'iniziativa, organizzate in modo chiaro. In particolare:
+Nel caso in cui si tratti di un iniziativa della nostra piattaforma, la pagina di dettaglio deve mostrare tutte le informazioni associate all'iniziativa, organizzate in modo chiaro. In particolare:
 
 \begin{itemize}
     \item \textbf{Dati della proposta:}
     \textbf{titolo},
     \textbf{descrizione} completa,
-    \textbf{autore} (se l'iniziativa è creata in piattaforma),
+    \textbf{autore},
     \textbf{categoria} di appartenenza (es. "ambiente", "mobilità"),
-    \textbf{luogo} (se specificato),
+    \textbf{luogo},
     eventuali \textbf{allegati} (immagini o PDF) resi disponibili dall'autore.
 
     \item \textbf{Dati sullo stato e avanzamento:}
      \textbf{stato attuale} del ciclo di vita (RF\ref{rf:ciclo_vita_stati}),
-    \textbf{numero totale di firme raccolte} (aggiornato in tempo reale se l'iniziativa è interna),
-     \textbf{data di scadenza} (per le iniziative non importate nello stato "In corso"),
-    \textbf{piattaforma di provenienza} (se l'iniziativa è importata).
+    \textbf{numero totale di firme raccolte},
+     \textbf{data di scadenza}.
     
     \item \textbf{Dati di risposta (se presenti):}
      eventuali \textbf{note ufficiali} o documenti di risposta pubblicati dall'amministrazione.
     
 \end{itemize}
+
+Se invece si tratta di un iniziativa esterna alla nostra piattaforma, cliccandoci sopra si verrà portati direttamente alla relativa iniziativa sul sito web in cui è stata creata, in modo da poter procedere con la firma nell'altra piattaforma. 
 
 \subsection{Requisiti funzionali per gli utenti autenticati}
 \RF{Logout.} \label{rf:logout}
@@ -75,7 +76,7 @@ Il sistema deve permettere al personale dell'amministrazione (utenti amministrat
 %una data di inizio e 
 una data di scadenza per la votazione, assicurando il periodo di apertura non sia inferiore a 14 giorni. Il sistema deve impedire la pubblicazione di un nuovo bilancio qualora un altro risultasse già attivo, garantendo che non possano coesistere più bilanci partecipativi attivi simultaneamente.
 
-\RF{Consultazione Archivio Bilanci Partecipativi}
+\RF{Consultazione archivio bilanci partecipativi}
 \label{rf:consultazione_archivio_bilancio_partecipativo}
 Il sistema deve fornire al personale dell'Amministrazione una sezione dedicata alla consultazione dell'archivio storico di tutti i bilanci partecipativi conclusi. Tale interfaccia deve essere accessibile esclusivamente agli utenti "amministratore". Per ogni bilancio archiviato, il sistema deve visualizzare in modo chiaro i dettagli della consultazione passata, includendo la domanda che era stata proposta, l'elenco delle opzioni disponibili e il relativo periodo di votazione. La vista dovrà riportare anche i risultati finali, specificando il numero totale di votanti e la distribuzione dei voti, sia in numero assoluto che in percentuale, per ciascuna opzione.
 
