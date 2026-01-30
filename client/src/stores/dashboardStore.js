@@ -28,6 +28,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
         headers: { 'X-Mock-User-Id': userId },
       })
 
+      console.log('Dashboard Data:', res.data.data)
       myInitiatives.value = res.data.data
 
       if (res.data.meta) {

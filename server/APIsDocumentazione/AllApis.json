@@ -1,0 +1,2991 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Default module",
+    "description": "",
+    "version": "1.0.0"
+  },
+  "tags": [
+    {
+      "name": "Initiatives"
+    },
+    {
+      "name": "ParticipatoryBudgets"
+    },
+    {
+      "name": "Users"
+    },
+    {
+      "name": "Users/Auth"
+    },
+    {
+      "name": "Filters"
+    }
+  ],
+  "paths": {
+    "/initiatives": {
+      "get": {
+        "summary": "initiativesList",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "Initiatives"
+        ],
+        "parameters": [
+          {
+            "name": "currentPage",
+            "in": "query",
+            "description": "Numero della pagina per la paginazione",
+            "required": false,
+            "example": 1,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "objectsPerPage",
+            "in": "query",
+            "description": "Numero di elementi per pagina",
+            "required": false,
+            "example": 10,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filtro per lo stato dell'iniziativa",
+            "required": false,
+            "example": "In corso",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Ricerca libera nel titolo, descrizione e luogo",
+            "required": false,
+            "example": "Parco",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryID",
+            "in": "query",
+            "description": "Filtro per categoria",
+            "required": false,
+            "example": "Sport",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "description": "Codice relativo ad un attributo su cui bisogna ordinare",
+            "required": false,
+            "example": 1,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "description": "La direzione dell'ordinamento (asc o desc)",
+            "required": false,
+            "example": "desc",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "minSignatures",
+            "in": "query",
+            "description": "Limite inferiore di firme da mostrare",
+            "required": false,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "maxSignatures",
+            "in": "query",
+            "description": "Limite superiore di firme da mostrare",
+            "required": false,
+            "example": 1000,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Initiative"
+                      },
+                      "minItems": 100,
+                      "maxItems": 100
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaDataList"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      },
+      "post": {
+        "summary": "createInitiative",
+        "deprecated": false,
+        "description": "Creazione di una nuova iniziativa",
+        "tags": [
+          "Initiatives"
+        ],
+        "parameters": [
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "Simula l'utente loggato",
+            "required": true,
+            "example": 1,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "description": "Titolo iniziativa",
+                    "example": "",
+                    "type": "string"
+                  },
+                  "description": {
+                    "description": "Descrizione",
+                    "example": "",
+                    "type": "string"
+                  },
+                  "place": {
+                    "description": "Luogo",
+                    "example": "",
+                    "type": "string"
+                  },
+                  "categoryId": {
+                    "type": "integer",
+                    "description": "ID categoria",
+                    "example": 0
+                  },
+                  "attachments": {
+                    "format": "binary",
+                    "type": "string",
+                    "description": "Immagini",
+                    "example": ""
+                  }
+                }
+              },
+              "examples": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailedInitiative"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/initiatives/{id}": {
+      "get": {
+        "summary": "initiativeDetails",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "Initiatives"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailedInitiative"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      },
+      "patch": {
+        "summary": "changeExpirationDate",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "Initiatives"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expirationDate": {
+                    "type": "string",
+                    "format": "date"
+                  }
+                },
+                "required": [
+                  "expirationDate"
+                ]
+              },
+              "examples": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailedInitiative"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      },
+      "put": {
+        "summary": "updateInitiative - DA CAPIRE",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "Initiatives"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailedInitiative"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/initiatives/{id}/responses": {
+      "post": {
+        "summary": "createReply",
+        "deprecated": false,
+        "description": "L'operazione deve creare una nuova risposta ma allo stesso tempo modfiicare lo stato dell'iniziativa.",
+        "tags": [
+          "Initiatives"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "example": "",
+                    "type": "string"
+                  },
+                  "motivations": {
+                    "example": "",
+                    "type": "string"
+                  },
+                  "ottachments": {
+                    "format": "binary",
+                    "type": "string",
+                    "description": "PDF o Immagini",
+                    "example": ""
+                  }
+                }
+              },
+              "examples": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reply"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/initiatives/{id}/signatures": {
+      "post": {
+        "summary": "signInitiative",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "Initiatives"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InitiativeSignature"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/initiatives/{id}/follows": {
+      "post": {
+        "summary": "saveIniziative",
+        "deprecated": false,
+        "description": "Salva iniziativa",
+        "tags": [
+          "Initiatives"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedInitiative"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      },
+      "delete": {
+        "summary": "removeFromSavedInitiatives",
+        "deprecated": false,
+        "description": "Salva iniziativa",
+        "tags": [
+          "Initiatives"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "initiativeId": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "initiativeId"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/participatory-budgets": {
+      "post": {
+        "summary": "createParticipatoryBudget",
+        "deprecated": false,
+        "description": "Creazione bilancio partecipativo",
+        "tags": [
+          "ParticipatoryBudgets"
+        ],
+        "parameters": [
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParticipatoryBudget"
+              },
+              "examples": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PBOption"
+                      },
+                      "minItems": 3,
+                      "maxItems": 3
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "creatorId": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "expirationDate": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "votedOptionId": {
+                      "type": "integer",
+                      "description": "opzione votata"
+                    }
+                  },
+                  "required": [
+                    "votedOptionId",
+                    "options",
+                    "id",
+                    "creatorId",
+                    "title",
+                    "createdAt",
+                    "expirationDate"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      },
+      "get": {
+        "summary": "participatoryBudgetsArchive",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "ParticipatoryBudgets"
+        ],
+        "parameters": [
+          {
+            "name": "currentPage",
+            "in": "query",
+            "description": "Numero pagina della lista",
+            "required": false,
+            "example": 1,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "objectsPerPage",
+            "in": "query",
+            "description": "Numero di bilanci returnati per ogni pagina",
+            "required": false,
+            "example": 10,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "X-Mock-User-id",
+            "in": "header",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ParticipatoryBudget"
+                      },
+                      "minItems": 1,
+                      "maxItems": 5
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaDataList"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/participatory-budgets/active": {
+      "get": {
+        "summary": "participatoryBudgetDetails",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "ParticipatoryBudgets"
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "notActive"
+              ]
+            }
+          },
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "votedOptionId": {
+                      "type": "integer",
+                      "description": "identifica l'opzione che l'utente ha votato se ha già votato. ",
+                      "nullable": true
+                    },
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PBOption"
+                      },
+                      "minItems": 3,
+                      "maxItems": 3
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "creatorId": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "expirationDate": {
+                      "type": "string",
+                      "format": "date"
+                    }
+                  },
+                  "required": [
+                    "options",
+                    "id",
+                    "creatorId",
+                    "title",
+                    "createdAt",
+                    "expirationDate"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/participatory-budgets/{id}/votes": {
+      "post": {
+        "summary": "voteParticipatoryBudget",
+        "deprecated": false,
+        "description": "è importante usare l'attributo position per votare e non l'id che invece rappresenta l'id assoluto. ",
+        "tags": [
+          "ParticipatoryBudgets"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "position": {
+                    "type": "integer",
+                    "minimum": 2,
+                    "maximum": 5
+                  }
+                },
+                "required": [
+                  "position"
+                ]
+              },
+              "examples": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipatoryBudget"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/google": {
+      "post": {
+        "summary": "loginAndAuth",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "Users/Auth"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tokenId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tokenId"
+                ]
+              },
+              "examples": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "logout",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "Users/Auth"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/users/me/initiatives": {
+      "get": {
+        "summary": "initiativesDashboard",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "name": "relation",
+            "in": "query",
+            "description": "Enum: signed, created, followed",
+            "required": false,
+            "example": "created",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "created",
+                "signed",
+                "followed"
+              ]
+            }
+          },
+          {
+            "name": "currentPage",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "objectsPerPage",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DetailedInitiative"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaDataList"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/users/me/notifications": {
+      "get": {
+        "summary": "notificationsList",
+        "deprecated": false,
+        "description": "Notifiche dell'utente",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "name": "read",
+            "in": "query",
+            "description": "Se false, restituisce solo le notifiche non lette",
+            "required": false,
+            "example": "false",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "currentPage",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "objectsPerPage",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "ETag",
+            "in": "header",
+            "description": "Specifica la versione corrispondente della modifica, serve per controllare la concorrenza delle risorse alla modifica dello stato. ",
+            "required": false,
+            "example": "\"v1\"",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Notification"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaDataList"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/users/me/notifications/{id}": {
+      "patch": {
+        "summary": "readNotification",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "isRead": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "si accetta solo true per segnare la notifica letta"
+                  }
+                },
+                "required": [
+                  "isRead"
+                ]
+              },
+              "examples": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Notification"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/users/me": {
+      "get": {
+        "summary": "getUser",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/users": {
+      "post": {
+        "summary": "userRegistration",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "fiscalCode": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email",
+                  "fiscalCode"
+                ]
+              },
+              "examples": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      },
+      "get": {
+        "summary": "showAdminUsers",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "name": "isAdmin",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "firstName": {
+                            "type": "string"
+                          },
+                          "lastName": {
+                            "type": "string"
+                          },
+                          "fiscalCode": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "firstName",
+                          "lastName",
+                          "fiscalCode"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/users/{id}": {
+      "patch": {
+        "summary": "changePrivileges",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "isAdmin": {
+                    "type": "boolean",
+                    "description": "di default false"
+                  }
+                },
+                "required": [
+                  "isAdmin"
+                ]
+              },
+              "examples": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/categories": {
+      "get": {
+        "summary": "categoriesList",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "Filters"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Category"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/platforms": {
+      "get": {
+        "summary": "platformsList",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "Filters"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Platform"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "InitiativeCreation": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Titolo dell'iniziativa"
+          },
+          "description": {
+            "type": "string",
+            "description": "Descrizione dell'iniziativa"
+          },
+          "place": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "integer"
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Attachment"
+            },
+            "description": "allegati"
+          }
+        },
+        "required": [
+          "title",
+          "description",
+          "place",
+          "categoryId",
+          "attachments"
+        ]
+      },
+      "DetailedInitiative": {
+        "properties": {
+          "id": {
+            "description": "",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "title": {
+            "description": "",
+            "type": "string",
+            "maxLength": 255
+          },
+          "description": {
+            "description": "",
+            "type": "string",
+            "maxLength": 65535
+          },
+          "place": {
+            "description": "",
+            "default": "NULL",
+            "type": "string",
+            "maxLength": 64,
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "description": "",
+            "default": "'In corso'",
+            "enum": [
+              "In corso",
+              "Approvata",
+              "Respinta",
+              "Scaduta"
+            ],
+            "nullable": true
+          },
+          "signatures": {
+            "description": "numero di firme",
+            "default": "0",
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "creationDate": {
+            "type": "string",
+            "description": "",
+            "format": "date"
+          },
+          "expirationDate": {
+            "description": "",
+            "default": "NULL",
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "authorId": {
+            "description": "",
+            "default": "NULL",
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "categoryId": {
+            "description": "",
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647
+          },
+          "platformId": {
+            "description": "",
+            "default": "NULL",
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "externalURL": {
+            "description": "",
+            "default": "NULL",
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Attachment"
+            },
+            "nullable": true
+          },
+          "reply": {
+            "$ref": "#/components/schemas/Reply",
+            "nullable": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "creationDate",
+          "categoryId"
+        ]
+      },
+      "AdministrationReply": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "In corso",
+              "Approvata",
+              "Respinta",
+              "Scaduta",
+              "Archiviata"
+            ],
+            "description": "Stato da modificare nell'iniziativa"
+          },
+          "motivations": {
+            "type": "string",
+            "description": "Motivazioni che il comune esrime in risposta all'iniziativa"
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Attachment"
+            },
+            "nullable": true
+          }
+        },
+        "required": [
+          "status",
+          "motivations"
+        ]
+      },
+      "ParticipatoryBudget": {
+        "type": "object",
+        "properties": {
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PBOption"
+            },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "id": {
+            "type": "integer"
+          },
+          "creatorId": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expirationDate": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "options",
+          "id",
+          "creatorId",
+          "title",
+          "createdAt",
+          "expirationDate"
+        ]
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "newUserId": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "accessToken",
+          "user",
+          "newUserId"
+        ]
+      },
+      "GenericError": {
+        "type": "object",
+        "properties": {
+          "timeStamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "issue": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "field",
+                "issue"
+              ]
+            },
+            "nullable": true
+          }
+        },
+        "required": [
+          "timeStamp",
+          "message"
+        ]
+      },
+      "MetaDataList": {
+        "type": "object",
+        "properties": {
+          "currentPage": {
+            "type": "integer"
+          },
+          "objectsPerPage": {
+            "type": "integer"
+          },
+          "totalObjects": {
+            "type": "integer"
+          },
+          "totalPages": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "currentPage",
+          "objectsPerPage",
+          "totalObjects",
+          "totalPages"
+        ]
+      },
+      "AttachmentNoID": {
+        "properties": {
+          "fileName": {
+            "description": "",
+            "type": "string",
+            "maxLength": 255
+          },
+          "filePath": {
+            "description": "",
+            "type": "string",
+            "maxLength": 500
+          },
+          "fileType": {
+            "description": "",
+            "default": "NULL",
+            "type": "string",
+            "maxLength": 50,
+            "nullable": true
+          },
+          "uploadedAt": {
+            "description": "",
+            "default": "current_timestamp()",
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fileName",
+          "filePath",
+          "uploadedAt"
+        ]
+      },
+      "Attachment": {
+        "properties": {
+          "id": {
+            "description": "",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "fileName": {
+            "description": "",
+            "type": "string",
+            "maxLength": 255
+          },
+          "filePath": {
+            "description": "",
+            "type": "string",
+            "maxLength": 500
+          },
+          "fileType": {
+            "description": "",
+            "default": "NULL",
+            "type": "string",
+            "maxLength": 50,
+            "nullable": true
+          },
+          "uploadedAt": {
+            "description": "",
+            "default": "current_timestamp()",
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "fileName",
+          "filePath",
+          "uploadedAt"
+        ]
+      },
+      "Category": {
+        "properties": {
+          "id": {
+            "description": "",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "name": {
+            "description": "",
+            "type": "string",
+            "maxLength": 100
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "InitiativeSignature": {
+        "properties": {
+          "userId": {
+            "description": "",
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647
+          },
+          "initiativeId": {
+            "description": "",
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647
+          },
+          "signatureDate": {
+            "description": "",
+            "default": "current_timestamp()",
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "userId",
+          "initiativeId",
+          "signatureDate"
+        ]
+      },
+      "Initiative": {
+        "properties": {
+          "id": {
+            "description": "",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "title": {
+            "description": "",
+            "type": "string",
+            "maxLength": 255
+          },
+          "place": {
+            "description": "",
+            "default": "NULL",
+            "type": "string",
+            "maxLength": 64,
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "description": "",
+            "default": "'In corso'",
+            "enum": [
+              "In corso",
+              "Approvata",
+              "Respinta",
+              "Scaduta"
+            ],
+            "nullable": true
+          },
+          "signatures": {
+            "description": "numero di firme",
+            "default": "0",
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "creationDate": {
+            "type": "string",
+            "description": "",
+            "format": "date"
+          },
+          "expirationDate": {
+            "description": "",
+            "default": "NULL",
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "authorId": {
+            "description": "",
+            "default": "NULL",
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "categoryId": {
+            "description": "",
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647
+          },
+          "platformId": {
+            "description": "",
+            "default": "NULL",
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "externalURL": {
+            "description": "",
+            "default": "NULL",
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "attachment": {
+            "$ref": "#/components/schemas/Attachment",
+            "nullable": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "creationDate",
+          "categoryId"
+        ]
+      },
+      "SavedInitiative": {
+        "properties": {
+          "userId": {
+            "description": "",
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647
+          },
+          "initiativeId": {
+            "description": "",
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647
+          },
+          "savedAt": {
+            "description": "",
+            "default": "current_timestamp()",
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "userId",
+          "initiativeId",
+          "savedAt"
+        ]
+      },
+      "Notification": {
+        "properties": {
+          "id": {
+            "description": "",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "text": {
+            "description": "",
+            "type": "string",
+            "maxLength": 65535
+          },
+          "isRead": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "creationDate": {
+            "description": "",
+            "default": "current_timestamp()",
+            "type": "string"
+          },
+          "linkRef": {
+            "description": "",
+            "default": "NULL",
+            "type": "string",
+            "maxLength": 255,
+            "nullable": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "creationDate"
+        ]
+      },
+      "PBOption": {
+        "properties": {
+          "id": {
+            "description": "",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "text": {
+            "description": "",
+            "type": "string",
+            "maxLength": 250
+          },
+          "position": {
+            "description": "",
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "position"
+        ]
+      },
+      "Platform": {
+        "properties": {
+          "id": {
+            "description": "",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "platformName": {
+            "description": "",
+            "type": "string",
+            "maxLength": 100
+          },
+          "iconPath": {
+            "description": "",
+            "default": "NULL",
+            "type": "string",
+            "maxLength": 255,
+            "nullable": true
+          },
+          "platformLink": {
+            "description": "",
+            "default": "NULL",
+            "type": "string",
+            "maxLength": 255,
+            "nullable": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "platformName"
+        ]
+      },
+      "PreAuthorized": {
+        "properties": {
+          "fiscalCode": {
+            "description": "",
+            "type": "string",
+            "maxLength": 16
+          },
+          "insertionDate": {
+            "description": "",
+            "default": "current_timestamp()",
+            "type": "string"
+          },
+          "insertedBy": {
+            "description": "",
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647
+          }
+        },
+        "type": "object",
+        "required": [
+          "fiscalCode",
+          "insertionDate",
+          "insertedBy"
+        ]
+      },
+      "Reply": {
+        "properties": {
+          "id": {
+            "description": "",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "initiativeId": {
+            "description": "",
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647
+          },
+          "adminId": {
+            "description": "",
+            "default": "NULL",
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647,
+            "nullable": true
+          },
+          "replyText": {
+            "description": "",
+            "type": "string",
+            "maxLength": 65535
+          },
+          "creationDate": {
+            "description": "",
+            "default": "current_timestamp()",
+            "type": "string"
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttachmentNoID"
+            },
+            "nullable": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "initiativeId",
+          "replyText",
+          "creationDate"
+        ]
+      },
+      "User": {
+        "properties": {
+          "id": {
+            "description": "",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "firstName": {
+            "description": "",
+            "type": "string",
+            "maxLength": 100
+          },
+          "lastName": {
+            "description": "",
+            "type": "string",
+            "maxLength": 100
+          },
+          "fiscalCode": {
+            "description": "",
+            "type": "string",
+            "maxLength": 16
+          },
+          "email": {
+            "description": "",
+            "type": "string",
+            "maxLength": 150
+          },
+          "isAdmin": {
+            "type": "boolean"
+          },
+          "isCitizen": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "description": "",
+            "default": "current_timestamp()",
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "fiscalCode",
+          "email",
+          "createdAt",
+          "isAdmin",
+          "isCitizen"
+        ]
+      },
+      "PBVote": {
+        "properties": {
+          "userId": {
+            "description": "",
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647
+          },
+          "participatoryBudgetId": {
+            "description": "",
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647
+          },
+          "optionId": {
+            "description": "",
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647
+          },
+          "votedAt": {
+            "description": "",
+            "default": "current_timestamp()",
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "userId",
+          "participatoryBudgetId",
+          "optionId",
+          "votedAt"
+        ]
+      }
+    },
+    "responses": {},
+    "securitySchemes": {}
+  },
+  "servers": [],
+  "security": []
+}

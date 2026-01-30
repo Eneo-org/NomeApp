@@ -44,7 +44,7 @@ const handleVote = async (position) => {
           }}</span>
       </div>
       <h2>{{ store.activeBudget.title }}</h2>
-      <p class="subtitle">Scegli uno dei 5 progetti finalisti. Il più votato verrà finanziato!</p>
+      <p class="subtitle">Scegli tra le opzioni e fai valere la tua opinione di cittadino.</p>
     </div>
 
     <div class="options-container">

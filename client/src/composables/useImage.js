@@ -9,19 +9,24 @@ export function useImage() {
   const { isDark } = useTheme()
 
   const getImageUrl = (item) => {
-    // 1. Logica aggiornata: controlla prima l'array `attachments`
-    if (item && item.attachments && item.attachments.length > 0) {
-      const cleanPath = item.attachments[0].filePath.replace(/\\/g, '/');
+    let fileData = null;
+
+    // Prima controlliamo l'array `attachments` che è lo standard più recente
+    if (item && Array.isArray(item.attachments) && item.attachments.length > 0) {
+      fileData = item.attachments[0];
+    }
+    // Altrimenti, usiamo `attachment` per compatibilità con la vecchia struttura
+    else if (item && item.attachment) {
+      fileData = item.attachment;
+    }
+
+    // Se abbiamo trovato dei dati validi e c'è un percorso, costruiamo l'URL
+    if (fileData && fileData.filePath) {
+      const cleanPath = fileData.filePath.replace(/\\/g, '/');
       return `${API_URL}/${cleanPath}`;
     }
 
-    // 2. Fallback alla vecchia logica per compatibilità
-    if (item && item.attachment && item.attachment.filePath) {
-      const cleanPath = item.attachment.filePath.replace(/\\/g, '/');
-      return `${API_URL}/${cleanPath}`;
-    }
-
-    // 3. Placeholder reattivo al tema
+    // Altrimenti, usiamo il placeholder che dipende dal tema
     return isDark.value ? defaultImageDark : defaultImageLight;
   };
 

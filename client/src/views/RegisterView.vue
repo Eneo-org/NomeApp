@@ -264,7 +264,7 @@ h2 {
 }
 
 .highlight-email {
-  color: var(--primary-color);
+  color: var(--accent-color);
   /* Usa il Blu globale */
 }
 
@@ -405,7 +405,7 @@ h2 {
   padding: 14px;
 
   /* Usa il Blu globale */
-  background-color: var(--primary-color);
+  background-color: var(--accent-color);
   color: white;
 
   border: none;
@@ -417,7 +417,7 @@ h2 {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: var(--primary-hover);
+  background-color: var(--accent-hover);
 }
 
 .btn-primary:disabled {

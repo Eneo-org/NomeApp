@@ -2,11 +2,10 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useInitiativeStore } from '../stores/initiativeStore'
-import defaultImage from '@/assets/placeholder-initiative.jpg';
+import InitiativeCard from '@/components/InitiativeCard.vue'
 
 const route = useRoute()
 const initiativeStore = useInitiativeStore()
-const API_URL = 'http://localhost:3000';
 
 // --- STATO FILTRI ARCHIVIO ---
 const filters = ref({
@@ -39,6 +38,12 @@ const loadArchiveData = async () => {
 onMounted(() => {
   if (route.query.search) {
     filters.value.search = route.query.search;
+  } else if (route.query.status) {
+    if (Array.isArray(route.query.status)) {
+      filters.value.status = route.query.status;
+    } else {
+      filters.value.status = [route.query.status];
+    }
   }
   initiativeStore.fetchFiltersData();
   loadArchiveData();
@@ -60,29 +65,6 @@ const changePage = async (newPage) => {
   await loadArchiveData();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-
-// --- HELPERS ---
-const formatDate = (dateString) => {
-  if (!dateString) return 'N/D'
-  return new Date(dateString).toLocaleDateString('it-IT')
-}
-
-const getImageUrl = (item) => {
-  if (!item.attachment || !item.attachment.filePath) {
-    return defaultImage;
-  }
-  const cleanPath = item.attachment.filePath.replace(/\\/g, '/');
-  return `${API_URL}/${cleanPath}`;
-};
-
-const getStatusClass = (status) => {
-  if (!status) return 'status-default';
-  const s = status.toLowerCase();
-  if (s === 'approvata') return 'status-success';
-  if (s === 'respinta') return 'status-danger';
-  if (s === 'scaduta') return 'status-muted';
-    return 'status-default';
-};
 </script>
 
 <template>
@@ -155,44 +137,11 @@ const getStatusClass = (status) => {
         <div v-else-if="initiativeStore.initiatives.length > 0">
 
           <div class="initiatives-list">
-
-            <div v-for="item in initiativeStore.initiatives" :key="item.id" class="card">
-              <div class="card-image-wrapper">
-                <div v-if="item.platformId !== 1" class="source-badge external">
-                  🔗 {{ initiativeStore.getPlatformName(item.platformId) }}
-                </div>
-                <img :src="getImageUrl(item)" class="card-img" alt="Immagine iniziativa">
-              </div>
-
-              <div class="card-content">
-                <div class="card-header">
-                  <h3>{{ item.title }}</h3>
-                  <div class="status-wrapper">
-                    <span class="badge-status" :class="getStatusClass(item.status)">
-                      {{ item.status.toUpperCase() }}
-                    </span>
-                  </div>
-                </div>
-
-                <div class="card-meta">
-                  <span>📍 <strong>{{ item.place || 'Trento' }}</strong></span>
-                  <span>🏷️ {{ initiativeStore.getCategoryName(item.categoryId) }}</span>
-                  <div class="date-row"><span>📅 {{ item.status === 'In corso' ? 'Scadenza:' : 'Scaduta il:' }} {{ formatDate(item.expirationDate) }}</span></div>
-                </div>
-
-                <div class="card-footer">
-                  <div class="signatures">
-                    <strong>Firme: {{ item.signatures }}</strong>
-                  </div>
-                  <div class="actions">
-                    <RouterLink :to="'/initiative/' + item.id">
-                      <button class="action-btn">Rivedi Dettagli</button>
-                    </RouterLink>
-                  </div>
-                </div>
-              </div>
-            </div>
-
+            <InitiativeCard 
+              v-for="item in initiativeStore.initiatives" 
+              :key="item.id" 
+              :item="item" 
+            />
           </div>
 
           <div class="pagination-controls">
@@ -349,135 +298,6 @@ const getStatusClass = (status) => {
   gap: 20px;
 }
 
-/* --- STILI CARD --- */
-.card {
-  display: flex;
-  gap: 20px;
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 12px;
-  overflow: hidden;
-  height: 180px;
-  position: relative;
-  box-shadow: var(--card-shadow);
-  }
-
-.card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.card-image-wrapper {
-  flex: 0 0 220px;
-  background: #333;
-  position: relative;
-}
-
-.card-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.card-content {
-  flex: 1;
-  padding: 15px 20px 15px 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.card-header h3 {
-  margin: 0;
-  font-size: 1.4rem;
-  /* Titolo leggermente più grande visto lo spazio */
-  line-height: 1.2;
-  color: var(--text-color);
-  padding-right: 90px;
-}
-
-/* Badge Stato (Scaduta, ecc) in alto a destra */
-.badge-status {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  z-index: 5;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: bold;
-  color: white;
-  text-transform: uppercase;
-}
-
-.status-success {
-  background-color: #27ae60;
-}
-
-.status-danger {
-  background-color: #c0392b;
-}
-
-.status-muted {
-  background-color: #7f8c8d;
-}
-
-.status-default {
-  background-color: #7f8c8d;
-}
-
-/* Badge Piattaforma in alto a sinistra */
-.source-badge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  z-index: 2;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-  background-color: #d32f2f;
-  color: white;
-}
-
-.card-meta {
-  font-size: 0.9rem;
-  color: var(--secondary-text);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 5px;
-}
-
-.date-row {
-  margin-top: 5px;
-}
-
-.card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: auto;
-}
-
-.action-btn {
-  background-color: var(--card-bg);
-  color: var(--accent-color);
-  border: 1px solid var(--accent-color);
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-weight: bold;
-  font-size: 0.9rem;
-}
-
-.action-btn:hover {
-  background-color: var(--accent-color);
-  color: white;
-}
-
 /* --- PAGINAZIONE --- */
 .pagination-controls {
   display: flex;
@@ -519,17 +339,6 @@ const getStatusClass = (status) => {
 
   .initiatives-list {
     grid-template-columns: 1fr;
-  }
-
-  .card {
-    flex-direction: column;
-    height: auto;
-  }
-
-  .card-image-wrapper {
-    flex: none;
-    height: 160px;
-    width: 100%;
   }
 }
 </style>

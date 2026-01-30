@@ -119,10 +119,6 @@ const mainImageSrc = computed(() => {
   return defaultImage;
 });
 
-const progressPercentage = computed(() => {
-  if (!initiative.value) return 0;
-  return Math.min((initiative.value.signatures / 1000) * 100, 100);
-});
 </script>
 
 <template>
@@ -218,14 +214,11 @@ const progressPercentage = computed(() => {
             </div>
 
             <div class="card-body pt-0">
-              <div class="progress-section">
-                <div class="progress-info">
-                  <span class="current-sigs">{{ initiative.signatures }} <small>firme</small></span>
-                  <span class="target-sigs">Obiettivo: 1000</span>
-                </div>
-                <div class="progress-track">
-                  <div class="progress-fill" :style="{ width: progressPercentage + '%' }"></div>
-                </div>
+              <div class="signatures-display">
+                <p class="signatures-count">
+                  <span class="count-number">{{ initiative.signatures }}</span>
+                  <span class="count-label">firme raccolte</span>
+                </p>
               </div>
 
               <div v-if="initiative.platformId === 1">
@@ -629,6 +622,36 @@ const progressPercentage = computed(() => {
   margin: 0;
   font-size: 1.3rem;
   font-weight: 700;
+}
+
+.signatures-display {
+  text-align: center;
+  margin-bottom: 25px;
+  background-color: var(--input-bg);
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--header-border);
+}
+
+.signatures-count {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+}
+
+.count-number {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--accent-color);
+  line-height: 1;
+  margin-right: 10px;
+}
+
+.count-label {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--text-color);
 }
 
 .card-body {

@@ -139,7 +139,7 @@ const formatDate = (dateString) => {
 
             <RouterLink to="/" class="nav-link">Home</RouterLink>
 
-            <RouterLink to="/initiatives" class="nav-link">Iniziative</RouterLink>
+            <RouterLink :to="{ path: '/initiatives', query: { status: 'In corso' } }" class="nav-link">Iniziative</RouterLink>
 
     
 

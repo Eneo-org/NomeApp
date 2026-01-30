@@ -4,10 +4,7 @@ import { useDashboardStore } from '../stores/dashboardStore'
 import { useUserStore } from '../stores/userStore'
 import { useInitiativeStore } from '../stores/initiativeStore'
 import { useRouter } from 'vue-router'
-// Assicurati che questo file esista, altrimenti mettine uno nella cartella assets!
-import defaultImage from '@/assets/placeholder-initiative.jpg';
-
-const API_URL = 'http://localhost:3000';
+import InitiativeCard from '@/components/InitiativeCard.vue'
 
 const dashboardStore = useDashboardStore()
 const userStore = useUserStore()
@@ -15,21 +12,6 @@ const initiativeStore = useInitiativeStore()
 const router = useRouter()
 
 const activeTab = ref('created')
-
-// --- HELPER IMMAGINI AGGIORNATO ---
-const getImageUrl = (item) => {
-  // Cerchiamo l'immagine in tutti i posti possibili per essere sicuri
-  const fileData = item.attachment || item.attachments;
-
-  // Se non c'è nessun allegato, o se l'allegato non ha il percorso, usa default
-  if (!fileData || !fileData.filePath) {
-    return defaultImage;
-  }
-
-  // Se c'è, puliamo il percorso (fix per slash Windows \)
-  const cleanPath = fileData.filePath.replace(/\\/g, '/');
-  return `${API_URL}/${cleanPath}`;
-};
 
 // Calcola il numero di notifiche non lette in tempo reale
 const unreadCount = computed(() => {
@@ -41,20 +23,15 @@ const formatDate = (dateString) => {
   return new Date(dateString).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
-const getStatusClass = (status) => {
-  if (!status) return 'status-default';
-  const s = status.toLowerCase();
-  if (s === 'in corso') return 'status-active';
-  if (s === 'approvata') return 'status-success';
-  if (s === 'respinta') return 'status-danger';
-  if (s === 'scaduta') return 'status-muted';
-  return 'status-default';
-};
-
 // --- AZIONI ---
-const handleSign = async (item) => {
-  const result = await initiativeStore.signInitiative(item.id);
-  if (result.success) item.signatures++;
+const handleNotificationClick = async (notif) => {
+  // Segna la notifica come letta in background
+  await dashboardStore.markAsRead(notif.id);
+
+  // Se la notifica ha un ID iniziativa, reindirizza l'utente
+  if (notif.initiativeId) {
+    router.push(`/initiative/${notif.initiativeId}`);
+  }
 };
 
 // --- CARICAMENTO DATI ---
@@ -139,7 +116,7 @@ onMounted(async () => {
           <p>Non hai nuove notifiche.</p>
         </div>
         <div v-for="notif in dashboardStore.notifications" :key="notif.id" class="notification-item"
-          :class="{ unread: !notif.isRead }" @click="dashboardStore.markAsRead(notif.id)">
+          :class="{ unread: !notif.isRead }" @click="handleNotificationClick(notif)">
           <div class="notif-content">
             <p>{{ notif.text }}</p>
             <small>{{ formatDate(notif.creationDate) }}</small>
@@ -154,60 +131,11 @@ onMounted(async () => {
         </div>
 
         <div v-else class="cards-container">
-          <div v-for="item in dashboardStore.myInitiatives" :key="item.id" class="card">
-
-            <div class="card-image-wrapper">
-              <div v-if="item.platformId && item.platformId !== 1" class="source-badge external">
-                🔗 {{ initiativeStore.getPlatformName(item.platformId) }}
-              </div>
-              <img :src="getImageUrl(item)" class="card-img" alt="Immagine iniziativa">
-            </div>
-
-            <div class="card-content">
-              <div class="card-header">
-                <h3>{{ item.title }}</h3>
-                <div class="status-wrapper">
-                  <span class="badge-status" :class="getStatusClass(item.status)">
-                    {{ item.status ? item.status.toUpperCase() : 'N/A' }}
-                  </span>
-                  <button v-if="item.status && item.status.toLowerCase() === 'in corso'" class="follow-btn"
-                    :class="{ 'active': initiativeStore.isFollowed(item.id) }"
-                    @click.prevent="initiativeStore.toggleFollow(item.id, item.title)">
-                    {{ initiativeStore.isFollowed(item.id) ? '⭐' : '☆' }}
-                  </button>
-                </div>
-              </div>
-
-              <div class="card-meta">
-                <span>📍 <strong>{{ item.place || 'Trento' }}</strong></span>
-                <span>🏷️ {{ initiativeStore.getCategoryName(item.categoryId) }}</span>
-                <div class="date-row"><span>📅 {{ formatDate(item.creationDate) }}</span></div>
-              </div>
-
-              <div class="card-footer">
-                <div class="signatures">
-                  <strong>Firme: {{ item.signatures }}</strong>
-                </div>
-                <div class="actions">
-                  <div v-if="!item.platformId || item.platformId === 1" class="internal-actions">
-                    <RouterLink :to="'/initiative/' + item.id">
-                      <button class="action-btn">Dettagli</button>
-                    </RouterLink>
-
-                    <button v-if="item.status && item.status.toLowerCase() === 'in corso' && activeTab !== 'created'"
-                      @click="handleSign(item)" class="sign-btn">
-                      ✍️ Firma
-                    </button>
-                  </div>
-
-                  <a v-else :href="item.externalURL || '#'" target="_blank">
-                    <button class="action-btn outline">Su {{ initiativeStore.getPlatformName(item.platformId) }}
-                      ↗</button>
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
+          <InitiativeCard 
+            v-for="item in dashboardStore.myInitiatives" 
+            :key="item.id" 
+            :item="item" 
+          />
 
           <div class="pagination-controls" v-if="dashboardStore.totalPages > 1">
             <button @click="prevPage" :disabled="dashboardStore.currentPage === 1" class="page-btn">←</button>
@@ -274,163 +202,6 @@ onMounted(async () => {
   gap: 20px;
 }
 
-.card {
-  display: flex;
-  gap: 0;
-  /* Rimosso gap per far attaccare immagine */
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 12px;
-  overflow: hidden;
-  height: 180px;
-  box-shadow: var(--card-shadow);
-}
-
-/* WRAPPER IMMAGINE: FISSO E PIENO */
-.card-image-wrapper {
-  flex: 0 0 240px;
-  /* Larghezza fissa */
-  background: #222;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.card-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  /* L'immagine riempie tutto lo spazio senza deformarsi */
-  display: block;
-}
-
-.card-content {
-  flex: 1;
-  padding: 15px 20px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.card-header h3 {
-  margin: 0;
-  font-size: 1.2rem;
-  line-height: 1.2;
-  color: var(--text-color);
-}
-
-.status-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.badge-status {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: bold;
-  color: white;
-  text-transform: uppercase;
-}
-
-.status-active {
-  background-color: #3498db;
-}
-
-.status-success {
-  background-color: #27ae60;
-}
-
-.status-danger {
-  background-color: #e74c3c;
-}
-
-.status-muted {
-  background-color: #95a5a6;
-}
-
-.status-default {
-  background-color: #7f8c8d;
-}
-
-.follow-btn {
-  background: transparent;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #777;
-  transition: 0.2s;
-  padding: 0;
-}
-
-.follow-btn.active {
-  color: #f1c40f;
-}
-
-.follow-btn:hover {
-  transform: scale(1.1);
-  color: #f1c40f;
-}
-
-.card-meta {
-  font-size: 0.9rem;
-  color: var(--secondary-text);
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.date-row {
-  font-size: 0.85rem;
-  color: #888;
-}
-
-.card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: auto;
-}
-
-.action-btn {
-  background-color: var(--card-bg);
-  color: var(--text-color);
-  border: 1px solid var(--header-border);
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.action-btn:hover {
-  border-color: var(--accent-color);
-  color: var(--accent-color);
-}
-
-/* Source Badge */
-.source-badge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  font-weight: bold;
-  background-color: #d32f2f;
-  color: white;
-  z-index: 2;
-}
-
 /* Notifiche & Paginazione */
 .notification-item {
   padding: 15px;
@@ -457,37 +228,55 @@ onMounted(async () => {
   border-radius: 4px;
 }
 
+/* In UserDashboard.vue */
+
 .tab-btn-wrapper {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* Assicuriamo che il badge non venga tagliato se esce dai bordi */
+  overflow: visible; 
 }
 
 .notification-badge {
   position: absolute;
-  top: 0px;
-  right: 5px;
+  /* Ho cambiato da -5px a -1px per abbassarlo. 
+     Se lo vuoi ancora più in basso, prova a mettere 0px o 2px */
+  top: -1px; 
+  
+  /* L'ho spostato un po' più a destra (-12px) così non copre la "e" finale */
+  right: -12px; 
+  
+  z-index: 10;
 
   background-color: #ef4444;
   color: white;
 
   font-size: 0.7rem;
-  font-weight: bold;
-  line-height: 1;
-
-  min-width: 18px;
-  height: 18px;
-  border-radius: 99px;
-
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  
+  border-radius: 12px;
+  
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 4px;
 
-  border: 2px solid var(--card-bg);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transform: translate(50%, -50%);
+  border: 2px solid var(--bg-color); 
+  box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3);
+  
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Animazione carina quando appare */
+@keyframes popIn {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .pagination-controls {

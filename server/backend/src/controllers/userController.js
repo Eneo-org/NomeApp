@@ -4,16 +4,7 @@ const db = require("../config/db");
 
 exports.getUser = async (req, res) => {
   try {
-    // 1. "Simuliamo" l'autenticazione leggendo l'header
-    // In futuro, qui leggerai il token decodificato (es. req.user.id)
-    const userId = req.header("X-Mock-User-Id");
-
-    if (!userId) {
-      return res.status(401).json({
-        timeStamp: new Date().toISOString(),
-        message: "Autenticazione mancante: Header X-Mock-User-Id non fornito",
-      });
-    }
+    const userId = req.user.id; // ID fornito dal middleware di autenticazione
 
     // 2. Query al Database
     const query = `
@@ -66,15 +57,17 @@ exports.getUser = async (req, res) => {
 
 exports.initiativesDashboard = async (req, res) => {
   try {
-    // 1. Autenticazione simulata
-    const userId = req.header("X-Mock-User-Id");
-    if (!userId) {
-      return res.status(401).json({
+    // 1. Autenticazione e autorizzazione
+    const userId = req.user.id; // ID fornito dal middleware
+
+    // Controllo che l'utente sia un cittadino
+    const [userRows] = await db.query("SELECT IS_CITTADINO FROM UTENTE WHERE ID_UTENTE = ?", [userId]);
+    if (userRows.length === 0 || !userRows[0].IS_CITTADINO) {
+      return res.status(403).json({
         timeStamp: new Date().toISOString(),
-        message: "Autenticazione mancante: Header X-Mock-User-Id non fornito",
+        message: "Accesso negato: solo i cittadini possono visualizzare questa dashboard.",
       });
     }
-
     // 2. Lettura Parametri Query
     const relation = req.query.relation; // 'created', 'signed', 'followed'
     const currentPage = parseInt(req.query.currentPage) || 1;
@@ -170,8 +163,7 @@ exports.initiativesDashboard = async (req, res) => {
       platformId: row.ID_PIATTAFORMA,
       externalURL: row.URL_ESTERNO,
       // Nota: Gli allegati richiederebbero una query separata o una JOIN complessa.
-      // Per la dashboard lista, spesso si lascia null o si mette un placeholder.
-      attachments: row.FILE_PATH ? { filePath: row.FILE_PATH } : null,
+      attachment: row.FILE_PATH ? { filePath: row.FILE_PATH } : null,
       reply: null,
     }));
 
@@ -212,12 +204,7 @@ exports.userRegistration = async (req, res) => {
 
 exports.showAdminUsers = async (req, res) => {
   try {
-    const requesterId = req.header("X-Mock-User-Id");
-
-    // 1. Validazione Header
-    if (!requesterId) return res.status(401).json({ message: "Auth mancante" });
-
-    // 2. Controllo Permessi Admin
+    const requesterId = req.user.id; // ID fornito dal middleware
     const [requesters] = await db.query(
       "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
       [requesterId]
@@ -281,16 +268,8 @@ exports.showAdminUsers = async (req, res) => {
 exports.changePrivileges = async (req, res) => {
   try {
     const targetUserId = req.params.id; // L'ID dell'utente da modificare
-    const requesterId = req.header("X-Mock-User-Id"); // Chi sta facendo la richiesta
-
-    // 1. Validazione Header (Autenticazione Mock)
-    if (!requesterId) {
-      return res.status(401).json({
-        timeStamp: new Date().toISOString(),
-        message: "Autenticazione richiesta: Header X-Mock-User-Id mancante",
-      });
-    }
-
+    const requesterId = req.user.id; // Chi sta facendo la richiesta
+    
     // 2. Validazione Body
     const { isAdmin } = req.body;
     if (typeof isAdmin !== "boolean") {
@@ -359,8 +338,18 @@ exports.changePrivileges = async (req, res) => {
 
 exports.searchUserByFiscalCode = async (req, res) => {
   try {
-    const requesterId = req.header("X-Mock-User-Id");
-    if (!requesterId) return res.status(401).json({ message: "Auth mancante" });
+    const requesterId = req.user.id; // ID fornito dal middleware
+
+    // Controllo che il richiedente sia un admin
+    const [requesters] = await db.query(
+      "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
+      [requesterId]
+    );
+    if (requesters.length === 0 || !requesters[0].IS_ADMIN) {
+      return res
+        .status(403)
+        .json({ message: "Accesso negato: solo gli admin possono cercare utenti." });
+    }
 
     const { fiscalCode } = req.query;
 
@@ -402,8 +391,19 @@ exports.searchUserByFiscalCode = async (req, res) => {
 
 exports.preAuthorizeAdmin = async (req, res) => {
   try {
-    const requesterId = req.header("X-Mock-User-Id");
-    if (!requesterId) return res.status(401).json({ message: "Auth mancante" });
+    const requesterId = req.user.id; // ID fornito dal middleware
+
+    // --- AGGIUNTA: Controllo Permessi Admin ---
+    const [requesters] = await db.query(
+      "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
+      [requesterId]
+    );
+    if (requesters.length === 0 || !requesters[0].IS_ADMIN) {
+      return res
+        .status(403)
+        .json({ message: "Accesso negato: solo gli admin possono pre-autorizzare." });
+    }
+    // --- FINE AGGIUNTA ---
 
     const { fiscalCode } = req.body;
 
@@ -421,8 +421,8 @@ exports.preAuthorizeAdmin = async (req, res) => {
     // Per i campi obbligatori (Password, Email, Nome) mettiamo dei placeholder o NULL se il DB lo permette.
     // Assumo che il DB accetti NULL su Nome/Cognome o abbia dei default, altrimenti metto stringhe vuote.
     const insertQuery = `
-      INSERT INTO UTENTE (CODICE_FISCALE, IS_ADMIN, IS_CITTADINO, NOME, COGNOME, EMAIL, PASSWORD, CREATED_AT)
-      VALUES (?, 1, 0, '', '', ?, 'PRE_AUTH_PLACEHOLDER', NOW())
+      INSERT INTO UTENTE (CODICE_FISCALE, IS_ADMIN, IS_CITTADINO, NOME, COGNOME, EMAIL, CREATED_AT)
+      VALUES (?, 1, 0, '', '', ?, NOW())
     `;
 
     // Generiamo una mail fittizia temporanea per evitare errori UNIQUE key se la colonna email è unique

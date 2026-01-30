@@ -7,7 +7,8 @@ const {
 // --- 1. Recupero Archivio (SOLO ADMIN & SOLO SCADUTI) ---
 exports.getArchivedBudgets = async (req, res) => {
   try {
-    const userId = req.header("X-Mock-User-Id");
+    // const userId = req.header("X-Mock-User-Id");
+    const userId = req.user.id; // ID fornito da authMiddleware
 
     // A. Validazione Autenticazione
     if (!userId) {
@@ -29,6 +30,7 @@ exports.getArchivedBudgets = async (req, res) => {
         message: "Utente non trovato",
       });
     }
+
     if (!users[0].IS_ADMIN) {
       return res.status(403).json({
         timeStamp: new Date().toISOString(),
@@ -115,12 +117,7 @@ exports.getArchivedBudgets = async (req, res) => {
 exports.createParticipatoryBudget = async (req, res) => {
   let connection;
   try {
-    const userId = req.header("X-Mock-User-Id");
-    if (!userId)
-      return res.status(401).json({
-        timeStamp: new Date().toISOString(),
-        message: "Header X-Mock-User-Id mancante",
-      });
+    const userId = req.user.id; // ID fornito da authMiddleware
 
     // Validazione Input
     const { error, value } = createBudgetSchema.validate(req.body, {
@@ -250,7 +247,7 @@ exports.getActiveParticipatoryBudget = async (req, res) => {
 
     // 3. Controllo se l'utente ha già votato
     let votedPosition = null;
-    const userId = req.header("X-Mock-User-Id");
+    const userId = req.user?.id; // ID opzionale, la rotta è pubblica
 
     if (userId) {
       const queryVote = `
@@ -297,13 +294,7 @@ exports.voteParticipatoryBudget = async (req, res) => {
   let connection;
   try {
     const budgetId = req.params.id;
-    const userId = req.header("X-Mock-User-Id");
-
-    if (!userId)
-      return res.status(401).json({
-        timeStamp: new Date().toISOString(),
-        message: "Header X-Mock-User-Id mancante",
-      });
+    const userId = req.user.id; // ID fornito da authMiddleware
 
     // 1. Validazione input (Position)
     const { error, value } = voteBudgetSchema.validate(req.body);
