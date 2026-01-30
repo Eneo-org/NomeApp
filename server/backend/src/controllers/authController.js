@@ -34,15 +34,16 @@ exports.googleLogin = async (req, res) => {
 
     console.log(`[LOGIN] Cerco utente con CF: ${deterministicCF}`);
 
-    // MODIFICA RICHIESTA: Cerca SOLO per CODICE_FISCALE
-    const [rows] = await db.query(
+    // Cerca l'utente prima per CODICE_FISCALE (metodo preferito)
+    const [rowsByCF] = await db.query(
       "SELECT * FROM UTENTE WHERE CODICE_FISCALE = ?",
       [deterministicCF]
     );
 
-    if (rows.length > 0) {
-      // TROVATO -> LOGIN
-      const user = rows[0];
+    if (rowsByCF.length > 0) {
+      // TROVATO con CF -> LOGIN
+      const user = rowsByCF[0];
+      console.log(`[LOGIN] Utente trovato tramite CF: ${user.EMAIL}`);
       return res.status(200).json({
         status: "LOGIN_SUCCESS",
         user: {
@@ -54,19 +55,114 @@ exports.googleLogin = async (req, res) => {
           isCitizen: Boolean(user.IS_CITTADINO),
         },
       });
-    } else {
-      // NON TROVATO -> REGISTRAZIONE
-      // Nota: Qui non ci interessa se l'email esiste già, lo controllerà "sendOtp" dopo.
+    }
+
+    // Se non trovato, Cerca per EMAIL (fallback per utenti esistenti senza CF deterministico)
+    const [rowsByEmail] = await db.query(
+      "SELECT * FROM UTENTE WHERE EMAIL = ?",
+      [payload.email]
+    );
+
+    if (rowsByEmail.length > 0) {
+      // TROVATO con EMAIL -> Utente esistente, aggiorniamo il CF e facciamo login
+      const user = rowsByEmail[0];
+      console.log(`[LOGIN] Utente trovato tramite email (fallback): ${user.EMAIL}. Aggiorno il CF.`);
+      
+      // Aggiorna il codice fiscale per le future ricerche
+      await db.query("UPDATE UTENTE SET CODICE_FISCALE = ? WHERE ID_UTENTE = ?", [
+        deterministicCF,
+        user.ID_UTENTE,
+      ]);
+
       return res.status(200).json({
-        status: "NEED_REGISTRATION",
-        googleData: {
-          firstName: payload.given_name,
-          lastName: payload.family_name,
-          email: payload.email,
-          fiscalCode: deterministicCF, // Passiamo il CF calcolato
+        status: "LOGIN_SUCCESS",
+        user: {
+          id: user.ID_UTENTE,
+          firstName: user.NOME,
+          lastName: user.COGNOME,
+          email: user.EMAIL,
+          isAdmin: Boolean(user.IS_ADMIN),
+          isCitizen: Boolean(user.IS_CITTADINO),
         },
       });
     }
+
+    // Se non trovato né con CF né con Email, controlliamo la pre-autorizzazione
+    console.log(`[LOGIN] Utente non trovato. Verifico pre-autorizzazione per CF: ${deterministicCF}`);
+
+    const [preAuthRows] = await db.query(
+      "SELECT * FROM PRE_AUTORIZZATO WHERE CODICE_FISCALE = ?",
+      [deterministicCF]
+    );
+
+    if (preAuthRows.length > 0) {
+      // --- TROVATO IN PRE_AUTORIZZATO -> CREA ADMIN E LOGIN ---
+      console.log(`[LOGIN] CF trovato nella tabella di pre-autorizzazione. Creo utente admin.`);
+      
+      const firstName = payload.given_name || "Utente";
+      const lastName = payload.family_name || "Pre-autorizzato";
+
+      const connection = await db.getConnection();
+      try {
+        await connection.beginTransaction();
+
+        // 1. Inserisci il nuovo utente come admin
+        const [insertResult] = await connection.query(
+          `INSERT INTO UTENTE (NOME, COGNOME, EMAIL, CODICE_FISCALE, IS_ADMIN, IS_CITTADINO, CREATED_AT)
+           VALUES (?, ?, ?, ?, 1, 0, NOW())`,
+          [firstName, lastName, payload.email, deterministicCF]
+        );
+        const newUserId = insertResult.insertId;
+
+        // 2. Rimuovi dalla tabella di pre-autorizzazione
+        await connection.query(
+          "DELETE FROM PRE_AUTORIZZATO WHERE CODICE_FISCALE = ?",
+          [deterministicCF]
+        );
+
+        await connection.commit();
+
+        // 3. Recupera l'utente appena creato per la risposta
+        const [newUserRows] = await connection.query(
+          "SELECT * FROM UTENTE WHERE ID_UTENTE = ?",
+          [newUserId]
+        );
+        const user = newUserRows[0];
+
+        console.log(`[LOGIN] Utente admin creato con successo. ID: ${user.ID_UTENTE}`);
+        return res.status(200).json({
+          status: "LOGIN_SUCCESS",
+          user: {
+            id: user.ID_UTENTE,
+            firstName: user.NOME,
+            lastName: user.COGNOME,
+            email: user.EMAIL,
+            isAdmin: Boolean(user.IS_ADMIN),
+            isCitizen: Boolean(user.IS_CITTADINO),
+          },
+        });
+
+      } catch (error) {
+        await connection.rollback();
+        console.error("Errore durante la creazione dell'utente pre-autorizzato:", error);
+        return res.status(500).json({ message: "Errore durante la creazione dell'utente pre-autorizzato." });
+      } finally {
+        connection.release();
+      }
+    }
+
+
+    // --- NESSUNA CORRISPONDENZA -> REGISTRAZIONE ---
+    console.log(`[LOGIN] Utente non trovato e non pre-autorizzato. Avvio registrazione per: ${payload.email}`);
+    return res.status(200).json({
+      status: "NEED_REGISTRATION",
+      googleData: {
+        firstName: payload.given_name,
+        lastName: payload.family_name,
+        email: payload.email,
+        fiscalCode: deterministicCF, // Passiamo il CF calcolato
+      },
+    });
   } catch (err) {
     console.error("Errore Login Google:", err);
     res.status(401).json({ message: "Token non valido" });

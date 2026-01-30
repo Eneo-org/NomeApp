@@ -11,7 +11,7 @@ router.get("/admin/expiring", authMiddleware, initiativeController.getExpiringIn
 router.get("/cooldown", authMiddleware, initiativeController.checkCooldown);
 
 
-router.get("/", initiativeController.getAllInitiatives);
+router.get("/", authMiddleware, initiativeController.getAllInitiatives);
 
 router.post(
   "/",
@@ -24,7 +24,7 @@ router.post(
 
 // Questa cattura tutto quello che assomiglia a un ID.
 // Se metti /admin/expiring sotto a questa, non verrà mai raggiunta!
-router.get("/:id", initiativeController.getInitiativeById);
+router.get("/:id", authMiddleware, initiativeController.getInitiativeById);
 
 // ... il resto delle rotte rimangono uguali ...
 router.patch("/:id", authMiddleware, initiativeController.changeExpirationDate);

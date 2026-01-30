@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const authController = require("../controllers/authController");
+const userController = require("../controllers/userController");
 
 // --- ROTTE DI AUTENTICAZIONE ---
 
@@ -11,7 +12,8 @@ router.post("/google-login", authController.googleLogin);
 // 2. Invio OTP: Manda la mail con il codice (per i nuovi utenti)
 router.post("/send-otp", authController.sendOtp);
 
-
+// 3. Registrazione Utente
+router.post("/register", userController.userRegistration);
 
 // --- ALTRE ROTTE ---
 router.post("/logout", authController.logout);

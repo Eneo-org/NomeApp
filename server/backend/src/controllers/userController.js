@@ -639,34 +639,47 @@ exports.preAuthorizeAdmin = async (req, res) => {
 
     const { fiscalCode } = req.body;
 
-    // Controllo se esiste già per sicurezza
-    const [existing] = await db.query(
-      "SELECT ID_UTENTE FROM UTENTE WHERE CODICE_FISCALE = ?",
-      [fiscalCode]
-    );
-    if (existing.length > 0) {
-      return res.status(409).json({ message: "Utente già esistente" });
+    if (!fiscalCode) {
+      return res.status(400).json({ message: "Codice fiscale mancante" });
     }
 
-    // Inseriamo il nuovo "Admin Fantasma"
-    // Nota: IS_ADMIN = 1, IS_CITTADINO = 0
-    // Per i campi obbligatori (Password, Email, Nome) mettiamo dei placeholder o NULL se il DB lo permette.
-    // Assumo che il DB accetti NULL su Nome/Cognome o abbia dei default, altrimenti metto stringhe vuote.
+    // Controllo se l'utente esiste già
+    const [existingUser] = await db.query(
+      "SELECT * FROM UTENTE WHERE CODICE_FISCALE = ?",
+      [fiscalCode]
+    );
+
+    if (existingUser.length > 0) {
+        return res.status(409).json({ message: "Utente già esistente." });
+    }
+    
+    // Controllo se il codice fiscale è già pre-autorizzato
+    const [existingPreAuth] = await db.query(
+      "SELECT * FROM PRE_AUTORIZZATO WHERE CODICE_FISCALE = ?",
+      [fiscalCode]
+    );
+
+    if (existingPreAuth.length > 0) {
+      return res.status(409).json({ message: "Codice fiscale già pre-autorizzato." });
+    }
+
+    // Inseriamo il codice fiscale nella tabella PRE_AUTORIZZATO
     const insertQuery = `
-      INSERT INTO UTENTE (CODICE_FISCALE, IS_ADMIN, IS_CITTADINO, NOME, COGNOME, EMAIL, CREATED_AT)
-      VALUES (?, 1, 0, '', '', ?, NOW())
+      INSERT INTO PRE_AUTORIZZATO (CODICE_FISCALE, INSERITO_DA)
+      VALUES (?, ?)
     `;
 
-    // Generiamo una mail fittizia temporanea per evitare errori UNIQUE key se la colonna email è unique
-    const tempEmail = `preauth_${Date.now()}@temp.local`;
-
-    await db.query(insertQuery, [fiscalCode, tempEmail]);
+    await db.query(insertQuery, [fiscalCode, requesterId]);
 
     res
       .status(201)
       .json({ message: "Codice fiscale pre-autorizzato con successo" });
   } catch (err) {
     console.error("Errore preAuthorizeAdmin:", err);
+    // Usiamo un controllo più granulare per l'errore di duplicazione
+    if (err.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({ message: "Codice fiscale già pre-autorizzato." });
+    }
     res
       .status(500)
       .json({

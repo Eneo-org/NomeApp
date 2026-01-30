@@ -18,17 +18,17 @@ router.patch("/me/notifications/:id", authMiddleware, notificationController.mar
 // --- 2. Rotte generali e specifiche (/users) ---
 
 // >>> NUOVA ROTTA: Pre-autorizzazione Admin <<<
-router.post("/admin/pre-authorize", userController.preAuthorizeAdmin);
+router.post("/admin/pre-authorize", authMiddleware, userController.preAuthorizeAdmin);
 
-router.get("/admin/list", userController.showAdminUsers);
+router.get("/admin/list", authMiddleware, userController.showAdminUsers);
 router.post("/", userController.userRegistration);
 
 // >>> NUOVA ROTTA: Ricerca (METTERE PRIMA DI /:id) <<<
-router.get("/search", userController.searchUserByFiscalCode);
+router.get("/search", authMiddleware, userController.searchUserByFiscalCode);
 
-router.get("/", userController.showAdminUsers);
+router.get("/", authMiddleware, userController.showAdminUsers);
 
 // --- 3. Rotte con parametri ID specifici (/users/:id) ---
-router.patch("/:id/role", userController.changePrivileges);
+router.patch("/:id/role", authMiddleware, userController.changePrivileges);
 
 module.exports = router;

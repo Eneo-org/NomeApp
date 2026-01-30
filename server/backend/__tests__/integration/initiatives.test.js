@@ -83,6 +83,7 @@ describe('API /initiatives (SQL Backend)', () => {
         it('should return 200 and a paginated list', async () => {
             const response = await request(app)
                 .get('/initiatives')
+                .set('X-Mock-User-Id', mockCitizenId)
                 .query({ currentPage: 1, objectsPerPage: 10 });
 
             expect(response.status).toBe(200);
@@ -113,7 +114,7 @@ describe('API /initiatives (SQL Backend)', () => {
         });
 
         it('should return 200 and correct details for existing ID', async () => {
-            const response = await request(app).get(`/initiatives/${createdId}`);
+            const response = await request(app).get(`/initiatives/${createdId}`).set('X-Mock-User-Id', mockCitizenId);
 
             expect(response.status).toBe(200);
             expect(parseInt(response.body.id)).toBe(parseInt(createdId));
@@ -122,7 +123,7 @@ describe('API /initiatives (SQL Backend)', () => {
 
         it('should return 404 for a non-existent ID', async () => {
             // Usiamo un ID che sicuramente non esiste (o molto alto)
-            const response = await request(app).get('/initiatives/9999999');
+            const response = await request(app).get('/initiatives/9999999').set('X-Mock-User-Id', mockCitizenId);
             expect(response.status).toBe(404);
         });
     });

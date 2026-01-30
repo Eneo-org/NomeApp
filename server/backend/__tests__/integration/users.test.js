@@ -20,6 +20,7 @@ describe('API /users (Integration)', () => {
         await db.query("TRUNCATE TABLE INIZIATIVA;");
         await db.query("TRUNCATE TABLE UTENTE;");
         await db.query("TRUNCATE TABLE CATEGORIA;");
+        await db.query("TRUNCATE TABLE PRE_AUTORIZZATO;");
         await db.query("SET FOREIGN_KEY_CHECKS = 1;");
 
         // Popolamento Utenti
@@ -196,10 +197,8 @@ describe('API /users (Integration)', () => {
             
             expect(response.status).toBe(201);
             
-            const [rows] = await db.query("SELECT * FROM UTENTE WHERE CODICE_FISCALE = ?", [newFiscalCode]);
+            const [rows] = await db.query("SELECT * FROM PRE_AUTORIZZATO WHERE CODICE_FISCALE = ?", [newFiscalCode]);
             expect(rows).toHaveLength(1);
-            expect(rows[0].IS_ADMIN).toBe(1);
-            expect(rows[0].IS_CITTADINO).toBe(0);
         });
     });
 
