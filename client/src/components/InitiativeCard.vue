@@ -105,7 +105,7 @@ const goToDetail = () => {
   border-radius: 12px;
   overflow: hidden;
   box-shadow: var(--card-shadow);
-  min-height: 180px;
+  height: 200px;
   cursor: pointer;
   transition: box-shadow 0.3s, transform 0.3s;
 }
@@ -116,7 +116,7 @@ const goToDetail = () => {
 }
 
 .card-image-wrapper {
-  flex: 0 0 230px;
+  flex: 0 0 250px;
   background: #2c3e50;
   position: relative;
   overflow: hidden;

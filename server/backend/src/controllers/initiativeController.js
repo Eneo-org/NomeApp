@@ -69,18 +69,16 @@ exports.getAllInitiatives = async (req, res) => {
 
     // Filtro: Status (Gestisce sia stringa singola che array)
     if (status) {
-      if (Array.isArray(status)) {
-        // Se è un array usa IN (...)
-        // Esempio: i.STATO IN (?, ?, ?)
-        const placeholders = status.map(() => "?").join(", ");
+      if (Array.isArray(status) && status.length > 0) {
+        const placeholders = status.map(() => '?').join(',');
         whereConditions.push(`i.STATO IN (${placeholders})`);
-        // Aggiungi tutti gli elementi dell'array ai parametri
         queryParams.push(...status);
-      } else {
-        // Se è una stringa singola usa =
-        whereConditions.push("i.STATO = ?");
+      } else if (typeof status === 'string' && status) {
+        whereConditions.push('i.STATO = ?');
         queryParams.push(status);
       }
+    } else {
+      whereConditions.push("i.STATO = 'In corso'");
     }
 
     // Filtro: Not Status (Escludi stato)
@@ -138,7 +136,8 @@ exports.getAllInitiatives = async (req, res) => {
                 i.*,
                 (SELECT FILE_PATH 
                  FROM ALLEGATO a 
-                 WHERE a.ID_INIZIATIVA = i.ID_INIZIATIVA 
+                 WHERE a.ID_INIZIATIVA = i.ID_INIZIATIVA AND a.FILE_TYPE LIKE 'image/%'
+                 ORDER BY a.ID_ALLEGATO ASC
                  LIMIT 1) as first_attachment
             FROM INIZIATIVA i
             ${whereClause}
@@ -196,35 +195,17 @@ exports.createInitiative = async (req, res) => {
     const userId = req.user.id;
 
     // --- 🛑 CHECK COOLDOWN 🛑 ---
-    // Skip cooldown when running tests to avoid interfering with integration tests
-    if (process.env.NODE_ENV !== 'test') {
-      // Recuperiamo la data dell'ultima iniziativa
-      const [lastInits] = await db.execute(
-        "SELECT DATA_CREAZIONE FROM INIZIATIVA WHERE ID_AUTORE = ? ORDER BY DATA_CREAZIONE DESC LIMIT 1",
-        [userId]
-      );
+    const [cooldownCheck] = await db.execute(
+      "SELECT ID_INIZIATIVA FROM INIZIATIVA WHERE ID_AUTORE = ? AND DATA_CREAZIONE > NOW() - INTERVAL 14 DAY",
+      [userId]
+    );
 
-      if (lastInits.length > 0) {
-        const lastDate = new Date(lastInits[0].DATA_CREAZIONE);
-        const now = new Date();
-        const cooldownDays = 14;
-
-        const cooldownEnd = new Date(lastDate);
-        cooldownEnd.setDate(lastDate.getDate() + cooldownDays);
-
-        // Se ADESSO è prima della FINE del cooldown -> BLOCCA
-        if (now < cooldownEnd) {
-          const remainingMs = cooldownEnd - now;
-
-          if (files) cleanupFiles(files); // Pulisci i file caricati
-
-          return res.status(429).json({
-            message: "Devi attendere prima di creare una nuova iniziativa.",
-            cooldownActive: true,
-            remainingMs: remainingMs,
-          });
-        }
-      }
+    if (cooldownCheck.length > 0) {
+      if (files) cleanupFiles(files);
+      return res.status(422).json({
+        message:
+          "Hai già creato un'iniziativa di recente. Devi attendere 14 giorni tra una proposta e l'altra.",
+      });
     }
     // --- ✅ FINE CHECK COOLDOWN ---
 
@@ -264,7 +245,7 @@ exports.createInitiative = async (req, res) => {
     const [resultInit] = await connection.execute(queryIniziativa, [
       title,
       description,
-      place,
+      place || null,
       categoryId,
       userId,
       finalPlatformId, // <--- Ora passiamo l'ID corretto (1)
@@ -435,10 +416,7 @@ exports.getExpiringInitiatives = async (req, res) => {
 
     // --- QUERY CORRETTA ---
     const whereClause = `
-        WHERE STATO = 'In corso' 
-        AND ID_PIATTAFORMA = 1 
-        AND DATA_SCADENZA > NOW()                      -- Esclude le scadute (passato)
-        AND DATA_SCADENZA <= DATE_ADD(NOW(), INTERVAL 3 DAY) -- Include solo scadenze prossime (futuro vicino)
+        WHERE i.STATO = 'In corso' AND i.DATA_SCADENZA > NOW()
     `;
 
     const queryData = `
@@ -446,14 +424,14 @@ exports.getExpiringInitiatives = async (req, res) => {
         ID_INIZIATIVA, TITOLO, DESCRIZIONE, LUOGO, 
         STATO, NUM_FIRME, DATA_SCADENZA, 
         ID_CATEGORIA, ID_AUTORE, ID_PIATTAFORMA,
-        (SELECT FILE_PATH FROM ALLEGATO WHERE ID_INIZIATIVA = INIZIATIVA.ID_INIZIATIVA LIMIT 1) as FILE_PATH
-      FROM INIZIATIVA 
+        (SELECT a.FILE_PATH FROM ALLEGATO a WHERE a.ID_INIZIATIVA = i.ID_INIZIATIVA AND a.FILE_TYPE LIKE 'image/%' ORDER BY a.ID_ALLEGATO ASC LIMIT 1) as FILE_PATH
+      FROM INIZIATIVA i
       ${whereClause}
       ORDER BY DATA_SCADENZA ASC 
       LIMIT ? OFFSET ?
     `;
 
-    const queryCount = `SELECT COUNT(*) as total FROM INIZIATIVA ${whereClause}`;
+    const queryCount = `SELECT COUNT(*) as total FROM INIZIATIVA i ${whereClause}`;
 
     const [rows] = await db.query(queryData, [limit, offset]);
     const [count] = await db.query(queryCount);
@@ -981,17 +959,26 @@ async function _getDetailedInitiativeData(id) {
     categoryId: initiative.ID_CATEGORIA,
     platformId: initiative.ID_PIATTAFORMA,
     externalURL: initiative.URL_ESTERNO,
-    attachments:
-      attachmentsInit.length > 0
-        ? attachmentsInit.map((att) => ({
-            id: att.ID_ALLEGATO,
-            fileName: att.FILE_NAME,
-            filePath: att.FILE_PATH,
-            fileType: att.FILE_TYPE,
-            uploadedAt: att.UPLOADED_AT,
-          }))
-        : null,
+    images: attachmentsInit
+      .filter(att => att.FILE_TYPE.startsWith('image/'))
+      .map(att => ({
+        id: att.ID_ALLEGATO,
+        fileName: att.FILE_NAME,
+        filePath: att.FILE_PATH,
+        fileType: att.FILE_TYPE,
+        uploadedAt: att.UPLOADED_AT,
+      })),
+    documents: attachmentsInit
+      .filter(att => !att.FILE_TYPE.startsWith('image/'))
+      .map(att => ({
+        id: att.ID_ALLEGATO,
+        fileName: att.FILE_NAME,
+        filePath: att.FILE_PATH,
+        fileType: att.FILE_TYPE,
+        uploadedAt: att.UPLOADED_AT,
+      })),
     reply: formattedReply,
+    attachment: attachmentsInit.length > 0 ? { filePath: attachmentsInit[0].FILE_PATH } : null,
   };
 }
 // Funzione Helper Privata per inviare notifiche ai follower

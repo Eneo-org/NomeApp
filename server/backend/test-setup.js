@@ -1,6 +1,9 @@
 // backend/__tests__/setup.js
 require('dotenv').config();
 
+// FORZA L'AMBIENTE TEST PRIMA DI TUTTO
+process.env.NODE_ENV = 'test';
+
 // Imposta un timeout più lungo per i test di integrazione con DB reale
 jest.setTimeout(5000);
 

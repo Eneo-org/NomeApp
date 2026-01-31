@@ -2,12 +2,14 @@ import { defineStore } from 'pinia'
 import axios from 'axios'
 import { ref } from 'vue'
 import { useToastStore } from './toastStore' // IMPORT STORE TOAST
+import { useUserStore } from './userStore';
 
 const API_URL = import.meta.env.VITE_API_URL
 
 export const useInitiativeStore = defineStore('initiative', () => {
   // Inizializza Toast Store
   const toast = useToastStore()
+  const userStore = useUserStore()
 
   // --- STATE ---
   const initiatives = ref([])
@@ -85,8 +87,11 @@ export const useInitiativeStore = defineStore('initiative', () => {
         totalObjects.value = response.data.meta.totalObjects
       }
 
-      await fetchUserFollowedIds()
-      // Possiamo chiamare fetchUserSignedIds qui se volessimo vedere lo stato in home,
+      if (userStore.isAuthenticated) {
+
+        await fetchUserFollowedIds()
+
+      }      // Possiamo chiamare fetchUserSignedIds qui se volessimo vedere lo stato in home,
       // ma per ora lo chiamiamo nel dettaglio per ottimizzare.
     } catch (err) {
       console.error('Errore fetch initiatives:', err)
@@ -178,7 +183,7 @@ export const useInitiativeStore = defineStore('initiative', () => {
       toast.showToast('Rimossa dai preferiti', 'info')
 
       try {
-        await axios.delete(`${API_URL}/initiatives/${id}/unfollows`, {
+        await axios.delete(`${API_URL}/initiatives/${id}/follows`, {
           headers: { 'X-Mock-User-Id': userId },
         })
       } catch (err) {

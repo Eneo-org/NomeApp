@@ -40,7 +40,7 @@ router.post(
 
 router.post("/:id/signatures", authMiddleware, initiativeController.signInitiative);
 router.post("/:id/follows", authMiddleware, initiativeController.followInitiative);
-router.delete("/:id/unfollows", authMiddleware, initiativeController.unfollowInitiative);
+router.delete("/:id/follows", authMiddleware, initiativeController.unfollowInitiative);
 router.patch("/:id/status", authMiddleware, initiativeController.updateInitiativeStatus);
 
 module.exports = router;

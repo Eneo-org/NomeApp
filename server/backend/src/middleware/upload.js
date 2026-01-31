@@ -75,7 +75,7 @@ const imageAndPdfFilter = (req, file, cb) => {
 
 exports.uploadInitiative = multer({
   storage: storage("initiatives"),
-  fileFilter: imageFilter,
+  fileFilter: imageAndPdfFilter,
   limits: {
     fileSize: 5 * 1024 * 1024, // Limite 5MB
     files: 5 // Massimo 5 file per upload

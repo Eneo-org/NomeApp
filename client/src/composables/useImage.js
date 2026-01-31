@@ -11,11 +11,15 @@ export function useImage() {
   const getImageUrl = (item) => {
     let fileData = null;
 
-    // Prima controlliamo l'array `attachments` che è lo standard più recente
-    if (item && Array.isArray(item.attachments) && item.attachments.length > 0) {
-      fileData = item.attachments[0];
+    // 1. Priorità all'array `images` (più specifico)
+    if (item && Array.isArray(item.images) && item.images.length > 0) {
+      fileData = item.images[0];
     }
-    // Altrimenti, usiamo `attachment` per compatibilità con la vecchia struttura
+    // 2. Altrimenti, cerca la prima immagine nell'array `attachments`
+    else if (item && Array.isArray(item.attachments) && item.attachments.length > 0) {
+      fileData = item.attachments.find(att => att.fileType && att.fileType.startsWith('image/'));
+    }
+    // 3. Fallback per la vecchia struttura `attachment`
     else if (item && item.attachment) {
       fileData = item.attachment;
     }

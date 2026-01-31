@@ -3,6 +3,7 @@ require('dotenv').config(); // Carica le variabili d'ambiente
 const app = express();
 const cors = require("cors");
 const path = require("path");
+const rateLimit = require("express-rate-limit");
 
 // Import Routes
 const initiativeRoutes = require("./routes/initiatives");
@@ -15,6 +16,14 @@ const notificationRoutes = require("./routes/notificationRoutes");
 // 1. Middleware Base
 app.use(express.json());
 app.use(cors());
+
+// 2. RATE LIMITER (Importante: skippa se siamo in test)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 100, 
+  skip: (req, res) => process.env.NODE_ENV === 'test',
+});
+app.use(limiter);
 
 // 2. File Statici (Immagini)
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));

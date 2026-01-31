@@ -111,13 +111,26 @@ const handleCopyLink = async () => {
 };
 
 const mainImageSrc = computed(() => {
-  if (!initiative.value) return defaultImage;
-  if (initiative.value.attachments?.length > 0) {
-    const cleanPath = initiative.value.attachments[0].filePath.replace(/\\/g, '/');
-    return `${API_URL}/${cleanPath}`;
+  if (!initiative.value || !initiative.value.images || initiative.value.images.length === 0) {
+    return defaultImage;
   }
-  return defaultImage;
+  const cleanPath = initiative.value.images[currentImageIndex.value].filePath.replace(/\\/g, '/');
+  return `${API_URL}/${cleanPath}`;
 });
+
+const nextImage = () => {
+  if (initiative.value && initiative.value.images.length > 1) {
+    currentImageIndex.value = (currentImageIndex.value + 1) % initiative.value.images.length;
+  }
+};
+
+const prevImage = () => {
+  if (initiative.value && initiative.value.images.length > 1) {
+    currentImageIndex.value = (currentImageIndex.value - 1 + initiative.value.images.length) % initiative.value.images.length;
+  }
+};
+
+const currentImageIndex = ref(0);
 
 </script>
 
@@ -175,11 +188,29 @@ const mainImageSrc = computed(() => {
         <article class="main-content">
           <figure class="hero-image">
             <img :src="mainImageSrc" alt="Immagine iniziativa">
+            <div v-if="initiative.images && initiative.images.length > 1" class="gallery-nav">
+              <button @click="prevImage" class="gallery-btn prev">‹</button>
+              <button @click="nextImage" class="gallery-btn next">›</button>
+            </div>
           </figure>
+          <div v-if="initiative.images && initiative.images.length > 1" class="thumbnail-gallery">
+            <img v-for="(image, index) in initiative.images" :key="image.id" :src="`${API_URL}/${image.filePath.replace(/\\/g, '/')}`" @click="currentImageIndex = index" :class="{ 'active': currentImageIndex === index }" alt="Thumbnail">
+           </div>
 
           <section class="description-box">
             <h3>Dettagli dell'iniziativa</h3>
             <p class="description-text">{{ initiative.description }}</p>
+          </section>
+
+          <section v-if="initiative.documents && initiative.documents.length > 0" class="attachments-box">
+            <h3>Allegati scaricabili</h3>
+            <ul>
+              <li v-for="doc in initiative.documents" :key="doc.id">
+                <a :href="`${API_URL}/${doc.filePath.replace(/\\/g, '/')}`" target="_blank" class="file-link">
+                  📄 {{ doc.fileName }}
+                </a>
+              </li>
+            </ul>
           </section>
 
           <section v-if="initiative.reply" class="admin-reply">
@@ -480,6 +511,65 @@ const mainImageSrc = computed(() => {
   overflow: hidden;
   margin: 0;
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.gallery-nav {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.gallery-btn {
+  pointer-events: all;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+  transition: background-color 0.2s;
+}
+
+.gallery-btn:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.gallery-btn.prev {
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
+
+.gallery-btn.next {
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+}
+
+.thumbnail-gallery {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.thumbnail-gallery img {
+  width: 80px;
+  height: 60px;
+  object-fit: cover;
+  cursor: pointer;
+  border-radius: 5px;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.thumbnail-gallery img.active {
+  border-color: var(--accent-color);
 }
 
 .hero-image img {
