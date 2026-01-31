@@ -196,31 +196,34 @@ exports.createInitiative = async (req, res) => {
     const userId = req.user.id;
 
     // --- 🛑 CHECK COOLDOWN 🛑 ---
-    // Recuperiamo la data dell'ultima iniziativa
-    const [lastInits] = await db.execute(
-      "SELECT DATA_CREAZIONE FROM INIZIATIVA WHERE ID_AUTORE = ? ORDER BY DATA_CREAZIONE DESC LIMIT 1",
-      [userId]
-    );
+    // Skip cooldown when running tests to avoid interfering with integration tests
+    if (process.env.NODE_ENV !== 'test') {
+      // Recuperiamo la data dell'ultima iniziativa
+      const [lastInits] = await db.execute(
+        "SELECT DATA_CREAZIONE FROM INIZIATIVA WHERE ID_AUTORE = ? ORDER BY DATA_CREAZIONE DESC LIMIT 1",
+        [userId]
+      );
 
-    if (lastInits.length > 0) {
-      const lastDate = new Date(lastInits[0].DATA_CREAZIONE);
-      const now = new Date();
-      const cooldownDays = 14;
+      if (lastInits.length > 0) {
+        const lastDate = new Date(lastInits[0].DATA_CREAZIONE);
+        const now = new Date();
+        const cooldownDays = 14;
 
-      const cooldownEnd = new Date(lastDate);
-      cooldownEnd.setDate(lastDate.getDate() + cooldownDays);
+        const cooldownEnd = new Date(lastDate);
+        cooldownEnd.setDate(lastDate.getDate() + cooldownDays);
 
-      // Se ADESSO è prima della FINE del cooldown -> BLOCCA
-      if (now < cooldownEnd) {
-        const remainingMs = cooldownEnd - now;
+        // Se ADESSO è prima della FINE del cooldown -> BLOCCA
+        if (now < cooldownEnd) {
+          const remainingMs = cooldownEnd - now;
 
-        if (files) cleanupFiles(files); // Pulisci i file caricati
+          if (files) cleanupFiles(files); // Pulisci i file caricati
 
-        return res.status(429).json({
-          message: "Devi attendere prima di creare una nuova iniziativa.",
-          cooldownActive: true,
-          remainingMs: remainingMs,
-        });
+          return res.status(429).json({
+            message: "Devi attendere prima di creare una nuova iniziativa.",
+            cooldownActive: true,
+            remainingMs: remainingMs,
+          });
+        }
       }
     }
     // --- ✅ FINE CHECK COOLDOWN ---

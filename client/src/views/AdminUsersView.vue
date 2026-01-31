@@ -80,6 +80,10 @@ const closeModal = () => {
 
 const searchCandidate = async () => {
   if (!candidateFiscal.value) return;
+  
+  // Assicuriamo che il CF sia maiuscolo per coerenza
+  candidateFiscal.value = candidateFiscal.value.toUpperCase();
+
   processing.value = true;
   searchPerformed.value = false;
 
@@ -103,6 +107,7 @@ const promoteUser = async () => {
 
 const preAuthorize = async () => {
   processing.value = true;
+  // candidateFiscal è già stato reso maiuscolo in searchCandidate
   const success = await userStore.preAuthorizeAdmin(candidateFiscal.value);
   processing.value = false;
 
@@ -183,7 +188,7 @@ onMounted(() => loadAdmins());
           <p>Cerca un cittadino per CF per promuoverlo.</p>
           <div class="modal-search">
             <input v-model="candidateFiscal" type="text" placeholder="Codice Fiscale..."
-              style="text-transform: uppercase;">
+              style="text-transform: uppercase;" @input="candidateFiscal = $event.target.value.toUpperCase()">
             <button @click="searchCandidate" :disabled="processing || !candidateFiscal">🔍 Cerca</button>
           </div>
 

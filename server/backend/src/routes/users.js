@@ -17,13 +17,11 @@ router.patch("/me/notifications/:id", authMiddleware, notificationController.mar
 
 // --- 2. Rotte generali e specifiche (/users) ---
 
-// >>> NUOVA ROTTA: Pre-autorizzazione Admin <<<
 router.post("/admin/pre-authorize", authMiddleware, userController.preAuthorizeAdmin);
 
 router.get("/admin/list", authMiddleware, userController.showAdminUsers);
 router.post("/", userController.userRegistration);
 
-// >>> NUOVA ROTTA: Ricerca (METTERE PRIMA DI /:id) <<<
 router.get("/search", authMiddleware, userController.searchUserByFiscalCode);
 
 router.get("/", authMiddleware, userController.showAdminUsers);

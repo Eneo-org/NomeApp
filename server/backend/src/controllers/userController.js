@@ -625,7 +625,7 @@ exports.preAuthorizeAdmin = async (req, res) => {
   try {
     const requesterId = req.user.id;
 
-    // --- AGGIUNTA: Controllo Permessi Admin ---
+    // Controllo Permessi Admin
     const [requesters] = await db.query(
       "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
       [requesterId]
@@ -635,9 +635,9 @@ exports.preAuthorizeAdmin = async (req, res) => {
         .status(403)
         .json({ message: "Accesso negato: solo gli admin possono pre-autorizzare." });
     }
-    // --- FINE AGGIUNTA ---
 
-    const { fiscalCode } = req.body;
+    // Assicuriamo che il CF sia maiuscolo anche lato server
+    const fiscalCode = req.body.fiscalCode ? req.body.fiscalCode.toUpperCase() : null;
 
     if (!fiscalCode) {
       return res.status(400).json({ message: "Codice fiscale mancante" });
