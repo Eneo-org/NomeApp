@@ -14,55 +14,58 @@ paths:
     get:
       summary: initiativesList
       deprecated: false
-      description: ''
+      description: >-
+        Restituisce la lista delle iniziative. Supporta parametri per
+        l'applicazione di filtri alla ricerca, per la ricerca testuale e
+        l'ordinamento.
       tags:
         - Initiatives
       parameters:
         - name: currentPage
           in: query
-          description: Numero della pagina per la paginazione
+          description: Numero della pagina per la paginazione.
           required: false
           example: 1
           schema:
             type: integer
         - name: objectsPerPage
           in: query
-          description: Numero di elementi per pagina
+          description: Numero di elementi per pagina.
           required: false
           example: 10
           schema:
             type: integer
         - name: status
           in: query
-          description: Filtro per lo stato dell'iniziativa
+          description: Filtro per lo stato dell'iniziativa.
           required: false
           example: In corso
           schema:
             type: string
         - name: search
           in: query
-          description: Ricerca libera nel titolo, descrizione e luogo
+          description: Ricerca libera nel titolo, descrizione e luogo.
           required: false
           example: Parco
           schema:
             type: string
         - name: categoryID
           in: query
-          description: Filtro per categoria
+          description: ID univoco della categoria (filtro per categoria).
           required: false
           example: Sport
           schema:
             type: integer
         - name: sortBy
           in: query
-          description: Codice relativo ad un attributo su cui bisogna ordinare
+          description: Codice relativo ad un attributo su cui bisogna ordinare.
           required: false
           example: 1
           schema:
             type: integer
         - name: order
           in: query
-          description: La direzione dell'ordinamento (asc o desc)
+          description: La direzione dell'ordinamento (asc o desc).
           required: false
           example: desc
           schema:
@@ -72,14 +75,14 @@ paths:
               - desc
         - name: minSignatures
           in: query
-          description: Limite inferiore di firme da mostrare
+          description: Limite inferiore di firme da mostrare.
           required: false
           example: 0
           schema:
             type: integer
         - name: maxSignatures
           in: query
-          description: Limite superiore di firme da mostrare
+          description: Limite superiore di firme da mostrare.
           required: false
           example: 1000
           schema:
@@ -115,7 +118,7 @@ paths:
     post:
       summary: createInitiative
       deprecated: false
-      description: Creazione di una nuova iniziativa
+      description: Permette a un cittadino autenticato di creare una nuova iniziativa.
       tags:
         - Initiatives
       parameters:
@@ -133,27 +136,26 @@ paths:
               type: object
               properties:
                 title:
-                  description: Titolo iniziativa
-                  example: ''
+                  description: Titolo dell'iniziativa.
                   type: string
+                  example: ''
                 description:
-                  description: Descrizione
-                  example: ''
+                  description: Descrizione dettagliata della proposta.
                   type: string
+                  example: ''
                 place:
-                  description: Luogo
-                  example: ''
+                  description: Luogo o area di interesse.
                   type: string
+                  example: ''
                 categoryId:
                   type: integer
-                  description: ID categoria
+                  description: ID univoco della categoria.
                   example: 0
                 attachments:
                   format: binary
                   type: string
-                  description: Immagini
+                  description: Eventuali allegati (Immagini o PDF).
                   example: ''
-            examples: {}
         required: true
       responses:
         '201':
@@ -204,14 +206,17 @@ paths:
     get:
       summary: initiativeDetails
       deprecated: false
-      description: ''
+      description: >-
+        Restituisce i dettagli completi di una singola iniziativa selezionata
+        dall'utente.
       tags:
         - Initiatives
       parameters:
         - name: id
           in: path
-          description: ''
+          description: ID univoco dell'iniziativa.
           required: true
+          example: 0
           schema:
             type: integer
       responses:
@@ -228,24 +233,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenericError'
+          headers: {}
         '404':
           description: ''
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GenericError'
+          headers: {}
       security: []
     patch:
       summary: changeExpirationDate
       deprecated: false
-      description: ''
+      description: >-
+        Permette all'amministrazione di prorogare la data di scadenza di
+        un'iniziativa.
       tags:
         - Initiatives
       parameters:
         - name: id
           in: path
-          description: ''
+          description: ID univoco dell'iniziativa.
           required: true
+          example: 0
           schema:
             type: integer
         - name: X-Mock-User-Id
@@ -264,9 +274,9 @@ paths:
                 expirationDate:
                   type: string
                   format: date
+                  description: Nuova data di scadenza.
               required:
                 - expirationDate
-            examples: {}
         required: true
       responses:
         '200':
@@ -305,70 +315,22 @@ paths:
                 $ref: '#/components/schemas/GenericError'
           headers: {}
       security: []
-    put:
-      summary: updateInitiative - DA CAPIRE
-      deprecated: false
-      description: ''
-      tags:
-        - Initiatives
-      parameters:
-        - name: id
-          in: path
-          description: ''
-          required: true
-          schema:
-            type: integer
-        - name: X-Mock-User-Id
-          in: header
-          description: ''
-          required: true
-          example: 0
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DetailedInitiative'
-          headers: {}
-        '404':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GenericError'
-          headers: {}
-        '422':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GenericError'
-          headers: {}
-        '503':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GenericError'
-          headers: {}
-      security: []
   /initiatives/{id}/responses:
     post:
       summary: createReply
       deprecated: false
       description: >-
-        L'operazione deve creare una nuova risposta ma allo stesso tempo
-        modfiicare lo stato dell'iniziativa.
+        Permette all'amministrazione di inviare una risposta ufficiale a
+        un'iniziativa, cambiandone lo stato da 'In corso' a 'Respinta' oppure
+        'Approvata'.
       tags:
         - Initiatives
       parameters:
         - name: id
           in: path
-          description: ''
+          description: ID univoco dell'iniziativa.
           required: true
+          example: 0
           schema:
             type: integer
         - name: X-Mock-User-Id
@@ -385,17 +347,18 @@ paths:
               type: object
               properties:
                 status:
-                  example: ''
+                  description: Nuovo stato dell'iniziativa ('Respinta' o 'Approvata').
                   type: string
+                  example: ''
                 motivations:
-                  example: ''
+                  description: Testo di esposizione delle motivazioni della risposta.
                   type: string
-                ottachments:
+                  example: ''
+                attachments:
                   format: binary
                   type: string
-                  description: PDF o Immagini
+                  description: Eventuali allegati (immagini o PDF).
                   example: ''
-            examples: {}
         required: true
       responses:
         '201':
@@ -438,14 +401,15 @@ paths:
     post:
       summary: signInitiative
       deprecated: false
-      description: ''
+      description: Permette a un cittadino di firmare un'iniziativa.
       tags:
         - Initiatives
       parameters:
         - name: id
           in: path
-          description: ''
+          description: ID univoco dell'iniziativa.
           required: true
+          example: 0
           schema:
             type: integer
         - name: X-Mock-User-Id
@@ -496,14 +460,17 @@ paths:
     post:
       summary: saveIniziative
       deprecated: false
-      description: Salva iniziativa
+      description: >-
+        Salva un'iniziativa nella lista delle iniziative seguite dall'utente
+        affinché possa monitorarne lo stato.
       tags:
         - Initiatives
       parameters:
         - name: id
           in: path
-          description: ''
+          description: ID univoco dell'iniziativa.
           required: true
+          example: 0
           schema:
             type: integer
         - name: X-Mock-User-Id
@@ -546,14 +513,15 @@ paths:
     delete:
       summary: removeFromSavedInitiatives
       deprecated: false
-      description: Salva iniziativa
+      description: Rimuove l'iniziativa dalla lista delle iniziative seguite.
       tags:
         - Initiatives
       parameters:
         - name: id
           in: path
-          description: ''
+          description: ID univoco dell'iniziativa.
           required: true
+          example: 0
           schema:
             type: integer
         - name: X-Mock-User-Id
@@ -596,11 +564,139 @@ paths:
                 properties: {}
           headers: {}
       security: []
+  /initiatives/admin/expiring:
+    get:
+      summary: getExpiringInitiatives
+      deprecated: false
+      description: >-
+        Restituisce le iniziative in scadenza entro 7 giorni. Solo per
+        amministratori.
+      tags:
+        - Initiatives
+      parameters:
+        - name: currentPage
+          in: query
+          description: Numero della pagina per la paginazione.
+          required: false
+          example: 1
+          schema:
+            type: integer
+        - name: objectsPerPage
+          in: query
+          description: Numero di elementi per pagina.
+          required: false
+          example: 5
+          schema:
+            type: integer
+        - name: X-Mock-User-Id
+          in: header
+          description: Simula l'utente loggato (deve essere admin)
+          required: true
+          example: 1
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista delle iniziative in scadenza.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Initiative'
+                  meta:
+                    $ref: '#/components/schemas/MetaDataList'
+                required:
+                  - data
+                  - meta
+          headers: {}
+        '401':
+          description: Utente non autenticato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericError'
+          headers: {}
+        '403':
+          description: L'utente non ha privilegi di amministratore.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericError'
+          headers: {}
+        '500':
+          description: Errore del server.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericError'
+          headers: {}
+      security: []
+  /initiatives/cooldown:
+    get:
+      summary: checkCooldown
+      deprecated: false
+      description: >-
+        Verifica se l'utente può creare una nuova iniziativa (controlla il
+        periodo di cooldown di 14 giorni dall'ultima iniziativa creata).
+      tags:
+        - Initiatives
+      parameters:
+        - name: X-Mock-User-Id
+          in: header
+          description: Simula l'utente loggato
+          required: true
+          example: 1
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Informazioni sul cooldown.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  canCreate:
+                    type: boolean
+                    description: Indica se l'utente può creare una nuova iniziativa.
+                  daysRemaining:
+                    type: integer
+                    description: >-
+                      Numero di giorni rimanenti prima di poter creare una nuova
+                      iniziativa.
+                    nullable: true
+                  lastInitiativeDate:
+                    type: string
+                    format: date
+                    description: Data dell'ultima iniziativa creata.
+                    nullable: true
+                required:
+                  - canCreate
+          headers: {}
+        '401':
+          description: Utente non autenticato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericError'
+          headers: {}
+        '500':
+          description: Errore del server.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericError'
+          headers: {}
+      security: []
   /participatory-budgets:
     post:
       summary: createParticipatoryBudget
       deprecated: false
-      description: Creazione bilancio partecipativo
+      description: Creazione di un nuovo bilancio partecipativo.
       tags:
         - ParticipatoryBudgets
       parameters:
@@ -616,7 +712,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ParticipatoryBudget'
-            examples: {}
         required: true
       responses:
         '201':
@@ -632,21 +727,27 @@ paths:
                       $ref: '#/components/schemas/PBOption'
                     minItems: 3
                     maxItems: 3
+                    description: Array di opzioni.
                   id:
                     type: integer
+                    description: ID univoco del bilancio partecipativo.
                   creatorId:
                     type: integer
+                    description: ID univoco del creatore del bilancio partecipativo.
                   title:
                     type: string
+                    description: Titolo del bilancio partecipativo.
                   createdAt:
                     type: string
                     format: date-time
+                    description: Data di creazione.
                   expirationDate:
                     type: string
                     format: date
+                    description: Data di scadenza.
                   votedOptionId:
                     type: integer
-                    description: opzione votata
+                    description: ID dell'opzione votata.
                 required:
                   - votedOptionId
                   - options
@@ -689,20 +790,20 @@ paths:
     get:
       summary: participatoryBudgetsArchive
       deprecated: false
-      description: ''
+      description: Restituisce l'archivio storico dei bilanci partecipativi conclusi.
       tags:
         - ParticipatoryBudgets
       parameters:
         - name: currentPage
           in: query
-          description: Numero pagina della lista
+          description: Numero della pagina per la paginazione.
           required: false
           example: 1
           schema:
             type: integer
         - name: objectsPerPage
           in: query
-          description: Numero di bilanci returnati per ogni pagina
+          description: Numero di elementi per pagina.
           required: false
           example: 10
           schema:
@@ -753,13 +854,13 @@ paths:
     get:
       summary: participatoryBudgetDetails
       deprecated: false
-      description: ''
+      description: Restituisce i dettagli di un bilancio partecipativo.
       tags:
         - ParticipatoryBudgets
       parameters:
         - name: status
           in: query
-          description: ''
+          description: Filtro per stato (attivo o non).
           required: false
           schema:
             type: string
@@ -784,7 +885,7 @@ paths:
                   votedOptionId:
                     type: integer
                     description: >-
-                      identifica l'opzione che l'utente ha votato se ha già
+                      Identifica l'opzione che l'utente ha votato se ha già
                       votato. 
                     nullable: true
                   options:
@@ -793,18 +894,24 @@ paths:
                       $ref: '#/components/schemas/PBOption'
                     minItems: 3
                     maxItems: 3
+                    description: Array di opzioni.
                   id:
                     type: integer
+                    description: ID univoco del bilancio partecipativo.
                   creatorId:
                     type: integer
+                    description: ID univoco del creatore del bilancio partecipativo.
                   title:
                     type: string
+                    description: Titolo del bilancio partecipativo.
                   createdAt:
                     type: string
                     format: date-time
+                    description: Data di creazione.
                   expirationDate:
                     type: string
                     format: date
+                    description: Data di scadenza.
                 required:
                   - options
                   - id
@@ -819,15 +926,16 @@ paths:
       summary: voteParticipatoryBudget
       deprecated: false
       description: >-
-        è importante usare l'attributo position per votare e non l'id che invece
-        rappresenta l'id assoluto. 
+        Permette a un cittadino di esprimere il proprio voto per una delle
+        opzioni del bilancio partecipativo.
       tags:
         - ParticipatoryBudgets
       parameters:
         - name: id
           in: path
-          description: ''
+          description: ID univoco del bilancio partecipativo.
           required: true
+          example: 0
           schema:
             type: integer
         - name: X-Mock-User-Id
@@ -847,9 +955,9 @@ paths:
                   type: integer
                   minimum: 2
                   maximum: 5
+                  description: Posizione dell'opzione scelta.
               required:
                 - position
-            examples: {}
         required: true
       responses:
         '200':
@@ -899,7 +1007,9 @@ paths:
     post:
       summary: loginAndAuth
       deprecated: false
-      description: ''
+      description: >-
+        Autenticazione utente tramite provider esterno. Verifica l'identità e
+        restituisce il token di sessione.
       tags:
         - Users/Auth
       parameters: []
@@ -911,9 +1021,9 @@ paths:
               properties:
                 tokenId:
                   type: string
+                  description: Token fornito dal provider di identità.
               required:
                 - tokenId
-            examples: {}
         required: true
       responses:
         '200':
@@ -937,6 +1047,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/GenericError'
           headers: {}
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                title: ''
+                type: object
+                properties:
+                  status:
+                    type: string
+                  googleData:
+                    type: object
+                    properties:
+                      firstName:
+                        type: string
+                      lastName:
+                        type: string
+                      email:
+                        type: string
+                      fiscalCode:
+                        type: string
+                    required:
+                      - firstName
+                      - lastName
+                      - email
+                      - fiscalCode
+                required:
+                  - status
+                  - googleData
+          headers: {}
         '500':
           description: ''
           content:
@@ -949,7 +1089,7 @@ paths:
     post:
       summary: logout
       deprecated: false
-      description: ''
+      description: Termina la sessione dell'utente corrente.
       tags:
         - Users/Auth
       parameters: []
@@ -967,17 +1107,122 @@ paths:
                   - message
           headers: {}
       security: []
+  /auth/otp:
+    post:
+      summary: RichiestaOTP
+      deprecated: false
+      description: >-
+        Invia un codice OTP (One-Time Password) via email per la verifica
+        dell'identità durante la registrazione di nuovi utenti.
+      tags:
+        - Users/Auth
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+              required:
+                - email
+        required: true
+      responses:
+        '201':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+          headers: {}
+      security: []
+  /auth/register:
+    post:
+      summary: userRegistration
+      deprecated: false
+      description: >-
+        Registrazione di un nuovo utente (Cittadino o Amministratore
+        pre-autorizzato) dopo la verifica OTP.
+      tags:
+        - Users/Auth
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                  description: Nome dell'utente.
+                lastName:
+                  type: string
+                  description: Cognome dell'utente.
+                fiscalCode:
+                  type: string
+                  description: Codice fiscale dell'utente.
+                email:
+                  type: string
+                  description: Email dell'utente.
+                otp:
+                  type: string
+                  description: Codice OTP ricevuto via email.
+              required:
+                - firstName
+                - lastName
+                - fiscalCode
+                - email
+                - otp
+        required: true
+      responses:
+        '201':
+          description: Utente registrato con successo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          headers: {}
+        '400':
+          description: Richiesta non valida o OTP errato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericError'
+          headers: {}
+        '409':
+          description: Utente già esistente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericError'
+          headers: {}
+        '500':
+          description: Errore del server.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericError'
+          headers: {}
+      security: []
   /users/me/initiatives:
     get:
       summary: initiativesDashboard
       deprecated: false
-      description: ''
+      description: >-
+        Restituisce i dati per la dashboard personale dell'utente (iniziative
+        firmate, create o seguite).
       tags:
         - Users
       parameters:
         - name: relation
           in: query
-          description: 'Enum: signed, created, followed'
+          description: Tipo di relazione (signed, created, followed).
           required: false
           example: created
           schema:
@@ -988,13 +1233,13 @@ paths:
               - followed
         - name: currentPage
           in: query
-          description: ''
+          description: Numero della pagina per la paginazione.
           required: false
           schema:
             type: integer
         - name: objectsPerPage
           in: query
-          description: ''
+          description: Numero di elementi per pagina.
           required: false
           schema:
             type: integer
@@ -1042,26 +1287,28 @@ paths:
     get:
       summary: notificationsList
       deprecated: false
-      description: Notifiche dell'utente
+      description: >-
+        Restituisce la lista delle notifiche dell'utente loggato, con
+        possibilità di filtrare per lette/non lette.
       tags:
         - Users
       parameters:
         - name: read
           in: query
-          description: Se false, restituisce solo le notifiche non lette
+          description: Se false, restituisce solo le notifiche non lette.
           required: false
           example: 'false'
           schema:
             type: boolean
         - name: currentPage
           in: query
-          description: ''
+          description: Numero della pagina per la paginazione.
           required: false
           schema:
             type: integer
         - name: objectsPerPage
           in: query
-          description: ''
+          description: Numero di elementi per pagina.
           required: false
           schema:
             type: integer
@@ -1118,14 +1365,15 @@ paths:
     patch:
       summary: readNotification
       deprecated: false
-      description: ''
+      description: Segna una specifica notifica come letta.
       tags:
         - Users
       parameters:
         - name: id
           in: path
-          description: ''
+          description: ID univoco della notifica.
           required: true
+          example: 0
           schema:
             type: integer
         - name: X-Mock-User-Id
@@ -1144,10 +1392,9 @@ paths:
                 isRead:
                   type: boolean
                   default: true
-                  description: si accetta solo true per segnare la notifica letta
+                  description: Impostare a true per segnare come letta.
               required:
                 - isRead
-            examples: {}
         required: true
       responses:
         '200':
@@ -1190,7 +1437,7 @@ paths:
     get:
       summary: getUser
       deprecated: false
-      description: ''
+      description: Restituisce i dettagli del profilo dell'utente loggato.
       tags:
         - Users
       parameters:
@@ -1242,7 +1489,9 @@ paths:
     post:
       summary: userRegistration
       deprecated: false
-      description: ''
+      description: >-
+        Registrazione di un nuovo utente (Cittadino o Amministratore) al primo
+        accesso.
       tags:
         - Users
       parameters: []
@@ -1254,12 +1503,15 @@ paths:
               properties:
                 email:
                   type: string
-                fiscalCode:
+                  description: Email inserita dall'utente.
+                googleToken:
+                  type: string
+                otp:
                   type: string
               required:
                 - email
-                - fiscalCode
-            examples: {}
+                - googleToken
+                - otp
         required: true
       responses:
         '201':
@@ -1301,13 +1553,15 @@ paths:
     get:
       summary: showAdminUsers
       deprecated: false
-      description: ''
+      description: >-
+        Permette agli amministratori di visualizzare e cercare nella lista degli
+        utenti registrati.
       tags:
         - Users
       parameters:
         - name: isAdmin
           in: query
-          description: ''
+          description: Filtra per mostrare solo gli admin.
           required: false
           schema:
             type: boolean
@@ -1363,14 +1617,15 @@ paths:
     patch:
       summary: changePrivileges
       deprecated: false
-      description: ''
+      description: Permette di modificare i privilegi di un utente.
       tags:
         - Users
       parameters:
         - name: id
           in: path
-          description: ''
+          description: ID univoco dell'utente.
           required: true
+          example: 0
           schema:
             type: integer
         - name: X-Mock-User-Id
@@ -1388,10 +1643,9 @@ paths:
               properties:
                 isAdmin:
                   type: boolean
-                  description: di default false
+                  description: Di default false.
               required:
                 - isAdmin
-            examples: {}
         required: true
       responses:
         '200':
@@ -1403,11 +1657,145 @@ paths:
                 properties: {}
           headers: {}
       security: []
+  /users/me/notifications/mark-all-as-read:
+    patch:
+      summary: markAllNotificationsAsRead
+      deprecated: false
+      description: Segna tutte le notifiche dell'utente corrente come lette.
+      tags:
+        - Users
+      parameters:
+        - name: X-Mock-User-Id
+          in: header
+          description: Simula l'utente loggato
+          required: true
+          example: 1
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+      responses:
+        '200':
+          description: Tutte le notifiche sono state segnate come lette.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  updatedCount:
+                    type: integer
+                    description: Numero di notifiche aggiornate.
+                required:
+                  - message
+                  - updatedCount
+          headers: {}
+        '401':
+          description: Utente non autenticato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericError'
+          headers: {}
+        '500':
+          description: Errore del server.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericError'
+          headers: {}
+      security: []
+  /users/admin/pre-authorize:
+    post:
+      summary: preAuthorizeAdmin
+      deprecated: false
+      description: >-
+        Pre-autorizza un codice fiscale per la registrazione come
+        amministratore. Solo gli amministratori possono utilizzare questa API.
+      tags:
+        - Users
+      parameters:
+        - name: X-Mock-User-Id
+          in: header
+          description: Simula l'utente loggato (deve essere admin)
+          required: true
+          example: 1
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fiscalCode:
+                  type: string
+                  description: Codice fiscale dell'amministratore da pre-autorizzare.
+              required:
+                - fiscalCode
+        required: true
+      responses:
+        '201':
+          description: Amministratore pre-autorizzato con successo.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  fiscalCode:
+                    type: string
+                required:
+                  - message
+                  - fiscalCode
+          headers: {}
+        '400':
+          description: Richiesta non valida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericError'
+          headers: {}
+        '401':
+          description: Utente non autenticato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericError'
+          headers: {}
+        '403':
+          description: L'utente non ha privilegi di amministratore.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericError'
+          headers: {}
+        '409':
+          description: Codice fiscale già pre-autorizzato.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericError'
+          headers: {}
+        '500':
+          description: Errore del server.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericError'
+          headers: {}
+      security: []
   /categories:
     get:
       summary: categoriesList
       deprecated: false
-      description: ''
+      description: Restituisce la lista delle categorie.
       tags:
         - Filters
       parameters: []
@@ -1438,7 +1826,7 @@ paths:
     get:
       summary: platformsList
       deprecated: false
-      description: ''
+      description: Restituisce la lista delle piattaforme.
       tags:
         - Filters
       parameters: []
@@ -1467,54 +1855,30 @@ paths:
       security: []
 components:
   schemas:
-    InitiativeCreation:
-      type: object
-      properties:
-        title:
-          type: string
-          description: Titolo dell'iniziativa
-        description:
-          type: string
-          description: Descrizione dell'iniziativa
-        place:
-          type: string
-        categoryId:
-          type: integer
-        attachments:
-          type: array
-          items:
-            $ref: '#/components/schemas/Attachment'
-          description: allegati
-      required:
-        - title
-        - description
-        - place
-        - categoryId
-        - attachments
     DetailedInitiative:
       properties:
         id:
-          description: ''
+          description: ID univoco dell'iniziativa.
           type: integer
           minimum: 1
           maximum: 2147483647
         title:
-          description: ''
+          description: Titolo dell'iniziativa.
           type: string
           maxLength: 255
         description:
-          description: ''
+          description: Descrizione dettagliata della proposta.
           type: string
           maxLength: 65535
         place:
-          description: ''
+          description: Luogo o area di interesse.
           default: 'NULL'
           type: string
           maxLength: 64
           nullable: true
         status:
           type: string
-          description: ''
+          description: Stato attuale dell'iniziativa.
           default: '''In corso'''
           enum:
             - In corso
@@ -1523,7 +1887,7 @@ components:
             - Scaduta
           nullable: true
         signatures:
-          description: numero di firme
+          description: Numero di firme raccolte.
           default: '0'
           type: integer
           minimum: -2147483648
@@ -1531,35 +1895,35 @@ components:
           nullable: true
         creationDate:
           type: string
-          description: ''
+          description: Data di creazione.
           format: date
         expirationDate:
-          description: ''
+          description: Data di scadenza.
           default: 'NULL'
           type: string
           format: date
           nullable: true
         authorId:
-          description: ''
+          description: 'ID univoco dell''autore. '
           default: 'NULL'
           type: integer
           minimum: -2147483648
           maximum: 2147483647
           nullable: true
         categoryId:
-          description: ''
+          description: ID univoco della categoria.
           type: integer
           minimum: -2147483648
           maximum: 2147483647
         platformId:
-          description: ''
+          description: ID univoco della piattaforma di provenienza.
           default: 'NULL'
           type: integer
           minimum: -2147483648
           maximum: 2147483647
           nullable: true
         externalURL:
-          description: ''
+          description: URL di reindirizzamento alla piattaforma esterna.
           default: 'NULL'
           type: string
           maxLength: 500
@@ -1568,9 +1932,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Attachment'
+          description: Array contenente gli eventuali allegati all'iniziativa.
           nullable: true
         reply:
           $ref: '#/components/schemas/Reply'
+          description: Eventuale risposta del Comune.
           nullable: true
       type: object
       required:
@@ -1579,29 +1945,6 @@ components:
         - description
         - creationDate
         - categoryId
-    AdministrationReply:
-      type: object
-      properties:
-        status:
-          type: string
-          enum:
-            - In corso
-            - Approvata
-            - Respinta
-            - Scaduta
-            - Archiviata
-          description: Stato da modificare nell'iniziativa
-        motivations:
-          type: string
-          description: Motivazioni che il comune esrime in risposta all'iniziativa
-        attachments:
-          type: array
-          items:
-            $ref: '#/components/schemas/Attachment'
-          nullable: true
-      required:
-        - status
-        - motivations
     ParticipatoryBudget:
       type: object
       properties:
@@ -1611,18 +1954,24 @@ components:
             $ref: '#/components/schemas/PBOption'
           minItems: 3
           maxItems: 3
+          description: Array di opzioni.
         id:
           type: integer
+          description: ID univoco del bilancio partecipativo.
         creatorId:
           type: integer
+          description: ID univoco del creatore del bilancio partecipativo.
         title:
           type: string
+          description: Titolo del bilancio partecipativo.
         createdAt:
           type: string
           format: date-time
+          description: Data di creazione.
         expirationDate:
           type: string
           format: date
+          description: Data di scadenza.
       required:
         - options
         - id
@@ -1649,8 +1998,10 @@ components:
         timeStamp:
           type: string
           format: date-time
+          description: Data e ora dell'errore.
         message:
           type: string
+          description: Messaggio dell'errore.
         details:
           type: array
           items:
@@ -1672,12 +2023,16 @@ components:
       properties:
         currentPage:
           type: integer
+          description: Numero della pagina per la paginazione.
         objectsPerPage:
           type: integer
+          description: Numero di elementi per pagina.
         totalObjects:
           type: integer
+          description: Numero totale di oggetti.
         totalPages:
           type: integer
+          description: Numero totale di pagine.
       required:
         - currentPage
         - objectsPerPage
@@ -1711,26 +2066,26 @@ components:
     Attachment:
       properties:
         id:
-          description: ''
+          description: ID univoco dell'allegato.
           type: integer
           minimum: 1
           maximum: 2147483647
         fileName:
-          description: ''
+          description: Nome del file.
           type: string
           maxLength: 255
         filePath:
-          description: ''
+          description: Path del file.
           type: string
           maxLength: 500
         fileType:
-          description: ''
+          description: Tipo di file.
           default: 'NULL'
           type: string
           maxLength: 50
           nullable: true
         uploadedAt:
-          description: ''
+          description: Data di caricamento.
           default: current_timestamp()
           type: string
       type: object
@@ -1742,12 +2097,12 @@ components:
     Category:
       properties:
         id:
-          description: ''
+          description: ID univoco della categoria.
           type: integer
           minimum: 1
           maximum: 2147483647
         name:
-          description: ''
+          description: Nome della categoria.
           type: string
           maxLength: 100
       type: object
@@ -1757,17 +2112,17 @@ components:
     InitiativeSignature:
       properties:
         userId:
-          description: ''
+          description: ID dell'utente firmatario.
           type: integer
           minimum: -2147483648
           maximum: 2147483647
         initiativeId:
-          description: ''
+          description: ID dell'iniziativa firmata.
           type: integer
           minimum: -2147483648
           maximum: 2147483647
         signatureDate:
-          description: ''
+          description: Data della firma.
           default: current_timestamp()
           type: string
       type: object
@@ -1778,23 +2133,23 @@ components:
     Initiative:
       properties:
         id:
-          description: ''
+          description: ID univoco dell'iniziativa.
           type: integer
           minimum: 1
           maximum: 2147483647
         title:
-          description: ''
+          description: Titolo dell'iniziativa.
           type: string
           maxLength: 255
         place:
-          description: ''
+          description: Luogo o area di interesse.
           default: 'NULL'
           type: string
           maxLength: 64
           nullable: true
         status:
           type: string
-          description: ''
+          description: Stato attuale dell'iniziativa.
           default: '''In corso'''
           enum:
             - In corso
@@ -1803,7 +2158,7 @@ components:
             - Scaduta
           nullable: true
         signatures:
-          description: numero di firme
+          description: Numero di firme raccolte.
           default: '0'
           type: integer
           minimum: -2147483648
@@ -1811,41 +2166,42 @@ components:
           nullable: true
         creationDate:
           type: string
-          description: ''
+          description: Data di creazione.
           format: date
         expirationDate:
-          description: ''
+          description: Data di scadenza.
           default: 'NULL'
           type: string
           format: date
           nullable: true
         authorId:
-          description: ''
+          description: 'ID univoco dell''autore. '
           default: 'NULL'
           type: integer
           minimum: -2147483648
           maximum: 2147483647
           nullable: true
         categoryId:
-          description: ''
+          description: ID univoco della categoria.
           type: integer
           minimum: -2147483648
           maximum: 2147483647
         platformId:
-          description: ''
+          description: ID univoco della piattaforma.
           default: 'NULL'
           type: integer
           minimum: -2147483648
           maximum: 2147483647
           nullable: true
         externalURL:
-          description: ''
+          description: URL di reindirizzamento alla piattaforma esterna.
           default: 'NULL'
           type: string
           maxLength: 500
           nullable: true
         attachment:
           $ref: '#/components/schemas/Attachment'
+          description: Immagine
           nullable: true
       type: object
       required:
@@ -1856,17 +2212,17 @@ components:
     SavedInitiative:
       properties:
         userId:
-          description: ''
+          description: ID dell'utente che ha salvato l'iniziativa.
           type: integer
           minimum: -2147483648
           maximum: 2147483647
         initiativeId:
-          description: ''
+          description: ID dell'iniziativa salvata.
           type: integer
           minimum: -2147483648
           maximum: 2147483647
         savedAt:
-          description: ''
+          description: Data di salvataggio.
           default: current_timestamp()
           type: string
       type: object
@@ -1877,19 +2233,20 @@ components:
     Notification:
       properties:
         id:
-          description: ''
+          description: ID univoco della notifica.
           type: integer
           minimum: 1
           maximum: 2147483647
         text:
-          description: ''
+          description: Contenuto della notifica.
           type: string
           maxLength: 65535
         isRead:
           type: boolean
+          description: Flag che indica se è stata letta o no.
           nullable: true
         creationDate:
-          description: ''
+          description: Data di creazione.
           default: current_timestamp()
           type: string
         linkRef:
@@ -1906,16 +2263,18 @@ components:
     PBOption:
       properties:
         id:
-          description: ''
+          description: ID univoco dell'opzione.
           type: integer
           minimum: 1
           maximum: 2147483647
         text:
-          description: ''
+          description: Testo di descrizione dell'opzione.
           type: string
           maxLength: 250
         position:
-          description: ''
+          description: >-
+            Posizione relativa alla numerazione nell'elenco di opzioni del
+            bilancio.
           type: integer
           minimum: -2147483648
           maximum: 2147483647
@@ -1927,22 +2286,22 @@ components:
     Platform:
       properties:
         id:
-          description: ''
+          description: ID univoco della piattaforma.
           type: integer
           minimum: 1
           maximum: 2147483647
         platformName:
-          description: ''
+          description: Nome della piattaforma.
           type: string
           maxLength: 100
         iconPath:
-          description: ''
+          description: Path dell'icona.
           default: 'NULL'
           type: string
           maxLength: 255
           nullable: true
         platformLink:
-          description: ''
+          description: Link di reindirizzamento alla piattaforma.
           default: 'NULL'
           type: string
           maxLength: 255
@@ -1954,34 +2313,35 @@ components:
     Reply:
       properties:
         id:
-          description: ''
+          description: ID univoco della risposta.
           type: integer
           minimum: 1
           maximum: 2147483647
         initiativeId:
-          description: ''
+          description: ID univoco dell'iniziativa a cui è rivolta la risposta.
           type: integer
           minimum: -2147483648
           maximum: 2147483647
         adminId:
-          description: ''
+          description: ID univoco dell'amministratore che ha fornito la risposta.
           default: 'NULL'
           type: integer
           minimum: -2147483648
           maximum: 2147483647
           nullable: true
         replyText:
-          description: ''
+          description: Testo di esposizione delle motivazioni della risposta.
           type: string
           maxLength: 65535
         creationDate:
-          description: ''
+          description: Data di creazione.
           default: current_timestamp()
           type: string
         attachments:
           type: array
           items:
             $ref: '#/components/schemas/AttachmentNoID'
+          description: Eventuali allegati (immagini o PDF)
           nullable: true
       type: object
       required:
@@ -1992,32 +2352,36 @@ components:
     User:
       properties:
         id:
-          description: ''
+          description: ID univoco dell'utente.
           type: integer
           minimum: 1
           maximum: 2147483647
         firstName:
-          description: ''
+          description: Nome dell'utente.
           type: string
           maxLength: 100
         lastName:
-          description: ''
+          description: Cognome dell'utente.
           type: string
           maxLength: 100
         fiscalCode:
-          description: ''
+          description: Codice fiscale dell'utente.
           type: string
           maxLength: 16
         email:
-          description: ''
+          description: Email dell'utente.
           type: string
           maxLength: 150
         isAdmin:
           type: boolean
+          description: >-
+            Flag che determina se l'utente può svolgere il ruolo di
+            amministratore.
         isCitizen:
           type: boolean
+          description: Flag che determina se l'utente può svolgere il ruolo di cittadino.
         createdAt:
-          description: ''
+          description: Data di registrazione.
           default: current_timestamp()
           type: string
       type: object
