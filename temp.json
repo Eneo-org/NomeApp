@@ -1,0 +1,31 @@
+"/initiatives/cooldown": {
+  "get": {
+    "summary": "Check Cooldown Status",
+    "description": "Verifica se l'utente ha creato un'iniziativa negli ultimi 14 giorni.",
+    "tags": ["Initiatives"],
+    "security": [],
+    "responses": {
+      "200": {
+        "description": "Stato cooldown recuperato.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "allowed": {
+                  "type": "boolean",
+                  "description": "Se true, l'utente può creare una nuova iniziativa."
+                },
+                "remainingMs": {
+                  "type": "integer",
+                  "description": "Millisecondi rimanenti alla fine del blocco (presente solo se allowed è false)."
+                }
+              }
+            }
+          }
+        }
+      },
+      "401": { "description": "Utente non autenticato" }
+    }
+  }
+}

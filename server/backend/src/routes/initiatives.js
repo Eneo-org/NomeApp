@@ -28,7 +28,7 @@ router.get("/:id", initiativeController.getInitiativeById);
 
 // ... il resto delle rotte rimangono uguali ...
 router.patch("/:id", authMiddleware, initiativeController.changeExpirationDate);
-router.put("/:id", authMiddleware, initiativeController.updateInitiative);
+// router.put("/:id", authMiddleware, initiativeController.updateInitiative); // Commentato: funzione non implementata nel controller
 
 // (Assicurati che questa parte combaci con il frontend come abbiamo detto prima)
 router.post(
@@ -41,6 +41,6 @@ router.post(
 router.post("/:id/signatures", authMiddleware, initiativeController.signInitiative);
 router.post("/:id/follows", authMiddleware, initiativeController.followInitiative);
 router.delete("/:id/follows", authMiddleware, initiativeController.unfollowInitiative);
-router.patch("/:id/status", authMiddleware, initiativeController.updateInitiativeStatus);
+// router.patch("/:id/status", authMiddleware, initiativeController.updateInitiativeStatus);
 
 module.exports = router;

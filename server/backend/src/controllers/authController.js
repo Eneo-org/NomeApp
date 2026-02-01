@@ -132,7 +132,7 @@ exports.googleLogin = async (req, res) => {
     }
 
     console.log(`[LOGIN] Utente non trovato e non pre-autorizzato. Avvio registrazione per: ${payload.email}`);
-    return res.status(200).json({
+    return res.status(404).json({
       status: "NEED_REGISTRATION",
       googleData: {
         firstName: payload.given_name,
@@ -181,11 +181,74 @@ exports.sendOtp = async (req, res) => {
         <html>
         <head>
             <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Verifica Email</title>
         </head>
-        <body style="font-family: sans-serif; padding: 20px;">
-            <h1>Il tuo codice OTP: ${otp}</h1>
-            <p>Inserisci questo codice per completare la registrazione.</p>
+        <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                    <td style="padding: 20px 0 30px 0;">
+                        
+                        <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="border-collapse: collapse; border: 1px solid #dedede; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                            
+                            <tr>
+                                <td bgcolor="#C00D0E" style="padding: 30px 30px; text-align: center;">
+                                    <h1 style="margin: 0; font-size: 24px; color: #ffffff; letter-spacing: 1px;">TRENTO PARTECIPA</h1>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td style="padding: 40px 30px;">
+                                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                        <tr>
+                                            <td style="color: #333333; font-size: 16px; line-height: 24px;">
+                                                Ciao,
+                                                <br><br>
+                                                Grazie per esserti unito a <strong>Trento Partecipa</strong>. Per completare la tua registrazione e verificare il tuo account, utilizza il codice OTP qui sotto.
+                                            </td>
+                                        </tr>
+                                        
+                                        <tr>
+                                            <td style="padding: 30px 0; text-align: center;">
+                                                <span style="display: inline-block; padding: 15px 30px; font-size: 32px; font-family: monospace; font-weight: bold; color: #C00D0E; background-color: #fdf0f0; border-radius: 6px; border: 1px dashed #C00D0E; letter-spacing: 5px;">
+                                                    ${otp}
+                                                </span>
+                                            </td>
+                                        </tr>
+
+                                        <tr>
+                                            <td style="color: #666666; font-size: 14px; line-height: 20px;">
+                                                ⚠️ <strong>Importante:</strong>
+                                                <ul>
+                                                    <li>Questo codice scadrà tra <strong>5 minuti</strong>.</li>
+                                                    <li>Se non hai richiesto tu questo codice, ignora pure questa email.</li>
+                                                    <li>Non condividere questo codice con nessuno.</li>
+                                                </ul>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td bgcolor="#eeeeee" style="padding: 20px 30px;">
+                                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                        <tr>
+                                            <td style="color: #999999; font-size: 12px; text-align: center;">
+                                                &copy; ${new Date().getFullYear()} Comune di Trento - Piattaforma di Partecipazione.<br>
+                                                Questa è una email automatica, per favore non rispondere.
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+
+                        </table>
+                    </td>
+                </tr>
+            </table>
+
         </body>
         </html>
       `,

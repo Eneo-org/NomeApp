@@ -144,7 +144,6 @@ onMounted(() => loadAdmins());
           <th>Cognome e Nome</th>
           <th>Codice Fiscale</th>
           <th>Email</th>
-          <th>Ruolo</th>
           <th>Azioni</th>
         </tr>
       </thead>
@@ -158,7 +157,6 @@ onMounted(() => loadAdmins());
           </td>
           <td>{{ user.fiscalCode }}</td>
           <td>{{ user.email || '-' }}</td>
-          <td><span class="badge-admin">ADMIN</span></td>
           <td>
             <button v-if="user.id !== userStore.user?.id" class="revoke-btn" @click="handleRevoke(user)">
               Rimuovi
@@ -166,7 +164,7 @@ onMounted(() => loadAdmins());
           </td>
         </tr>
         <tr v-if="sortedAdmins.length === 0">
-          <td colspan="5" class="no-data">Nessun amministratore trovato.</td>
+          <td colspan="4" class="no-data">Nessun amministratore trovato.</td>
         </tr>
       </tbody>
     </table>
@@ -310,15 +308,6 @@ onMounted(() => loadAdmins());
 .waiting-text {
   font-style: italic;
   color: var(--secondary-text);
-}
-
-.badge-admin {
-  background: #e74c3c;
-  color: white;
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: bold;
 }
 
 .revoke-btn {

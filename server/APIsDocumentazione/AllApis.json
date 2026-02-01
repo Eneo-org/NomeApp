@@ -23,11 +23,11 @@
     }
   ],
   "paths": {
-    "/initiatives": {
+    "/initiatives/admin/expiring": {
       "get": {
-        "summary": "initiativesList",
+        "summary": "getExpiringInitiatives",
         "deprecated": false,
-        "description": "",
+        "description": "Restituisce le iniziative in scadenza entro 7 giorni. Solo per amministratori.",
         "tags": [
           "Initiatives"
         ],
@@ -35,7 +35,7 @@
           {
             "name": "currentPage",
             "in": "query",
-            "description": "Numero della pagina per la paginazione",
+            "description": "Numero della pagina per la paginazione.",
             "required": false,
             "example": 1,
             "schema": {
@@ -45,7 +45,182 @@
           {
             "name": "objectsPerPage",
             "in": "query",
-            "description": "Numero di elementi per pagina",
+            "description": "Numero di elementi per pagina.",
+            "required": false,
+            "example": 5,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "Simula l'utente loggato (deve essere admin)",
+            "required": true,
+            "example": 1,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista delle iniziative in scadenza.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Initiative"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaDataList"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Utente non autenticato.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "L'utente non ha privilegi di amministratore.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore del server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/initiatives/cooldown": {
+      "get": {
+        "summary": "checkCooldown",
+        "deprecated": false,
+        "description": "Verifica se l'utente può creare una nuova iniziativa (controlla il periodo di cooldown di 14 giorni dall'ultima iniziativa creata).",
+        "tags": [
+          "Initiatives"
+        ],
+        "parameters": [
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "Simula l'utente loggato",
+            "required": true,
+            "example": 1,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Informazioni sul cooldown.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "canCreate": {
+                      "type": "boolean",
+                      "description": "Indica se l'utente può creare una nuova iniziativa."
+                    },
+                    "daysRemaining": {
+                      "type": "integer",
+                      "description": "Numero di giorni rimanenti prima di poter creare una nuova iniziativa.",
+                      "nullable": true
+                    },
+                    "lastInitiativeDate": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "Data dell'ultima iniziativa creata.",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "canCreate"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Utente non autenticato.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore del server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/initiatives": {
+      "get": {
+        "summary": "initiativesList",
+        "deprecated": false,
+        "description": "Restituisce la lista delle iniziative. Supporta parametri per l'applicazione di filtri alla ricerca, per la ricerca testuale e l'ordinamento.",
+        "tags": [
+          "Initiatives"
+        ],
+        "parameters": [
+          {
+            "name": "currentPage",
+            "in": "query",
+            "description": "Numero della pagina per la paginazione.",
+            "required": false,
+            "example": 1,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "objectsPerPage",
+            "in": "query",
+            "description": "Numero di elementi per pagina.",
             "required": false,
             "example": 10,
             "schema": {
@@ -55,7 +230,7 @@
           {
             "name": "status",
             "in": "query",
-            "description": "Filtro per lo stato dell'iniziativa",
+            "description": "Filtro per lo stato dell'iniziativa.",
             "required": false,
             "example": "In corso",
             "schema": {
@@ -65,7 +240,7 @@
           {
             "name": "search",
             "in": "query",
-            "description": "Ricerca libera nel titolo, descrizione e luogo",
+            "description": "Ricerca libera nel titolo, descrizione e luogo.",
             "required": false,
             "example": "Parco",
             "schema": {
@@ -75,7 +250,7 @@
           {
             "name": "categoryID",
             "in": "query",
-            "description": "Filtro per categoria",
+            "description": "ID univoco della categoria (filtro per categoria).",
             "required": false,
             "example": "Sport",
             "schema": {
@@ -85,7 +260,7 @@
           {
             "name": "sortBy",
             "in": "query",
-            "description": "Codice relativo ad un attributo su cui bisogna ordinare",
+            "description": "Codice relativo ad un attributo su cui bisogna ordinare.",
             "required": false,
             "example": 1,
             "schema": {
@@ -95,7 +270,7 @@
           {
             "name": "order",
             "in": "query",
-            "description": "La direzione dell'ordinamento (asc o desc)",
+            "description": "La direzione dell'ordinamento (asc o desc).",
             "required": false,
             "example": "desc",
             "schema": {
@@ -109,7 +284,7 @@
           {
             "name": "minSignatures",
             "in": "query",
-            "description": "Limite inferiore di firme da mostrare",
+            "description": "Limite inferiore di firme da mostrare.",
             "required": false,
             "example": 0,
             "schema": {
@@ -119,7 +294,7 @@
           {
             "name": "maxSignatures",
             "in": "query",
-            "description": "Limite superiore di firme da mostrare",
+            "description": "Limite superiore di firme da mostrare.",
             "required": false,
             "example": 1000,
             "schema": {
@@ -173,7 +348,7 @@
       "post": {
         "summary": "createInitiative",
         "deprecated": false,
-        "description": "Creazione di una nuova iniziativa",
+        "description": "Permette a un cittadino autenticato di creare una nuova iniziativa.",
         "tags": [
           "Initiatives"
         ],
@@ -196,29 +371,29 @@
                 "type": "object",
                 "properties": {
                   "title": {
-                    "description": "Titolo iniziativa",
+                    "description": "Titolo dell'iniziativa.",
                     "example": "",
                     "type": "string"
                   },
                   "description": {
-                    "description": "Descrizione",
+                    "description": "Descrizione dettagliata della proposta.",
                     "example": "",
                     "type": "string"
                   },
                   "place": {
-                    "description": "Luogo",
+                    "description": "Luogo o area di interesse.",
                     "example": "",
                     "type": "string"
                   },
                   "categoryId": {
                     "type": "integer",
-                    "description": "ID categoria",
+                    "description": "ID univoco della categoria.",
                     "example": 0
                   },
                   "attachments": {
                     "format": "binary",
                     "type": "string",
-                    "description": "Immagini",
+                    "description": "Eventuali allegati (Immagini o PDF).",
                     "example": ""
                   }
                 }
@@ -304,7 +479,7 @@
       "get": {
         "summary": "initiativeDetails",
         "deprecated": false,
-        "description": "",
+        "description": "Restituisce i dettagli completi di una singola iniziativa selezionata dall'utente.",
         "tags": [
           "Initiatives"
         ],
@@ -312,7 +487,7 @@
           {
             "name": "id",
             "in": "path",
-            "description": "",
+            "description": "ID univoco dell'iniziativa.",
             "required": true,
             "schema": {
               "type": "integer"
@@ -339,7 +514,8 @@
                   "$ref": "#/components/schemas/GenericError"
                 }
               }
-            }
+            },
+            "headers": {}
           },
           "404": {
             "description": "",
@@ -349,7 +525,8 @@
                   "$ref": "#/components/schemas/GenericError"
                 }
               }
-            }
+            },
+            "headers": {}
           }
         },
         "security": []
@@ -357,7 +534,7 @@
       "patch": {
         "summary": "changeExpirationDate",
         "deprecated": false,
-        "description": "",
+        "description": "Permette all'amministrazione di prorogare la data di scadenza di un'iniziativa.",
         "tags": [
           "Initiatives"
         ],
@@ -365,7 +542,7 @@
           {
             "name": "id",
             "in": "path",
-            "description": "",
+            "description": "ID univoco dell'iniziativa.",
             "required": true,
             "schema": {
               "type": "integer"
@@ -390,7 +567,8 @@
                 "properties": {
                   "expirationDate": {
                     "type": "string",
-                    "format": "date"
+                    "format": "date",
+                    "description": "Nuova data di scadenza."
                   }
                 },
                 "required": [
@@ -460,89 +638,13 @@
           }
         },
         "security": []
-      },
-      "put": {
-        "summary": "updateInitiative - DA CAPIRE",
-        "deprecated": false,
-        "description": "",
-        "tags": [
-          "Initiatives"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
-            "name": "X-Mock-User-Id",
-            "in": "header",
-            "description": "",
-            "required": true,
-            "example": 0,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DetailedInitiative"
-                }
-              }
-            },
-            "headers": {}
-          },
-          "404": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GenericError"
-                }
-              }
-            },
-            "headers": {}
-          },
-          "422": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GenericError"
-                }
-              }
-            },
-            "headers": {}
-          },
-          "503": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GenericError"
-                }
-              }
-            },
-            "headers": {}
-          }
-        },
-        "security": []
       }
     },
     "/initiatives/{id}/responses": {
       "post": {
         "summary": "createReply",
         "deprecated": false,
-        "description": "L'operazione deve creare una nuova risposta ma allo stesso tempo modfiicare lo stato dell'iniziativa.",
+        "description": "Permette all'amministrazione di inviare una risposta ufficiale a un'iniziativa, cambiandone lo stato da 'In corso' a 'Respinta' oppure 'Approvata'.",
         "tags": [
           "Initiatives"
         ],
@@ -550,7 +652,7 @@
           {
             "name": "id",
             "in": "path",
-            "description": "",
+            "description": "ID univoco dell'iniziativa.",
             "required": true,
             "schema": {
               "type": "integer"
@@ -574,17 +676,19 @@
                 "type": "object",
                 "properties": {
                   "status": {
+                    "description": "Nuovo stato dell'iniziativa ('Respinta' o 'Approvata').",
                     "example": "",
                     "type": "string"
                   },
                   "motivations": {
+                    "description": "Testo di esposizione delle motivazioni della risposta.",
                     "example": "",
                     "type": "string"
                   },
-                  "ottachments": {
+                  "attachments": {
                     "format": "binary",
                     "type": "string",
-                    "description": "PDF o Immagini",
+                    "description": "Eventuali allegati (immagini o PDF).",
                     "example": ""
                   }
                 }
@@ -658,7 +762,7 @@
       "post": {
         "summary": "signInitiative",
         "deprecated": false,
-        "description": "",
+        "description": "Permette a un cittadino di firmare un'iniziativa.",
         "tags": [
           "Initiatives"
         ],
@@ -666,7 +770,7 @@
           {
             "name": "id",
             "in": "path",
-            "description": "",
+            "description": "ID univoco dell'iniziativa.",
             "required": true,
             "schema": {
               "type": "integer"
@@ -747,7 +851,7 @@
       "post": {
         "summary": "saveIniziative",
         "deprecated": false,
-        "description": "Salva iniziativa",
+        "description": "Salva un'iniziativa nella lista delle iniziative seguite dall'utente affinché possa monitorarne lo stato.",
         "tags": [
           "Initiatives"
         ],
@@ -755,7 +859,7 @@
           {
             "name": "id",
             "in": "path",
-            "description": "",
+            "description": "ID univoco dell'iniziativa.",
             "required": true,
             "schema": {
               "type": "integer"
@@ -823,7 +927,7 @@
       "delete": {
         "summary": "removeFromSavedInitiatives",
         "deprecated": false,
-        "description": "Salva iniziativa",
+        "description": "Rimuove l'iniziativa dalla lista delle iniziative seguite.",
         "tags": [
           "Initiatives"
         ],
@@ -831,7 +935,7 @@
           {
             "name": "id",
             "in": "path",
-            "description": "",
+            "description": "ID univoco dell'iniziativa.",
             "required": true,
             "schema": {
               "type": "integer"
@@ -904,7 +1008,7 @@
       "post": {
         "summary": "createParticipatoryBudget",
         "deprecated": false,
-        "description": "Creazione bilancio partecipativo",
+        "description": "Creazione di un nuovo bilancio partecipativo.",
         "tags": [
           "ParticipatoryBudgets"
         ],
@@ -945,28 +1049,34 @@
                         "$ref": "#/components/schemas/PBOption"
                       },
                       "minItems": 3,
-                      "maxItems": 3
+                      "maxItems": 3,
+                      "description": "Array di opzioni."
                     },
                     "id": {
-                      "type": "integer"
+                      "type": "integer",
+                      "description": "ID univoco del bilancio partecipativo."
                     },
                     "creatorId": {
-                      "type": "integer"
+                      "type": "integer",
+                      "description": "ID univoco del creatore del bilancio partecipativo."
                     },
                     "title": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "Titolo del bilancio partecipativo."
                     },
                     "createdAt": {
                       "type": "string",
-                      "format": "date-time"
+                      "format": "date-time",
+                      "description": "Data di creazione."
                     },
                     "expirationDate": {
                       "type": "string",
-                      "format": "date"
+                      "format": "date",
+                      "description": "Data di scadenza."
                     },
                     "votedOptionId": {
                       "type": "integer",
-                      "description": "opzione votata"
+                      "description": "ID dell'opzione votata."
                     }
                   },
                   "required": [
@@ -1034,7 +1144,7 @@
       "get": {
         "summary": "participatoryBudgetsArchive",
         "deprecated": false,
-        "description": "",
+        "description": "Restituisce l'archivio storico dei bilanci partecipativi conclusi.",
         "tags": [
           "ParticipatoryBudgets"
         ],
@@ -1042,7 +1152,7 @@
           {
             "name": "currentPage",
             "in": "query",
-            "description": "Numero pagina della lista",
+            "description": "Numero della pagina per la paginazione.",
             "required": false,
             "example": 1,
             "schema": {
@@ -1052,7 +1162,7 @@
           {
             "name": "objectsPerPage",
             "in": "query",
-            "description": "Numero di bilanci returnati per ogni pagina",
+            "description": "Numero di elementi per pagina.",
             "required": false,
             "example": 10,
             "schema": {
@@ -1129,7 +1239,7 @@
       "get": {
         "summary": "participatoryBudgetDetails",
         "deprecated": false,
-        "description": "",
+        "description": "Restituisce i dettagli di un bilancio partecipativo.",
         "tags": [
           "ParticipatoryBudgets"
         ],
@@ -1137,7 +1247,7 @@
           {
             "name": "status",
             "in": "query",
-            "description": "",
+            "description": "Filtro per stato (attivo o non).",
             "required": false,
             "schema": {
               "type": "string",
@@ -1168,7 +1278,7 @@
                   "properties": {
                     "votedOptionId": {
                       "type": "integer",
-                      "description": "identifica l'opzione che l'utente ha votato se ha già votato. ",
+                      "description": "Identifica l'opzione che l'utente ha votato se ha già votato. ",
                       "nullable": true
                     },
                     "options": {
@@ -1177,24 +1287,30 @@
                         "$ref": "#/components/schemas/PBOption"
                       },
                       "minItems": 3,
-                      "maxItems": 3
+                      "maxItems": 3,
+                      "description": "Array di opzioni."
                     },
                     "id": {
-                      "type": "integer"
+                      "type": "integer",
+                      "description": "ID univoco del bilancio partecipativo."
                     },
                     "creatorId": {
-                      "type": "integer"
+                      "type": "integer",
+                      "description": "ID univoco del creatore del bilancio partecipativo."
                     },
                     "title": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "Titolo del bilancio partecipativo."
                     },
                     "createdAt": {
                       "type": "string",
-                      "format": "date-time"
+                      "format": "date-time",
+                      "description": "Data di creazione."
                     },
                     "expirationDate": {
                       "type": "string",
-                      "format": "date"
+                      "format": "date",
+                      "description": "Data di scadenza."
                     }
                   },
                   "required": [
@@ -1218,7 +1334,7 @@
       "post": {
         "summary": "voteParticipatoryBudget",
         "deprecated": false,
-        "description": "è importante usare l'attributo position per votare e non l'id che invece rappresenta l'id assoluto. ",
+        "description": "Permette a un cittadino di esprimere il proprio voto per una delle opzioni del bilancio partecipativo.",
         "tags": [
           "ParticipatoryBudgets"
         ],
@@ -1226,7 +1342,7 @@
           {
             "name": "id",
             "in": "path",
-            "description": "",
+            "description": "ID univoco del bilancio partecipativo.",
             "required": true,
             "schema": {
               "type": "integer"
@@ -1252,7 +1368,8 @@
                   "position": {
                     "type": "integer",
                     "minimum": 2,
-                    "maximum": 5
+                    "maximum": 5,
+                    "description": "Posizione dell'opzione scelta."
                   }
                 },
                 "required": [
@@ -1339,7 +1456,7 @@
       "post": {
         "summary": "loginAndAuth",
         "deprecated": false,
-        "description": "",
+        "description": "Autenticazione utente tramite provider esterno. Verifica l'identità e restituisce il token di sessione.",
         "tags": [
           "Users/Auth"
         ],
@@ -1351,7 +1468,8 @@
                 "type": "object",
                 "properties": {
                   "tokenId": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Token fornito dal provider di identità."
                   }
                 },
                 "required": [
@@ -1397,6 +1515,49 @@
             },
             "headers": {}
           },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "",
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "googleData": {
+                      "type": "object",
+                      "properties": {
+                        "firstName": {
+                          "type": "string"
+                        },
+                        "lastName": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "fiscalCode": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "firstName",
+                        "lastName",
+                        "email",
+                        "fiscalCode"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "googleData"
+                  ]
+                }
+              }
+            }
+          },
           "500": {
             "description": "",
             "content": {
@@ -1416,7 +1577,7 @@
       "post": {
         "summary": "logout",
         "deprecated": false,
-        "description": "",
+        "description": "Termina la sessione dell'utente corrente.",
         "tags": [
           "Users/Auth"
         ],
@@ -1445,11 +1606,156 @@
         "security": []
       }
     },
+    "/auth/otp": {
+      "post": {
+        "summary": "RichiestaOTP",
+        "deprecated": false,
+        "description": "Invia un codice OTP (One-Time Password) via email per la verifica dell'identità durante la registrazione di nuovi utenti.",
+        "tags": [
+          "Users/Auth"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email"
+                ]
+              },
+              "examples": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "summary": "userRegistration",
+        "deprecated": false,
+        "description": "Registrazione di un nuovo utente (Cittadino o Amministratore pre-autorizzato) dopo la verifica OTP.",
+        "tags": [
+          "Users/Auth"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "firstName": {
+                    "type": "string",
+                    "description": "Nome dell'utente."
+                  },
+                  "lastName": {
+                    "type": "string",
+                    "description": "Cognome dell'utente."
+                  },
+                  "fiscalCode": {
+                    "type": "string",
+                    "description": "Codice fiscale dell'utente."
+                  },
+                  "email": {
+                    "type": "string",
+                    "description": "Email dell'utente."
+                  },
+                  "otp": {
+                    "type": "string",
+                    "description": "Codice OTP ricevuto via email."
+                  }
+                },
+                "required": [
+                  "firstName",
+                  "lastName",
+                  "fiscalCode",
+                  "email",
+                  "otp"
+                ]
+              },
+              "examples": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Utente registrato con successo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Richiesta non valida o OTP errato.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Utente già esistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore del server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
     "/users/me/initiatives": {
       "get": {
         "summary": "initiativesDashboard",
         "deprecated": false,
-        "description": "",
+        "description": "Restituisce i dati per la dashboard personale dell'utente (iniziative firmate, create o seguite).",
         "tags": [
           "Users"
         ],
@@ -1457,7 +1763,7 @@
           {
             "name": "relation",
             "in": "query",
-            "description": "Enum: signed, created, followed",
+            "description": "Tipo di relazione (signed, created, followed).",
             "required": false,
             "example": "created",
             "schema": {
@@ -1472,7 +1778,7 @@
           {
             "name": "currentPage",
             "in": "query",
-            "description": "",
+            "description": "Numero della pagina per la paginazione.",
             "required": false,
             "schema": {
               "type": "integer"
@@ -1481,7 +1787,7 @@
           {
             "name": "objectsPerPage",
             "in": "query",
-            "description": "",
+            "description": "Numero di elementi per pagina.",
             "required": false,
             "schema": {
               "type": "integer"
@@ -1555,7 +1861,7 @@
       "get": {
         "summary": "notificationsList",
         "deprecated": false,
-        "description": "Notifiche dell'utente",
+        "description": "Restituisce la lista delle notifiche dell'utente loggato, con possibilità di filtrare per lette/non lette.",
         "tags": [
           "Users"
         ],
@@ -1563,7 +1869,7 @@
           {
             "name": "read",
             "in": "query",
-            "description": "Se false, restituisce solo le notifiche non lette",
+            "description": "Se false, restituisce solo le notifiche non lette.",
             "required": false,
             "example": "false",
             "schema": {
@@ -1573,7 +1879,7 @@
           {
             "name": "currentPage",
             "in": "query",
-            "description": "",
+            "description": "Numero della pagina per la paginazione.",
             "required": false,
             "schema": {
               "type": "integer"
@@ -1582,7 +1888,7 @@
           {
             "name": "objectsPerPage",
             "in": "query",
-            "description": "",
+            "description": "Numero di elementi per pagina.",
             "required": false,
             "schema": {
               "type": "integer"
@@ -1666,7 +1972,7 @@
       "patch": {
         "summary": "readNotification",
         "deprecated": false,
-        "description": "",
+        "description": "Segna una specifica notifica come letta.",
         "tags": [
           "Users"
         ],
@@ -1674,7 +1980,7 @@
           {
             "name": "id",
             "in": "path",
-            "description": "",
+            "description": "ID univoco della notifica.",
             "required": true,
             "schema": {
               "type": "integer"
@@ -1700,7 +2006,7 @@
                   "isRead": {
                     "type": "boolean",
                     "default": true,
-                    "description": "si accetta solo true per segnare la notifica letta"
+                    "description": "Impostare a true per segnare come letta."
                   }
                 },
                 "required": [
@@ -1772,11 +2078,92 @@
         "security": []
       }
     },
+    "/users/me/notifications/mark-all-as-read": {
+      "patch": {
+        "summary": "markAllNotificationsAsRead",
+        "deprecated": false,
+        "description": "Segna tutte le notifiche dell'utente corrente come lette.",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "Simula l'utente loggato",
+            "required": true,
+            "example": 1,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+              },
+              "examples": {}
+            }
+          },
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "description": "Tutte le notifiche sono state segnate come lette.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "updatedCount": {
+                      "type": "integer",
+                      "description": "Numero di notifiche aggiornate."
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "updatedCount"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Utente non autenticato.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore del server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
     "/users/me": {
       "get": {
         "summary": "getUser",
         "deprecated": false,
-        "description": "",
+        "description": "Restituisce i dettagli del profilo dell'utente loggato.",
         "tags": [
           "Users"
         ],
@@ -1856,7 +2243,7 @@
       "post": {
         "summary": "userRegistration",
         "deprecated": false,
-        "description": "",
+        "description": "Registrazione di un nuovo utente (Cittadino o Amministratore) al primo accesso.",
         "tags": [
           "Users"
         ],
@@ -1868,15 +2255,20 @@
                 "type": "object",
                 "properties": {
                   "email": {
+                    "type": "string",
+                    "description": "Email inserita dall'utente."
+                  },
+                  "googleToken": {
                     "type": "string"
                   },
-                  "fiscalCode": {
+                  "otp": {
                     "type": "string"
                   }
                 },
                 "required": [
                   "email",
-                  "fiscalCode"
+                  "googleToken",
+                  "otp"
                 ]
               },
               "examples": {}
@@ -1946,7 +2338,7 @@
       "get": {
         "summary": "showAdminUsers",
         "deprecated": false,
-        "description": "",
+        "description": "Permette agli amministratori di visualizzare e cercare nella lista degli utenti registrati.",
         "tags": [
           "Users"
         ],
@@ -1954,7 +2346,7 @@
           {
             "name": "isAdmin",
             "in": "query",
-            "description": "",
+            "description": "Filtra per mostrare solo gli admin.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -2036,11 +2428,128 @@
         "security": []
       }
     },
+    "/users/admin/pre-authorize": {
+      "post": {
+        "summary": "preAuthorizeAdmin",
+        "deprecated": false,
+        "description": "Pre-autorizza un codice fiscale per la registrazione come amministratore. Solo gli amministratori possono utilizzare questa API.",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "name": "X-Mock-User-Id",
+            "in": "header",
+            "description": "Simula l'utente loggato (deve essere admin)",
+            "required": true,
+            "example": 1,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fiscalCode": {
+                    "type": "string",
+                    "description": "Codice fiscale dell'amministratore da pre-autorizzare."
+                  }
+                },
+                "required": [
+                  "fiscalCode"
+                ]
+              },
+              "examples": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Amministratore pre-autorizzato con successo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "fiscalCode": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "fiscalCode"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Richiesta non valida.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Utente non autenticato.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "L'utente non ha privilegi di amministratore.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Codice fiscale già pre-autorizzato.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore del server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericError"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
     "/users/{id}": {
       "patch": {
         "summary": "changePrivileges",
         "deprecated": false,
-        "description": "",
+        "description": "Permette di modificare i privilegi di un utente.",
         "tags": [
           "Users"
         ],
@@ -2048,7 +2557,7 @@
           {
             "name": "id",
             "in": "path",
-            "description": "",
+            "description": "ID univoco dell'utente.",
             "required": true,
             "schema": {
               "type": "integer"
@@ -2073,7 +2582,7 @@
                 "properties": {
                   "isAdmin": {
                     "type": "boolean",
-                    "description": "di default false"
+                    "description": "Di default false."
                   }
                 },
                 "required": [
@@ -2106,7 +2615,7 @@
       "get": {
         "summary": "categoriesList",
         "deprecated": false,
-        "description": "",
+        "description": "Restituisce la lista delle categorie.",
         "tags": [
           "Filters"
         ],
@@ -2153,7 +2662,7 @@
       "get": {
         "summary": "platformsList",
         "deprecated": false,
-        "description": "",
+        "description": "Restituisce la lista delle piattaforme.",
         "tags": [
           "Filters"
         ],
@@ -2199,59 +2708,26 @@
   },
   "components": {
     "schemas": {
-      "InitiativeCreation": {
-        "type": "object",
-        "properties": {
-          "title": {
-            "type": "string",
-            "description": "Titolo dell'iniziativa"
-          },
-          "description": {
-            "type": "string",
-            "description": "Descrizione dell'iniziativa"
-          },
-          "place": {
-            "type": "string"
-          },
-          "categoryId": {
-            "type": "integer"
-          },
-          "attachments": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Attachment"
-            },
-            "description": "allegati"
-          }
-        },
-        "required": [
-          "title",
-          "description",
-          "place",
-          "categoryId",
-          "attachments"
-        ]
-      },
       "DetailedInitiative": {
         "properties": {
           "id": {
-            "description": "",
+            "description": "ID univoco dell'iniziativa.",
             "type": "integer",
             "minimum": 1,
             "maximum": 2147483647
           },
           "title": {
-            "description": "",
+            "description": "Titolo dell'iniziativa.",
             "type": "string",
             "maxLength": 255
           },
           "description": {
-            "description": "",
+            "description": "Descrizione dettagliata della proposta.",
             "type": "string",
             "maxLength": 65535
           },
           "place": {
-            "description": "",
+            "description": "Luogo o area di interesse.",
             "default": "NULL",
             "type": "string",
             "maxLength": 64,
@@ -2259,7 +2735,7 @@
           },
           "status": {
             "type": "string",
-            "description": "",
+            "description": "Stato attuale dell'iniziativa.",
             "default": "'In corso'",
             "enum": [
               "In corso",
@@ -2270,7 +2746,7 @@
             "nullable": true
           },
           "signatures": {
-            "description": "numero di firme",
+            "description": "Numero di firme raccolte.",
             "default": "0",
             "type": "integer",
             "minimum": -2147483648,
@@ -2279,18 +2755,18 @@
           },
           "creationDate": {
             "type": "string",
-            "description": "",
+            "description": "Data di creazione.",
             "format": "date"
           },
           "expirationDate": {
-            "description": "",
+            "description": "Data di scadenza.",
             "default": "NULL",
             "type": "string",
             "format": "date",
             "nullable": true
           },
           "authorId": {
-            "description": "",
+            "description": "ID univoco dell'autore. ",
             "default": "NULL",
             "type": "integer",
             "minimum": -2147483648,
@@ -2298,13 +2774,13 @@
             "nullable": true
           },
           "categoryId": {
-            "description": "",
+            "description": "ID univoco della categoria.",
             "type": "integer",
             "minimum": -2147483648,
             "maximum": 2147483647
           },
           "platformId": {
-            "description": "",
+            "description": "ID univoco della piattaforma di provenienza.",
             "default": "NULL",
             "type": "integer",
             "minimum": -2147483648,
@@ -2312,7 +2788,7 @@
             "nullable": true
           },
           "externalURL": {
-            "description": "",
+            "description": "URL di reindirizzamento alla piattaforma esterna.",
             "default": "NULL",
             "type": "string",
             "maxLength": 500,
@@ -2323,11 +2799,13 @@
             "items": {
               "$ref": "#/components/schemas/Attachment"
             },
+            "description": "Array contenente gli eventuali allegati all'iniziativa.",
             "nullable": true
           },
           "reply": {
             "$ref": "#/components/schemas/Reply",
-            "nullable": true
+            "nullable": true,
+            "description": "Eventuale risposta del Comune."
           }
         },
         "type": "object",
@@ -2339,37 +2817,6 @@
           "categoryId"
         ]
       },
-      "AdministrationReply": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "In corso",
-              "Approvata",
-              "Respinta",
-              "Scaduta",
-              "Archiviata"
-            ],
-            "description": "Stato da modificare nell'iniziativa"
-          },
-          "motivations": {
-            "type": "string",
-            "description": "Motivazioni che il comune esrime in risposta all'iniziativa"
-          },
-          "attachments": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Attachment"
-            },
-            "nullable": true
-          }
-        },
-        "required": [
-          "status",
-          "motivations"
-        ]
-      },
       "ParticipatoryBudget": {
         "type": "object",
         "properties": {
@@ -2379,24 +2826,30 @@
               "$ref": "#/components/schemas/PBOption"
             },
             "minItems": 3,
-            "maxItems": 3
+            "maxItems": 3,
+            "description": "Array di opzioni."
           },
           "id": {
-            "type": "integer"
+            "type": "integer",
+            "description": "ID univoco del bilancio partecipativo."
           },
           "creatorId": {
-            "type": "integer"
+            "type": "integer",
+            "description": "ID univoco del creatore del bilancio partecipativo."
           },
           "title": {
-            "type": "string"
+            "type": "string",
+            "description": "Titolo del bilancio partecipativo."
           },
           "createdAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Data di creazione."
           },
           "expirationDate": {
             "type": "string",
-            "format": "date"
+            "format": "date",
+            "description": "Data di scadenza."
           }
         },
         "required": [
@@ -2432,10 +2885,12 @@
         "properties": {
           "timeStamp": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Data e ora dell'errore."
           },
           "message": {
-            "type": "string"
+            "type": "string",
+            "description": "Messaggio dell'errore."
           },
           "details": {
             "type": "array",
@@ -2466,16 +2921,20 @@
         "type": "object",
         "properties": {
           "currentPage": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Numero della pagina per la paginazione."
           },
           "objectsPerPage": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Numero di elementi per pagina."
           },
           "totalObjects": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Numero totale di oggetti."
           },
           "totalPages": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Numero totale di pagine."
           }
         },
         "required": [
@@ -2520,30 +2979,30 @@
       "Attachment": {
         "properties": {
           "id": {
-            "description": "",
+            "description": "ID univoco dell'allegato.",
             "type": "integer",
             "minimum": 1,
             "maximum": 2147483647
           },
           "fileName": {
-            "description": "",
+            "description": "Nome del file.",
             "type": "string",
             "maxLength": 255
           },
           "filePath": {
-            "description": "",
+            "description": "Path del file.",
             "type": "string",
             "maxLength": 500
           },
           "fileType": {
-            "description": "",
+            "description": "Tipo di file.",
             "default": "NULL",
             "type": "string",
             "maxLength": 50,
             "nullable": true
           },
           "uploadedAt": {
-            "description": "",
+            "description": "Data di caricamento.",
             "default": "current_timestamp()",
             "type": "string"
           }
@@ -2559,13 +3018,13 @@
       "Category": {
         "properties": {
           "id": {
-            "description": "",
+            "description": "ID univoco della categoria.",
             "type": "integer",
             "minimum": 1,
             "maximum": 2147483647
           },
           "name": {
-            "description": "",
+            "description": "Nome della categoria.",
             "type": "string",
             "maxLength": 100
           }
@@ -2579,19 +3038,19 @@
       "InitiativeSignature": {
         "properties": {
           "userId": {
-            "description": "",
+            "description": "ID dell'utente firmatario.",
             "type": "integer",
             "minimum": -2147483648,
             "maximum": 2147483647
           },
           "initiativeId": {
-            "description": "",
+            "description": "ID dell'iniziativa firmata.",
             "type": "integer",
             "minimum": -2147483648,
             "maximum": 2147483647
           },
           "signatureDate": {
-            "description": "",
+            "description": "Data della firma.",
             "default": "current_timestamp()",
             "type": "string"
           }
@@ -2606,18 +3065,18 @@
       "Initiative": {
         "properties": {
           "id": {
-            "description": "",
+            "description": "ID univoco dell'iniziativa.",
             "type": "integer",
             "minimum": 1,
             "maximum": 2147483647
           },
           "title": {
-            "description": "",
+            "description": "Titolo dell'iniziativa.",
             "type": "string",
             "maxLength": 255
           },
           "place": {
-            "description": "",
+            "description": "Luogo o area di interesse.",
             "default": "NULL",
             "type": "string",
             "maxLength": 64,
@@ -2625,7 +3084,7 @@
           },
           "status": {
             "type": "string",
-            "description": "",
+            "description": "Stato attuale dell'iniziativa.",
             "default": "'In corso'",
             "enum": [
               "In corso",
@@ -2636,7 +3095,7 @@
             "nullable": true
           },
           "signatures": {
-            "description": "numero di firme",
+            "description": "Numero di firme raccolte.",
             "default": "0",
             "type": "integer",
             "minimum": -2147483648,
@@ -2645,18 +3104,18 @@
           },
           "creationDate": {
             "type": "string",
-            "description": "",
+            "description": "Data di creazione.",
             "format": "date"
           },
           "expirationDate": {
-            "description": "",
+            "description": "Data di scadenza.",
             "default": "NULL",
             "type": "string",
             "format": "date",
             "nullable": true
           },
           "authorId": {
-            "description": "",
+            "description": "ID univoco dell'autore. ",
             "default": "NULL",
             "type": "integer",
             "minimum": -2147483648,
@@ -2664,13 +3123,13 @@
             "nullable": true
           },
           "categoryId": {
-            "description": "",
+            "description": "ID univoco della categoria.",
             "type": "integer",
             "minimum": -2147483648,
             "maximum": 2147483647
           },
           "platformId": {
-            "description": "",
+            "description": "ID univoco della piattaforma.",
             "default": "NULL",
             "type": "integer",
             "minimum": -2147483648,
@@ -2678,7 +3137,7 @@
             "nullable": true
           },
           "externalURL": {
-            "description": "",
+            "description": "URL di reindirizzamento alla piattaforma esterna.",
             "default": "NULL",
             "type": "string",
             "maxLength": 500,
@@ -2686,7 +3145,8 @@
           },
           "attachment": {
             "$ref": "#/components/schemas/Attachment",
-            "nullable": true
+            "nullable": true,
+            "description": "Immagine"
           }
         },
         "type": "object",
@@ -2700,19 +3160,19 @@
       "SavedInitiative": {
         "properties": {
           "userId": {
-            "description": "",
+            "description": "ID dell'utente che ha salvato l'iniziativa.",
             "type": "integer",
             "minimum": -2147483648,
             "maximum": 2147483647
           },
           "initiativeId": {
-            "description": "",
+            "description": "ID dell'iniziativa salvata.",
             "type": "integer",
             "minimum": -2147483648,
             "maximum": 2147483647
           },
           "savedAt": {
-            "description": "",
+            "description": "Data di salvataggio.",
             "default": "current_timestamp()",
             "type": "string"
           }
@@ -2727,22 +3187,23 @@
       "Notification": {
         "properties": {
           "id": {
-            "description": "",
+            "description": "ID univoco della notifica.",
             "type": "integer",
             "minimum": 1,
             "maximum": 2147483647
           },
           "text": {
-            "description": "",
+            "description": "Contenuto della notifica.",
             "type": "string",
             "maxLength": 65535
           },
           "isRead": {
             "type": "boolean",
+            "description": "Flag che indica se è stata letta o no.",
             "nullable": true
           },
           "creationDate": {
-            "description": "",
+            "description": "Data di creazione.",
             "default": "current_timestamp()",
             "type": "string"
           },
@@ -2764,18 +3225,18 @@
       "PBOption": {
         "properties": {
           "id": {
-            "description": "",
+            "description": "ID univoco dell'opzione.",
             "type": "integer",
             "minimum": 1,
             "maximum": 2147483647
           },
           "text": {
-            "description": "",
+            "description": "Testo di descrizione dell'opzione.",
             "type": "string",
             "maxLength": 250
           },
           "position": {
-            "description": "",
+            "description": "Posizione relativa alla numerazione nell'elenco di opzioni del bilancio.",
             "type": "integer",
             "minimum": -2147483648,
             "maximum": 2147483647
@@ -2791,25 +3252,25 @@
       "Platform": {
         "properties": {
           "id": {
-            "description": "",
+            "description": "ID univoco della piattaforma.",
             "type": "integer",
             "minimum": 1,
             "maximum": 2147483647
           },
           "platformName": {
-            "description": "",
+            "description": "Nome della piattaforma.",
             "type": "string",
             "maxLength": 100
           },
           "iconPath": {
-            "description": "",
+            "description": "Path dell'icona.",
             "default": "NULL",
             "type": "string",
             "maxLength": 255,
             "nullable": true
           },
           "platformLink": {
-            "description": "",
+            "description": "Link di reindirizzamento alla piattaforma.",
             "default": "NULL",
             "type": "string",
             "maxLength": 255,
@@ -2822,48 +3283,22 @@
           "platformName"
         ]
       },
-      "PreAuthorized": {
-        "properties": {
-          "fiscalCode": {
-            "description": "",
-            "type": "string",
-            "maxLength": 16
-          },
-          "insertionDate": {
-            "description": "",
-            "default": "current_timestamp()",
-            "type": "string"
-          },
-          "insertedBy": {
-            "description": "",
-            "type": "integer",
-            "minimum": -2147483648,
-            "maximum": 2147483647
-          }
-        },
-        "type": "object",
-        "required": [
-          "fiscalCode",
-          "insertionDate",
-          "insertedBy"
-        ]
-      },
       "Reply": {
         "properties": {
           "id": {
-            "description": "",
+            "description": "ID univoco della risposta.",
             "type": "integer",
             "minimum": 1,
             "maximum": 2147483647
           },
           "initiativeId": {
-            "description": "",
+            "description": "ID univoco dell'iniziativa a cui è rivolta la risposta.",
             "type": "integer",
             "minimum": -2147483648,
             "maximum": 2147483647
           },
           "adminId": {
-            "description": "",
+            "description": "ID univoco dell'amministratore che ha fornito la risposta.",
             "default": "NULL",
             "type": "integer",
             "minimum": -2147483648,
@@ -2871,12 +3306,12 @@
             "nullable": true
           },
           "replyText": {
-            "description": "",
+            "description": "Testo di esposizione delle motivazioni della risposta.",
             "type": "string",
             "maxLength": 65535
           },
           "creationDate": {
-            "description": "",
+            "description": "Data di creazione.",
             "default": "current_timestamp()",
             "type": "string"
           },
@@ -2885,6 +3320,7 @@
             "items": {
               "$ref": "#/components/schemas/AttachmentNoID"
             },
+            "description": "Eventuali allegati (immagini o PDF)",
             "nullable": true
           }
         },
@@ -2899,39 +3335,41 @@
       "User": {
         "properties": {
           "id": {
-            "description": "",
+            "description": "ID univoco dell'utente.",
             "type": "integer",
             "minimum": 1,
             "maximum": 2147483647
           },
           "firstName": {
-            "description": "",
+            "description": "Nome dell'utente.",
             "type": "string",
             "maxLength": 100
           },
           "lastName": {
-            "description": "",
+            "description": "Cognome dell'utente.",
             "type": "string",
             "maxLength": 100
           },
           "fiscalCode": {
-            "description": "",
+            "description": "Codice fiscale dell'utente.",
             "type": "string",
             "maxLength": 16
           },
           "email": {
-            "description": "",
+            "description": "Email dell'utente.",
             "type": "string",
             "maxLength": 150
           },
           "isAdmin": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Flag che determina se l'utente può svolgere il ruolo di amministratore."
           },
           "isCitizen": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Flag che determina se l'utente può svolgere il ruolo di cittadino."
           },
           "createdAt": {
-            "description": "",
+            "description": "Data di registrazione.",
             "default": "current_timestamp()",
             "type": "string"
           }
@@ -2946,40 +3384,6 @@
           "createdAt",
           "isAdmin",
           "isCitizen"
-        ]
-      },
-      "PBVote": {
-        "properties": {
-          "userId": {
-            "description": "",
-            "type": "integer",
-            "minimum": -2147483648,
-            "maximum": 2147483647
-          },
-          "participatoryBudgetId": {
-            "description": "",
-            "type": "integer",
-            "minimum": -2147483648,
-            "maximum": 2147483647
-          },
-          "optionId": {
-            "description": "",
-            "type": "integer",
-            "minimum": -2147483648,
-            "maximum": 2147483647
-          },
-          "votedAt": {
-            "description": "",
-            "default": "current_timestamp()",
-            "type": "string"
-          }
-        },
-        "type": "object",
-        "required": [
-          "userId",
-          "participatoryBudgetId",
-          "optionId",
-          "votedAt"
         ]
       }
     },

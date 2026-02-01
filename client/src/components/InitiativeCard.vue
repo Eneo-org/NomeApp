@@ -51,11 +51,8 @@ const handleStarClick = async (event) => {
 }
 
 const goToDetail = () => {
-  if (props.item.platformId === 1) {
-    router.push(`/initiative/${props.item.id}`);
-  } else {
-    window.open(props.item.externalURL, '_blank');
-  }
+  // Tutte le iniziative (interne ed esterne) aprono la pagina di dettaglio locale
+  router.push(`/initiative/${props.item.id}`);
 }
 </script>
 

@@ -11,7 +11,6 @@ const participatoryBudgetsRoutes = require("./routes/participatoryBudgets");
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
 const filterRoutes = require("./routes/filters");
-const notificationRoutes = require("./routes/notificationRoutes");
 
 // 1. Middleware Base
 app.use(express.json());
@@ -34,8 +33,7 @@ app.use("/initiatives", initiativeRoutes);
 app.use("/participatory-budgets", participatoryBudgetsRoutes);
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
-app.use("/", filterRoutes); 
-app.use("/notifications", notificationRoutes);
+app.use("/", filterRoutes);
 
 // 4. ESPLORTAZIONE (Invece di app.listen)
 module.exports = app;

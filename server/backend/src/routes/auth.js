@@ -10,7 +10,7 @@ const userController = require("../controllers/userController");
 router.post("/google", authController.googleLogin);
 
 // 2. Invio OTP: Manda la mail con il codice (per i nuovi utenti)
-router.post("/send-otp", authController.sendOtp);
+router.post("/otp", authController.sendOtp);
 
 // 3. Registrazione Utente
 router.post("/register", userController.userRegistration);

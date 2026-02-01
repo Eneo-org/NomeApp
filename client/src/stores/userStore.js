@@ -47,17 +47,19 @@ export const useUserStore = defineStore('user', () => {
         // Caso A: Utente già registrato nel DB
         setUserData(data.user)
         return true
-      } else if (data.status === 'NEED_REGISTRATION') {
-        // Caso B: Utente nuovo, salviamo i dati parziali e chiediamo registrazione
-        tempRegistrationData.value = {
-          token: googleToken,
-          ...data.googleData, // email, nome, cognome da google
-        }
-        return 'REGISTER' // Ritorniamo una stringa specifica per la View
       }
 
       return false
     } catch (err) {
+      // Caso 404: Utente non trovato, serve registrazione
+      if (err.response?.status === 404 && err.response?.data?.status === 'NEED_REGISTRATION') {
+        tempRegistrationData.value = {
+          token: googleToken,
+          ...err.response.data.googleData, // email, nome, cognome da google
+        }
+        return 'REGISTER' // Ritorniamo una stringa specifica per la View
+      }
+      
       console.error('Errore loginWithGoogle:', err)
       return false
     }
@@ -66,7 +68,7 @@ export const useUserStore = defineStore('user', () => {
   // 2. INVIO OTP (Fase 2 Registrazione)
   const sendOtp = async (email) => {
     try {
-      await axios.post(`${API_URL}/auth/send-otp`, { email })
+      await axios.post(`${API_URL}/auth/otp`, { email })
       return true
     } catch (err) {
       console.error('Errore invio OTP:', err)

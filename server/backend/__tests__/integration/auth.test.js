@@ -165,7 +165,7 @@ describe('Auth Routes - Complete Integration Tests', () => {
         .post('/auth/google')
         .send({ token: 'VALID_TOKEN_NEW_USER' });
 
-      expect(res.statusCode).toBe(200);
+      expect(res.statusCode).toBe(404);
       expect(res.body.status).toBe('NEED_REGISTRATION');
       expect(res.body.googleData).toEqual({
         firstName: 'Nuovo',
@@ -235,9 +235,9 @@ describe('Auth Routes - Complete Integration Tests', () => {
   });
 
   // =========================================================================
-  // RF2: REGISTRAZIONE - POST /auth/send-otp & POST /auth/register
+  // RF2: REGISTRAZIONE - POST /auth/otp & POST /auth/register
   // =========================================================================
-  describe('POST /auth/send-otp (RF2 - Step 1: OTP Generation)', () => {
+  describe('POST /auth/otp (RF2 - Step 1: OTP Generation)', () => {
     const mockSendMail = jest.fn();
 
     beforeEach(() => {
@@ -248,7 +248,7 @@ describe('Auth Routes - Complete Integration Tests', () => {
 
     it('[RF2.0] Should return 400 for invalid email format', async () => {
       const res = await request(app)
-        .post('/auth/send-otp')
+        .post('/auth/otp')
         .send({ email: 'not-an-email' });
 
       expect(res.statusCode).toBe(400);
@@ -259,7 +259,7 @@ describe('Auth Routes - Complete Integration Tests', () => {
       db.query.mockResolvedValue([[{ ID_UTENTE: 5 }]]);
 
       const res = await request(app)
-        .post('/auth/send-otp')
+        .post('/auth/otp')
         .send({ email: 'existing.user@test.com' });
 
       expect(res.statusCode).toBe(409);
@@ -277,7 +277,7 @@ describe('Auth Routes - Complete Integration Tests', () => {
       db.query.mockResolvedValue([[]]); 
 
       const res = await request(app)
-        .post('/auth/send-otp')
+        .post('/auth/otp')
         .send({ email: 'new.citizen@test.com' });
 
       expect(res.statusCode).toBe(200);
@@ -295,7 +295,7 @@ describe('Auth Routes - Complete Integration Tests', () => {
       db.query.mockResolvedValue([[]]);
 
       const res = await request(app)
-        .post('/auth/send-otp')
+        .post('/auth/otp')
         .send({ email: 'dev.user@test.com' });
 
       expect(res.statusCode).toBe(200);

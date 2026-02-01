@@ -537,58 +537,59 @@ exports.changeExpirationDate = async (req, res) => {
   }
 };
 
-exports.updateInitiative = async (req, res) => {
-  try {
-    const initiativeId = req.params.id;
-    const userId = req.user.id;
-    const { title, description, place, categoryId } = req.body;
+// exports.updateInitiative = async (req, res) => {
+//   try {
+//     const initiativeId = req.params.id;
+//     const userId = req.user.id;
+//     const { title, description, place, categoryId } = req.body;
 
-    // 1. Verifica esistenza e proprietà
-    const [rows] = await db.query(
-      "SELECT ID_AUTORE, STATO FROM INIZIATIVA WHERE ID_INIZIATIVA = ?",
-      [initiativeId]
-    );
+//     // 1. Verifica esistenza e proprietà
+//     const [rows] = await db.query(
+//       "SELECT ID_AUTORE, STATO FROM INIZIATIVA WHERE ID_INIZIATIVA = ?",
+//       [initiativeId]
+//     );
 
-    if (rows.length === 0) {
-      return res.status(404).json({ message: "Iniziativa non trovata" });
-    }
+//     if (rows.length === 0) {
+//       return res.status(404).json({ message: "Iniziativa non trovata" });
+//     }
 
-    const initiative = rows[0];
+//     const initiative = rows[0];
 
-    // 2. Controllo permessi (solo autore può modificare)
-    if (initiative.ID_AUTORE !== parseInt(userId)) {
-      return res.status(403).json({ message: "Non sei l'autore di questa iniziativa" });
-    }
+//     // 2. Controllo permessi (solo autore può modificare)
+//     if (initiative.ID_AUTORE !== parseInt(userId)) {
+//       return res.status(403).json({ message: "Non sei l'autore di questa iniziativa" });
+//     }
 
-    // 3. Controllo stato (solo 'In corso' modificabile)
-    if (initiative.STATO !== 'In corso') {
-      return res.status(400).json({ message: "Impossibile modificare un'iniziativa non in corso" });
-    }
+//     // 3. Controllo stato (solo 'In corso' modificabile)
+//     if (initiative.STATO !== 'In corso') {
+//       return res.status(400).json({ message: "Impossibile modificare un'iniziativa non in corso" });
+//     }
 
-    // 4. Update
-    const updateQuery = `
-      UPDATE INIZIATIVA 
-      SET TITOLO = COALESCE(?, TITOLO), 
-          DESCRIZIONE = COALESCE(?, DESCRIZIONE), 
-          LUOGO = COALESCE(?, LUOGO), 
-          ID_CATEGORIA = COALESCE(?, ID_CATEGORIA)
-      WHERE ID_INIZIATIVA = ?
-    `;
+//     // 4. Update
+//     const updateQuery = `
+//       UPDATE INIZIATIVA 
+//       SET TITOLO = COALESCE(?, TITOLO), 
+//           DESCRIZIONE = COALESCE(?, DESCRIZIONE), 
+//           LUOGO = COALESCE(?, LUOGO), 
+//           ID_CATEGORIA = COALESCE(?, ID_CATEGORIA)
+//       WHERE ID_INIZIATIVA = ?
+//     `;
 
-    await db.query(updateQuery, [title, description, place, categoryId, initiativeId]);
+//     await db.query(updateQuery, [title, description, place, categoryId, initiativeId]);
 
-    res.status(200).json({ message: "Iniziativa aggiornata con successo" });
+//     res.status(200).json({ message: "Iniziativa aggiornata con successo" });
 
-  } catch (err) {
-    console.error("Errore updateInitiative:", err);
-    res.status(500).json({ message: "Errore interno del server" });
-  }
-};
+//   } catch (err) {
+//     console.error("Errore updateInitiative:", err);
+//     res.status(500).json({ message: "Errore interno del server" });
+//   }
+// };
 
 // Assicurati di importare lo schema di validazione all'inizio del file se non c'è già
 // const { administrationReplySchema } = require('../validators/initiativeSchema');
 
 // --- MODIFICA: CreateReply con Multer per la gestione dei file---
+
 exports.createReply = async (req, res) => {
   let connection;
   const files = req.files; // File caricati (Immagini o PDF)
@@ -1006,76 +1007,76 @@ const notifySingleUser = async (userId, message, link) => {
  * CAMBIO STATO INIZIATIVA (Solo Admin)
  * Aggiorna lo stato e notifica i follower.
  */
-exports.updateInitiativeStatus = async (req, res) => {
-  try {
-    const initiativeId = req.params.id;
-    const userId = req.user.id;
+// exports.updateInitiativeStatus = async (req, res) => {
+//   try {
+//     const initiativeId = req.params.id;
+//     const userId = req.user.id;
 
-    const { status } = req.body;
+//     const { status } = req.body;
 
-    if (!status)
-      return res.status(400).json({ message: "Dati mancanti" });
+//     if (!status)
+//       return res.status(400).json({ message: "Dati mancanti" });
 
-    // 1. Controllo Admin
-    const [admins] = await db.query(
-      "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
-      [userId]
-    );
+//     // 1. Controllo Admin
+//     const [admins] = await db.query(
+//       "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
+//       [userId]
+//     );
 
-    // Controllo robusto: verifica che l'utente esista E sia admin
-    if (admins.length === 0 || !admins[0].IS_ADMIN) {
-      return res.status(403).json({ message: "Accesso negato: Solo Admin." });
-    }
+//     // Controllo robusto: verifica che l'utente esista E sia admin
+//     if (admins.length === 0 || !admins[0].IS_ADMIN) {
+//       return res.status(403).json({ message: "Accesso negato: Solo Admin." });
+//     }
 
-    // 2. Recupero Info Iniziativa e Autore
-    const [rows] = await db.query(
-      "SELECT TITOLO, ID_AUTORE FROM INIZIATIVA WHERE ID_INIZIATIVA = ?",
-      [initiativeId]
-    );
-    if (rows.length === 0)
-      return res.status(404).json({ message: "Iniziativa non trovata" });
+//     // 2. Recupero Info Iniziativa e Autore
+//     const [rows] = await db.query(
+//       "SELECT TITOLO, ID_AUTORE FROM INIZIATIVA WHERE ID_INIZIATIVA = ?",
+//       [initiativeId]
+//     );
+//     if (rows.length === 0)
+//       return res.status(404).json({ message: "Iniziativa non trovata" });
 
-    const { TITOLO: title, ID_AUTORE: authorId } = rows[0];
+//     const { TITOLO: title, ID_AUTORE: authorId } = rows[0];
 
-    // 3. Aggiornamento DB
-    await db.query("UPDATE INIZIATIVA SET STATO = ? WHERE ID_INIZIATIVA = ?", [
-      status,
-      initiativeId,
-    ]);
+//     // 3. Aggiornamento DB
+//     await db.query("UPDATE INIZIATIVA SET STATO = ? WHERE ID_INIZIATIVA = ?", [
+//       status,
+//       initiativeId,
+//     ]);
 
-    // 4. GESTIONE NOTIFICHE INTELLIGENTE 🔔
-    const link = `/initiative/${initiativeId}`;
+//     // 4. GESTIONE NOTIFICHE INTELLIGENTE 🔔
+//     const link = `/initiative/${initiativeId}`;
 
-    // A. Notifica all'AUTORE
-    if (authorId) {
-      let authorMsg = `Lo stato della tua iniziativa "${title}" è cambiato in: ${status}.`;
+//     // A. Notifica all'AUTORE
+//     if (authorId) {
+//       let authorMsg = `Lo stato della tua iniziativa "${title}" è cambiato in: ${status}.`;
 
-      // Personalizzazione tono
-      if (status === "Respinta") {
-        authorMsg = `⚠️ Attenzione: La tua iniziativa "${title}" non è stata approvata.`;
-      } else if (status === "Approvata") {
-        authorMsg = `✅ Complimenti! La tua iniziativa "${title}" è stata approvata ed è ora pubblica.`;
-      }
+//       // Personalizzazione tono
+//       if (status === "Respinta") {
+//         authorMsg = `⚠️ Attenzione: La tua iniziativa "${title}" non è stata approvata.`;
+//       } else if (status === "Approvata") {
+//         authorMsg = `✅ Complimenti! La tua iniziativa "${title}" è stata approvata ed è ora pubblica.`;
+//       }
 
-      // Await qui è utile per essere sicuri che l'autore riceva la notifica prima di chiudere
-      await notifySingleUser(authorId, authorMsg, link);
-    }
+//       // Await qui è utile per essere sicuri che l'autore riceva la notifica prima di chiudere
+//       await notifySingleUser(authorId, authorMsg, link);
+//     }
 
-    // B. Notifica ai FOLLOWER (Solo se notizie positive/neutre)
-    if (status !== "Respinta") {
-      let followerMsg = `Aggiornamento: L'iniziativa "${title}" è ora ${status}.`;
-      if (status === "Approvata")
-        followerMsg = `🚀 L'iniziativa "${title}" che segui è stata approvata!`;
+//     // B. Notifica ai FOLLOWER (Solo se notizie positive/neutre)
+//     if (status !== "Respinta") {
+//       let followerMsg = `Aggiornamento: L'iniziativa "${title}" è ora ${status}.`;
+//       if (status === "Approvata")
+//         followerMsg = `🚀 L'iniziativa "${title}" che segui è stata approvata!`;
 
-      // Non usiamo 'await' qui per non rallentare la risposta se i follower sono tanti (Fire & Forget)
-      notifyFollowers(initiativeId, followerMsg, link);
-    }
+//       // Non usiamo 'await' qui per non rallentare la risposta se i follower sono tanti (Fire & Forget)
+//       notifyFollowers(initiativeId, followerMsg, link);
+//     }
 
-    res
-      .status(200)
-      .json({ message: "Stato aggiornato con successo", newStatus: status });
-  } catch (err) {
-    console.error("Errore updateStatus:", err);
-    res.status(500).json({ message: "Errore server durante l'aggiornamento" });
-  }
-};
+//     res
+//       .status(200)
+//       .json({ message: "Stato aggiornato con successo", newStatus: status });
+//   } catch (err) {
+//     console.error("Errore updateStatus:", err);
+//     res.status(500).json({ message: "Errore server durante l'aggiornamento" });
+//   }
+// };

@@ -213,7 +213,7 @@ watch(() => initiative.value?.id, () => {
                 {{ initiative.status }}
               </span>
               <span v-if="initiative.platformId !== 1" class="platform-badge external">
-                Esterna: {{ initiativeStore.getPlatformName(initiative.platformId) }}
+                📤 Piattaforma: {{ initiativeStore.getPlatformName(initiative.platformId) }}
               </span>
             </div>
           </div>
@@ -302,6 +302,7 @@ watch(() => initiative.value?.id, () => {
                 </p>
               </div>
 
+              <!-- INIZIATIVA INTERNA: Mostra form firma -->
               <div v-if="initiative.platformId === 1">
                 <button @click="handleSignClick" class="btn-sign" :class="{ 'signed': isUserSigned }"
                   :disabled="initiative.status !== 'In corso' || (userStore.isAuthenticated && !userStore.canVote)">
@@ -313,10 +314,23 @@ watch(() => initiative.value?.id, () => {
                 <p class="deadline-text">Hai tempo fino al {{ formatDate(initiative.expirationDate) }}</p>
               </div>
 
-              <div v-else class="external-info">
-                <p>Questa petizione è gestita su una piattaforma esterna.</p>
-                <a :href="initiative.externalURL || '#'" target="_blank" class="btn-external">
-                  Vai al sito esterno ↗
+              <!-- INIZIATIVA ESTERNA: Mostra CTA per piattaforma esterna -->
+              <div v-else class="external-initiative-box">
+                <div class="external-platform-info">
+                  <span class="platform-icon">🌐</span>
+                  <div class="platform-details">
+                    <span class="platform-label">Piattaforma di provenienza</span>
+                    <span class="platform-name">{{ initiativeStore.getPlatformName(initiative.platformId) }}</span>
+                  </div>
+                </div>
+                <p class="external-description">Questa iniziativa è ospitata su una piattaforma esterna. Per firmare o partecipare, visita il sito originale.</p>
+                <a 
+                  :href="initiative.externalURL || '#'" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  class="btn-external-cta"
+                >
+                  Vai su {{ initiativeStore.getPlatformName(initiative.platformId) }} per firmare ↗
                 </a>
               </div>
             </div>
@@ -903,25 +917,88 @@ watch(() => initiative.value?.id, () => {
   font-weight: 500;
 }
 
-.external-info {
+/* --- EXTERNAL INITIATIVE BOX --- */
+.external-initiative-box {
+  background: linear-gradient(135deg, var(--input-bg) 0%, rgba(52, 152, 219, 0.05) 100%);
+  border: 2px solid var(--header-border);
+  border-radius: 12px;
+  padding: 25px;
   text-align: center;
-  padding: 20px;
-  background: var(--input-bg);
-  border-radius: 10px;
-  border: 2px dashed var(--header-border);
 }
 
-.btn-external {
-  display: inline-block;
-  margin-top: 15px;
-  color: var(--accent-color);
+.external-platform-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--header-border);
+}
+
+.platform-icon {
+  font-size: 2.5rem;
+  background: var(--accent-color);
+  padding: 12px;
+  border-radius: 12px;
+  line-height: 1;
+}
+
+.platform-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.platform-label {
+  font-size: 0.8rem;
+  color: var(--secondary-text);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.platform-name {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text-color);
+  margin-top: 2px;
+}
+
+.external-description {
+  font-size: 0.95rem;
+  color: var(--secondary-text);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.btn-external-cta {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 18px 25px;
+  font-size: 1.1rem;
   font-weight: 700;
+  text-align: center;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent-color) 0%, #2980b9 100%);
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
   text-decoration: none;
-  font-size: 1rem;
 }
 
-.btn-external:hover {
-  text-decoration: underline;
+.btn-external-cta:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+  background: linear-gradient(135deg, #2980b9 0%, var(--accent-color) 100%);
+}
+
+.btn-external-cta:active {
+  transform: translateY(-1px);
 }
 
 /* Share Input Group */
