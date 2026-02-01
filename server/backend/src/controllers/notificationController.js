@@ -50,6 +50,14 @@ exports.markAsRead = async (req, res) => {
   const userId = req.user.id;
 
   try {
+    // Prima verifichiamo che la notifica esista e appartenga all'utente
+    const checkQuery = `SELECT * FROM NOTIFICA WHERE ID_NOTIFICA = ? AND ID_UTENTE = ?`;
+    const [rows] = await db.query(checkQuery, [notificationId, userId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Notifica non trovata o non appartenente all'utente" });
+    }
+
     // Aggiorniamo solo se la notifica appartiene all'utente (sicurezza)
     const query = `UPDATE NOTIFICA SET LETTA = 1 WHERE ID_NOTIFICA = ? AND ID_UTENTE = ?`;
     await db.query(query, [notificationId, userId]);

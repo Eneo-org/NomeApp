@@ -448,49 +448,82 @@ exports.showAdminUsers = async (req, res) => {
     }
 
     // 3. Parametri Query
-    const { fiscalCode, currentPage, objectsPerPage } = req.query;
-    const page = parseInt(currentPage) || 1;
-    const limit = parseInt(objectsPerPage) || 10;
-    const offset = (page - 1) * limit;
+    const { fiscalCode, isAdmin, currentPage, objectsPerPage } = req.query;
+    
+    // Caso 1: Ricerca utente specifico per fiscalCode (senza paginazione)
+    if (fiscalCode && !isAdmin) {
+      const query = `
+        SELECT ID_UTENTE, NOME, COGNOME, CODICE_FISCALE, EMAIL, IS_ADMIN, IS_CITTADINO
+        FROM UTENTE 
+        WHERE CODICE_FISCALE = ?
+      `;
 
-    // 4. Costruzione Query (SOLO ADMIN)
-    // Partiamo già filtrando per IS_ADMIN = 1
-    let queryBase = `SELECT ID_UTENTE, NOME, COGNOME, CODICE_FISCALE, EMAIL FROM UTENTE WHERE IS_ADMIN = 1`;
-    let queryCount = `SELECT COUNT(*) as total FROM UTENTE WHERE IS_ADMIN = 1`;
-    const queryParams = [];
+      const [rows] = await db.query(query, [fiscalCode]);
 
-    // Filtro Opzionale Codice Fiscale
-    if (fiscalCode) {
-      queryBase += ` AND CODICE_FISCALE LIKE ?`;
-      queryCount += ` AND CODICE_FISCALE LIKE ?`;
-      queryParams.push(`%${fiscalCode}%`);
+      if (rows.length === 0) {
+        return res.status(404).json({ message: "Utente non trovato" });
+      }
+
+      const user = rows[0];
+      return res.status(200).json({
+        id: user.ID_UTENTE,
+        firstName: user.NOME,
+        lastName: user.COGNOME,
+        fiscalCode: user.CODICE_FISCALE,
+        email: user.EMAIL,
+        isAdmin: Boolean(user.IS_ADMIN),
+        isCitizen: Boolean(user.IS_CITTADINO),
+      });
     }
 
-    // Ordinamento e Paginazione
-    queryBase += ` ORDER BY COGNOME ASC, NOME ASC LIMIT ? OFFSET ?`;
-    const dataParams = [...queryParams, limit, offset];
+    // Caso 2: Lista admin (con paginazione)
+    if (isAdmin === 'true') {
+      const page = parseInt(currentPage) || 1;
+      const limit = parseInt(objectsPerPage) || 10;
+      const offset = (page - 1) * limit;
 
-    // 5. Esecuzione
-    const [rows] = await db.query(queryBase, dataParams);
-    const [countRows] = await db.query(queryCount, queryParams);
+      let queryBase = `SELECT ID_UTENTE, NOME, COGNOME, CODICE_FISCALE, EMAIL FROM UTENTE WHERE IS_ADMIN = 1`;
+      let queryCount = `SELECT COUNT(*) as total FROM UTENTE WHERE IS_ADMIN = 1`;
+      const queryParams = [];
 
-    // 6. Risposta
-    res.status(200).json({
-      data: rows.map((u) => ({
-        id: u.ID_UTENTE,
-        firstName: u.NOME,
-        lastName: u.COGNOME,
-        fiscalCode: u.CODICE_FISCALE,
-        email: u.EMAIL,
-        isAdmin: true, // Sono tutti admin in questa lista
-      })),
-      meta: {
-        currentPage: page,
-        objectsPerPage: limit,
-        totalObjects: countRows[0].total,
-        totalPages: Math.ceil(countRows[0].total / limit),
-      },
+      // Filtro Opzionale Codice Fiscale
+      if (fiscalCode) {
+        queryBase += ` AND CODICE_FISCALE LIKE ?`;
+        queryCount += ` AND CODICE_FISCALE LIKE ?`;
+        queryParams.push(`%${fiscalCode}%`);
+      }
+
+      // Ordinamento e Paginazione
+      queryBase += ` ORDER BY COGNOME ASC, NOME ASC LIMIT ? OFFSET ?`;
+      const dataParams = [...queryParams, limit, offset];
+
+      // Esecuzione
+      const [rows] = await db.query(queryBase, dataParams);
+      const [countRows] = await db.query(queryCount, queryParams);
+
+      return res.status(200).json({
+        data: rows.map((u) => ({
+          id: u.ID_UTENTE,
+          firstName: u.NOME,
+          lastName: u.COGNOME,
+          fiscalCode: u.CODICE_FISCALE,
+          email: u.EMAIL,
+          isAdmin: true,
+        })),
+        meta: {
+          currentPage: page,
+          objectsPerPage: limit,
+          totalObjects: countRows[0].total,
+          totalPages: Math.ceil(countRows[0].total / limit),
+        },
+      });
+    }
+
+    // Caso 3: Nessun parametro valido
+    return res.status(400).json({ 
+      message: "Parametri mancanti: specificare 'isAdmin=true' o 'fiscalCode=...'" 
     });
+
   } catch (err) {
     console.error("Errore showAdminUsers:", err);
     res.status(500).json({ message: "Errore server" });
@@ -545,9 +578,12 @@ exports.changePrivileges = async (req, res) => {
     }
 
     // 6. Aggiornamento Privilegi (RF 10.2 e RF 10.3)
-    const updateQuery = "UPDATE UTENTE SET IS_ADMIN = ? WHERE ID_UTENTE = ?";
+    // Quando un utente diventa admin, non è più cittadino e viceversa
+    const updateQuery = "UPDATE UTENTE SET IS_ADMIN = ?, IS_CITTADINO = ? WHERE ID_UTENTE = ?";
     // Converto il booleano true/false in 1/0 per il DB
-    await db.query(updateQuery, [isAdmin ? 1 : 0, targetUserId]);
+    const newIsAdmin = isAdmin ? 1 : 0;
+    const newIsCitizen = isAdmin ? 0 : 1; // Se diventa admin, non è più cittadino
+    await db.query(updateQuery, [newIsAdmin, newIsCitizen, targetUserId]);
 
     // 7. Risposta
     res.status(200).json({

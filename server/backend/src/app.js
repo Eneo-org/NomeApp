@@ -19,9 +19,10 @@ app.use(cors());
 
 // 2. RATE LIMITER (Importante: skippa se siamo in test)
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, 
-  max: 100, 
+  windowMs: 15 * 60 * 1000, // 15 minuti
+  max: 500, // Aumentato a 500 per development (era 100)
   skip: (req, res) => process.env.NODE_ENV === 'test',
+  message: 'Too many requests, please try again later.'
 });
 app.use(limiter);
 

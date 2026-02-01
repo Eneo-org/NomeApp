@@ -19,14 +19,11 @@ router.patch("/me/notifications/:id", authMiddleware, notificationController.mar
 
 router.post("/admin/pre-authorize", authMiddleware, userController.preAuthorizeAdmin);
 
-router.get("/admin/list", authMiddleware, userController.showAdminUsers);
 router.post("/", userController.userRegistration);
-
-router.get("/search", authMiddleware, userController.searchUserByFiscalCode);
 
 router.get("/", authMiddleware, userController.showAdminUsers);
 
 // --- 3. Rotte con parametri ID specifici (/users/:id) ---
-router.patch("/:id/role", authMiddleware, userController.changePrivileges);
+router.patch("/:id", authMiddleware, userController.changePrivileges);
 
 module.exports = router;

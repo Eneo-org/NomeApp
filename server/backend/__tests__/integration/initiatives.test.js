@@ -220,7 +220,7 @@ const response = await request(app)
 
         it('Ordinamento: Verifica sortBy per data creazione (asc)', async () => {
             const response = await request(app).get('/initiatives').query({
-                sortBy: 'creationDate',
+                sortBy: 1,
                 order: 'asc'
             });
             expect(response.status).toBe(200);
@@ -240,9 +240,9 @@ const response = await request(app)
             expect(response.status).toBe(200);
             expect(response.body.id).toBe(101);
             expect(response.body.title).toBe('Parco Pulito');
-            // Verifica che ci siano i campi separati per allegati
-            expect(response.body).toHaveProperty('images');
-            expect(response.body).toHaveProperty('documents');
+            // Verifica che ci sia il campo unico per allegati
+            expect(response.body).toHaveProperty('attachments');
+            expect(Array.isArray(response.body.attachments)).toBe(true);
         });
 
         it('Errore: Richiesta di un ID inesistente (404)', async () => {

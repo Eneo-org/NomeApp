@@ -11,11 +11,11 @@ const {
 
 // --- 1. LOGIN: Cerca SOLO per Codice Fiscale ---
 exports.googleLogin = async (req, res) => {
-  const { token } = req.body;
+  const { tokenId } = req.body;
 
   try {
     const ticket = await client.verifyIdToken({
-      idToken: token,
+      idToken: tokenId,
       audience: CLIENT_ID,
     });
     const payload = ticket.getPayload();

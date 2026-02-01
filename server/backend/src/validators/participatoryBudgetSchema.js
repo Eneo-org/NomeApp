@@ -10,6 +10,14 @@ const optionSchema = Joi.object({
   position: Joi.number().integer().min(1),
 });
 
+// Helper per calcolare data minima (14 giorni da ora)
+const getMinExpirationDate = () => {
+  const date = new Date();
+  date.setDate(date.getDate() + 14);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
 exports.createBudgetSchema = Joi.object({
   id: Joi.number().integer(),
   creatorId: Joi.number().integer(),
@@ -19,14 +27,25 @@ exports.createBudgetSchema = Joi.object({
     "string.max": "Il titolo non può superare i 200 caratteri",
   }),
 
-  expirationDate: Joi.date().greater("now").required().messages({
-    "date.greater": "La data di scadenza deve essere futura",
-  }),
+  expirationDate: Joi.date()
+    .greater("now")
+    .min(getMinExpirationDate())
+    .required()
+    .messages({
+      "date.greater": "La data di scadenza deve essere futura",
+      "date.min": "La data di scadenza deve essere almeno 14 giorni dalla data odierna (RF8)",
+    }),
 
-  options: Joi.array().items(optionSchema).length(5).required().messages({
-    "array.length": "Devi inserire esattamente 5 opzioni per il voto",
-    "any.required": "Le opzioni sono obbligatorie",
-  }),
+  options: Joi.array()
+    .items(optionSchema)
+    .min(2)
+    .max(5)
+    .required()
+    .messages({
+      "array.min": "Devi inserire almeno 2 opzioni per il voto",
+      "array.max": "Puoi inserire al massimo 5 opzioni per il voto",
+      "any.required": "Le opzioni sono obbligatorie",
+    }),
 
   createdAt: Joi.date(),
 });

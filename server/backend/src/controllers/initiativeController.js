@@ -25,7 +25,7 @@ exports.getAllInitiatives = async (req, res) => {
     const {
       currentPage = 1,
       objectsPerPage = 10,
-      sortBy = "date",
+      sortBy = "1",
       order = "desc",
       search,
       place,
@@ -781,17 +781,7 @@ exports.signInitiative = async (req, res) => {
 
     // --- DA QUI IN POI LE AZIONI NON BLOCCANTI ---
 
-    // 5. Auto-follow (Chi firma segue automaticamente)
-    try {
-      await db.query(
-        `INSERT IGNORE INTO INIZIATIVA_SALVATA (ID_UTENTE, ID_INIZIATIVA) VALUES (?, ?)`,
-        [userId, initiativeId]
-      );
-    } catch (e) {
-      console.warn("Auto-follow fallito (non critico)", e);
-    }
-
-    // 6. 🔔 NOTIFICHE MILESTONE (Nuova logica aggiunta)
+    // 5. 🔔 NOTIFICHE MILESTONE (Logica aggiunta)
     // Controlliamo se abbiamo raggiunto un traguardo importante (50, 100, 500...)
     if (newCount === 50 || newCount === 100 || newCount % 500 === 0) {
       const msg = `🚀 L'iniziativa "${title}" ha appena raggiunto ${newCount} firme!`;
@@ -959,24 +949,13 @@ async function _getDetailedInitiativeData(id) {
     categoryId: initiative.ID_CATEGORIA,
     platformId: initiative.ID_PIATTAFORMA,
     externalURL: initiative.URL_ESTERNO,
-    images: attachmentsInit
-      .filter(att => att.FILE_TYPE.startsWith('image/'))
-      .map(att => ({
+    attachments: attachmentsInit.map(att => ({
         id: att.ID_ALLEGATO,
         fileName: att.FILE_NAME,
         filePath: att.FILE_PATH,
         fileType: att.FILE_TYPE,
         uploadedAt: att.UPLOADED_AT,
-      })),
-    documents: attachmentsInit
-      .filter(att => !att.FILE_TYPE.startsWith('image/'))
-      .map(att => ({
-        id: att.ID_ALLEGATO,
-        fileName: att.FILE_NAME,
-        filePath: att.FILE_PATH,
-        fileType: att.FILE_TYPE,
-        uploadedAt: att.UPLOADED_AT,
-      })),
+    })),
     reply: formattedReply,
     attachment: attachmentsInit.length > 0 ? { filePath: attachmentsInit[0].FILE_PATH } : null,
   };

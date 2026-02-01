@@ -6,8 +6,8 @@ const userController = require("../controllers/userController");
 // --- ROTTE DI AUTENTICAZIONE ---
 
 // 1. Google Login: Riceve il token, verifica se l'utente esiste o se deve registrarsi
-// Questa è la rotta che il frontend chiama con axios.post('/auth/google-login')
-router.post("/google-login", authController.googleLogin);
+// Questa è la rotta che il frontend chiama con axios.post('/auth/google')
+router.post("/google", authController.googleLogin);
 
 // 2. Invio OTP: Manda la mail con il codice (per i nuovi utenti)
 router.post("/send-otp", authController.sendOtp);

@@ -3,9 +3,8 @@
 // Valore: Colonna Database
 module.exports = {
   INITIATIVE_SORT_MAP: {
-    date: "i.DATA_CREAZIONE",
-    signatures: "i.NUM_FIRME",
-    title: "i.TITOLO",
+    "1": "i.DATA_CREAZIONE",
+    "2": "i.NUM_FIRME",
   },
 };
 
