@@ -12,7 +12,11 @@ export const useInitiativeStore = defineStore('initiative', () => {
   const userStore = useUserStore()
 
   // --- STATE ---
-  const initiatives = ref([])
+  // Array separati per evitare conflitti tra Home e Archive
+  const initiatives = ref([]) // Array generico (deprecato, manteniamo per compatibilità)
+  const homeInitiatives = ref([]) // Solo per la Home
+  const archiveInitiatives = ref([]) // Solo per l'Archivio
+  
   const categories = ref([])
   const platforms = ref([])
 
@@ -21,11 +25,22 @@ export const useInitiativeStore = defineStore('initiative', () => {
 
   const signedIds = ref([])
 
+  // Loading separati per evitare conflitti
   const loading = ref(false)
+  const homeLoading = ref(false)
+  const archiveLoading = ref(false)
+  const detailLoading = ref(false)
+  
   const error = ref(null)
   const currentPage = ref(1)
   const totalPages = ref(1)
   const totalObjects = ref(0)
+
+  // Flag per prevenire chiamate duplicate
+  const isFetchingFollowed = ref(false)
+  const isFetchingSigned = ref(false)
+  const isFetchingFilters = ref(false)
+  const isFetchingInitiatives = ref(false)
 
   // --- GETTERS ---
   const getCategoryName = (id) => {
@@ -49,6 +64,14 @@ export const useInitiativeStore = defineStore('initiative', () => {
   // --- ACTIONS ---
 
   const fetchFiltersData = async () => {
+    // Se già caricato o fetch in corso, skip
+    if ((categories.value.length > 0 && platforms.value.length > 0) || isFetchingFilters.value) {
+      console.log('⏭️ Filtri già caricati o fetch in corso, skip')
+      return
+    }
+
+    isFetchingFilters.value = true
+    
     try {
       const [resCat, resPlat] = await Promise.all([
         axios.get(`${API_URL}/categories`),
@@ -56,17 +79,41 @@ export const useInitiativeStore = defineStore('initiative', () => {
       ])
       categories.value = resCat.data.data
       platforms.value = resPlat.data.data
+      console.log('✅ Filtri caricati:', categories.value.length, 'categorie,', platforms.value.length, 'piattaforme')
     } catch (err) {
-      console.error('Errore filtri:', err) // Solo console, errore non critico per l'utente
+      if (err.response?.status === 429) {
+        console.warn('⚠️ Rate limit per filtri')
+      } else {
+        console.error('Errore filtri:', err)
+      }
+    } finally {
+      isFetchingFilters.value = false
     }
   }
 
-  const fetchInitiatives = async (page = 1, sortBy = 'signatures', filters = {}) => {
+  // sortBy: 1 = Data Creazione, 2 = Numero Firme
+  // context: 'home' o 'archive' per popolare l'array corretto
+  const fetchInitiatives = async (page = 1, sortBy = 1, filters = {}, context = 'archive') => {
+    // Previeni chiamate duplicate
+    if (isFetchingInitiatives.value) {
+      console.log('⏭️ fetchInitiatives già in corso, skip')
+      return
+    }
+
+    isFetchingInitiatives.value = true
+    
+    // Usa loading specifico per contesto
+    if (context === 'home') {
+      homeLoading.value = true
+    } else {
+      archiveLoading.value = true
+    }
     loading.value = true
+    
     try {
       const params = {
         currentPage: page,
-        objectsPerPage: 10,
+        objectsPerPage: context === 'home' ? 6 : 10, // Home: 6 iniziative, Archive: 10
         sortBy: sortBy,
         order: filters.order || 'desc',
         ...(filters.search && { search: filters.search }),
@@ -76,9 +123,19 @@ export const useInitiativeStore = defineStore('initiative', () => {
         ...(filters.not_status && { not_status: filters.not_status }),
       }
 
-      console.log('API Params:', params);
+      console.log(`🔍 [${context.toUpperCase()}] Fetch iniziative:`, params);
       const response = await axios.get(`${API_URL}/initiatives`, { params })
 
+      // Popola l'array corretto in base al contesto
+      if (context === 'home') {
+        homeInitiatives.value = response.data.data
+        console.log('🏠 Home iniziatives aggiornate:', homeInitiatives.value.length)
+      } else {
+        archiveInitiatives.value = response.data.data
+        console.log('📚 Archive iniziatives aggiornate:', archiveInitiatives.value.length)
+      }
+      
+      // Manteniamo anche l'array generico per retrocompatibilità
       initiatives.value = response.data.data
 
       if (response.data.meta) {
@@ -87,32 +144,44 @@ export const useInitiativeStore = defineStore('initiative', () => {
         totalObjects.value = response.data.meta.totalObjects
       }
 
-      if (userStore.isAuthenticated) {
-
-        await fetchUserFollowedIds()
-
-      }      // Possiamo chiamare fetchUserSignedIds qui se volessimo vedere lo stato in home,
-      // ma per ora lo chiamiamo nel dettaglio per ottimizzare.
+      // NON chiamare fetchUserFollowedIds qui - lasciare che i componenti lo chiamino quando necessario
+      // Questo evita troppe richieste simultanee
+      
     } catch (err) {
       console.error('Errore fetch initiatives:', err)
-      error.value = 'Impossibile caricare la lista.'
+      if (err.response?.status === 429) {
+        toast.showToast('⚠️ Troppe richieste, attendi un momento...', 'warning')
+      } else {
+        error.value = 'Impossibile caricare la lista.'
+      }
     } finally {
       loading.value = false
+      if (context === 'home') {
+        homeLoading.value = false
+      } else {
+        archiveLoading.value = false
+      }
+      isFetchingInitiatives.value = false
     }
   }
 
   const fetchInitiativeDetail = async (id) => {
-    loading.value = true
+    detailLoading.value = true
     error.value = null
     try {
+      console.log(`🔍 Fetch dettaglio iniziativa ID: ${id}`)
       const response = await axios.get(`${API_URL}/initiatives/${id}`)
-      await fetchUserFollowedIds()
+      console.log('✅ Dettaglio ricevuto:', response.data?.title || 'NO TITLE')
+      // NON chiamare fetchUserFollowedIds qui - viene chiamato in fetchInitiatives
       return response.data
     } catch (err) {
-      console.error('Errore fetch dettaglio:', err)
+      console.error('❌ Errore fetch dettaglio:', err.response?.status, err.message)
+      if (err.response?.status === 429) {
+        toast.showToast('⚠️ Troppe richieste, attendi un momento...', 'warning')
+      }
       return null
     } finally {
-      loading.value = false
+      detailLoading.value = false
     }
   }
 
@@ -131,11 +200,20 @@ export const useInitiativeStore = defineStore('initiative', () => {
 
   // --- GESTIONE PREFERITI ---
   const fetchUserFollowedIds = async () => {
+    // Previeni chiamate duplicate
+    if (isFetchingFollowed.value) {
+      console.log('⏭️ fetchUserFollowedIds già in corso, skip')
+      return
+    }
+
     const userId = localStorage.getItem('tp_mock_id')
     if (!userId) {
       followedIds.value = []
       return
     }
+
+    isFetchingFollowed.value = true
+    
     try {
       const res = await axios.get(`${API_URL}/users/me/initiatives`, {
         params: { relation: 'followed', objectsPerPage: 100 },
@@ -143,18 +221,36 @@ export const useInitiativeStore = defineStore('initiative', () => {
       })
       followedIds.value = res.data.data.map((item) => item.id)
     } catch (err) {
-      console.error('Errore sync preferiti:', err)
+      // Gestione specifica del rate limiting
+      if (err.response?.status === 429) {
+        console.warn('⚠️ Rate limit raggiunto per preferiti, riprovo tra 2 secondi...')
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        // Non richiamare automaticamente per evitare loop
+      } else {
+        console.error('Errore sync preferiti:', err)
+      }
       followedIds.value = [] // Fallback sicuro
+    } finally {
+      isFetchingFollowed.value = false
     }
   }
 
   // --- NUOVO: GESTIONE FIRME (Fetch iniziale) ---
   const fetchUserSignedIds = async () => {
+    // Previeni chiamate duplicate
+    if (isFetchingSigned.value) {
+      console.log('⏭️ fetchUserSignedIds già in corso, skip')
+      return
+    }
+
     const userId = localStorage.getItem('tp_mock_id')
     if (!userId) {
       signedIds.value = []
       return
     }
+
+    isFetchingSigned.value = true
+    
     try {
       // Assumiamo che il backend supporti relation='signed'
       const res = await axios.get(`${API_URL}/users/me/initiatives`, {
@@ -163,8 +259,17 @@ export const useInitiativeStore = defineStore('initiative', () => {
       })
       signedIds.value = res.data.data.map((item) => item.id)
     } catch (err) {
-      console.error('Errore sync firme:', err)
+      // Gestione specifica del rate limiting
+      if (err.response?.status === 429) {
+        console.warn('⚠️ Rate limit raggiunto per firme, riprovo tra 2 secondi...')
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        // Non richiamare automaticamente per evitare loop
+      } else {
+        console.error('Errore sync firme:', err)
+      }
       // Non resettiamo signedIds qui per evitare "flash", ma gestiamo l'errore
+    } finally {
+      isFetchingSigned.value = false
     }
   }
 
@@ -250,9 +355,9 @@ export const useInitiativeStore = defineStore('initiative', () => {
         { headers: { 'X-Mock-User-Id': mockUserId } },
       )
 
-      const init = initiatives.value.find((i) => i.id === initiativeId)
-      if (init) init.signatures += 1
-
+      // Non aggiorniamo l'oggetto initiative qui per evitare problemi
+      // Il contatore verrà aggiornato quando si ricarica il dettaglio
+      
       // --- NUOVO: Aggiornamento ottimistico dello stato firma ---
       if (!signedIds.value.includes(initiativeId)) {
         signedIds.value.push(initiativeId)
@@ -282,7 +387,7 @@ export const useInitiativeStore = defineStore('initiative', () => {
     if (!userId) {
       toast.showToast('Sessione non valida. Effettua il login.', 'error')
       loading.value = false
-      return false
+      return { success: false, initiativeId: null }
     }
 
     try {
@@ -301,17 +406,21 @@ export const useInitiativeStore = defineStore('initiative', () => {
         formData.append('attachments', payloadData.file)
       }
 
-      await axios.post(`${API_URL}/initiatives`, formData, {
+      const response = await axios.post(`${API_URL}/initiatives`, formData, {
         headers: {
           'X-Mock-User-Id': userId,
           'Content-Type': 'multipart/form-data',
         },
       })
 
-      await fetchInitiatives()
+      // Il backend restituisce { id: 123, title: "...", ... }
+      const createdInitiativeId = response.data.id
+
+      console.log('✅ Iniziativa creata con ID:', createdInitiativeId)
 
       toast.showToast('Iniziativa creata con successo! 🎉', 'success')
-      return true
+      
+      return { success: true, initiativeId: createdInitiativeId }
     } catch (err) {
       console.error('Errore creazione:', err)
 
@@ -324,7 +433,7 @@ export const useInitiativeStore = defineStore('initiative', () => {
         error.value = msg
         toast.showToast(msg, 'error')
       }
-      return false
+      return { success: false, initiativeId: null }
     } finally {
       loading.value = false
     }
@@ -412,11 +521,40 @@ export const useInitiativeStore = defineStore('initiative', () => {
     }
   }
 
+  // Metodo per resettare lo store (utile per logout)
+  const $reset = () => {
+    initiatives.value = []
+    homeInitiatives.value = []
+    archiveInitiatives.value = []
+    categories.value = []
+    platforms.value = []
+    followedIds.value = []
+    signedIds.value = []
+    loading.value = false
+    homeLoading.value = false
+    archiveLoading.value = false
+    detailLoading.value = false
+    isFetchingFollowed.value = false
+    isFetchingSigned.value = false
+    isFetchingFilters.value = false
+    isFetchingInitiatives.value = false
+    error.value = null
+    currentPage.value = 1
+    totalPages.value = 1
+    totalObjects.value = 0
+    console.log('🔄 InitiativeStore resettato')
+  }
+
   return {
     initiatives,
+    homeInitiatives,
+    archiveInitiatives,
     categories,
     platforms,
     loading,
+    homeLoading,
+    archiveLoading,
+    detailLoading,
     error,
     currentPage,
     totalPages,
@@ -442,5 +580,6 @@ export const useInitiativeStore = defineStore('initiative', () => {
     fetchInitiativeById,
     checkUserCooldown,
     extendDeadline,
+    $reset,
   }
 })

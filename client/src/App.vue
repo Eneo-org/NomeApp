@@ -4,11 +4,13 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from './stores/userStore'
 import TheToast from './components/TheToast.vue'
 import { useDashboardStore } from './stores/dashboardStore';
+import { useInitiativeStore } from './stores/initiativeStore';
 import { storeToRefs } from 'pinia';
 import { useTheme } from '@/composables/useTheme';
 
 const router = useRouter()
 const userStore = useUserStore()
+const initiativeStore = useInitiativeStore()
 const { isDark, toggleTheme, initTheme } = useTheme();
 const dashboardStore = useDashboardStore();
 
@@ -56,6 +58,10 @@ const handleNotificationClick = (notification) => {
 onMounted(() => {
   initTheme();
   userStore.initializeStore();
+  
+  // Carica filtri globalmente una sola volta
+  initiativeStore.fetchFiltersData();
+  
   if (userStore.isAuthenticated) {
     dashboardStore.fetchNotifications();
   }

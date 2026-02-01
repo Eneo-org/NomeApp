@@ -75,11 +75,16 @@ const handleSubmit = async () => {
     files: selectedFiles.value
   }
 
-  const success = await store.createInitiative(payload)
+  const result = await store.createInitiative(payload)
 
   loading.value = false
 
-  if (success) {
+  if (result.success && result.initiativeId) {
+    console.log('🎯 Navigazione verso iniziativa:', result.initiativeId)
+    // Naviga direttamente al dettaglio dell'iniziativa appena creata
+    router.push(`/initiative/${result.initiativeId}`)
+  } else if (result.success) {
+    // Fallback se non abbiamo l'ID (non dovrebbe succedere)
     router.push('/')
   } else {
     if (!store.error) toast.showToast("Errore sconosciuto durante la creazione.", "error");

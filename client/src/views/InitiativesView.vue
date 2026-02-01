@@ -11,7 +11,7 @@ const initiativeStore = useInitiativeStore()
 const filters = ref({
   search: '', // NUOVO: Campo ricerca
   status: [],
-  sortBy: 'date',
+  sortBy: 1, // 1 = Data Creazione, 2 = Numero Firme
   order: 'desc',
   platform: '',
   category: '',
@@ -31,11 +31,17 @@ const loadArchiveData = async () => {
     {
       ...filters.value,
       status: statusToSend
-    }
+    },
+    'archive' // IMPORTANTE: contesto archive
   );
 };
 
 onMounted(() => {
+  console.log('📚 InitiativesView montata - caricamento archivio');
+  // fetchFiltersData viene chiamato in App.vue una sola volta
+  // Reset pagina corrente
+  initiativeStore.currentPage = 1;
+  
   if (route.query.search) {
     filters.value.search = route.query.search;
   } else if (route.query.status) {
@@ -45,7 +51,7 @@ onMounted(() => {
       filters.value.status = [route.query.status];
     }
   }
-  initiativeStore.fetchFiltersData();
+  // fetchFiltersData viene chiamato in App.vue - non serve qui
   loadArchiveData();
 })
 
@@ -54,9 +60,29 @@ watch(() => route.query.search, (newSearch) => {
   filters.value.search = newSearch || '';
 });
 
+// Debounce timeout per evitare troppe richieste
+let filterDebounceTimeout = null;
+let isFirstMount = true; // Flag per ignorare il primo trigger del watcher
+
+// Watcher sui filtri - ricarica quando cambiano (con debounce di 800ms)
 watch(filters, () => {
-  initiativeStore.currentPage = 1;
-  loadArchiveData();
+  // Ignora il primo trigger (succede al mount)
+  if (isFirstMount) {
+    isFirstMount = false;
+    return;
+  }
+  
+  console.log('📝 Filtri cambiati, attendo debounce...');
+  
+  if (filterDebounceTimeout) {
+    clearTimeout(filterDebounceTimeout);
+  }
+  
+  filterDebounceTimeout = setTimeout(() => {
+    console.log('✅ Debounce completato, ricarico archivio');
+    initiativeStore.currentPage = 1;
+    loadArchiveData();
+  }, 800);
 }, { deep: true });
 
 const changePage = async (newPage) => {
@@ -87,12 +113,18 @@ const changePage = async (newPage) => {
         <div class="filter-group">
           <label>Ordina per</label>
           <select v-model="filters.sortBy">
-            <option value="date">Data Creazione</option>
-            <option value="signatures">Numero Firme</option>
+            <option :value="1">Data Creazione</option>
+            <option :value="2">Numero Firme</option>
           </select>
-          <div v-if="filters.sortBy === 'date'" class="radio-row">
-            <label><input type="radio" value="desc" v-model="filters.order"> Più recenti</label>
-            <label><input type="radio" value="asc" v-model="filters.order"> Meno recenti</label>
+          <div class="radio-row">
+            <template v-if="filters.sortBy === 1">
+              <label><input type="radio" value="desc" v-model="filters.order"> Più recenti</label>
+              <label><input type="radio" value="asc" v-model="filters.order"> Meno recenti</label>
+            </template>
+            <template v-else>
+              <label><input type="radio" value="desc" v-model="filters.order"> Maggiori</label>
+              <label><input type="radio" value="asc" v-model="filters.order"> Minori</label>
+            </template>
           </div>
         </div>
 
@@ -125,20 +157,20 @@ const changePage = async (newPage) => {
       </div>
 
         <button class="reset-btn"
-          @click="filters = { search: '', status: [], sortBy: 'date', order: 'desc', platform: '', category: '', dateFrom: '', dateTo: '' }">
+          @click="filters = { search: '', status: [], sortBy: 1, order: 'desc', platform: '', category: '', dateFrom: '', dateTo: '' }">
           Azzera Filtri
         </button>
       </aside>
 
       <main class="results-area">
 
-        <div v-if="initiativeStore.loading" class="loading-msg">Caricamento archivio...</div>
+        <div v-if="initiativeStore.archiveLoading" class="loading-msg">Caricamento archivio...</div>
 
-        <div v-else-if="initiativeStore.initiatives.length > 0">
+        <div v-else-if="initiativeStore.archiveInitiatives.length > 0">
 
           <div class="initiatives-list">
             <InitiativeCard 
-              v-for="item in initiativeStore.initiatives" 
+              v-for="item in initiativeStore.archiveInitiatives" 
               :key="item.id" 
               :item="item" 
             />

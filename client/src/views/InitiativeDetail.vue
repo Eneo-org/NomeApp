@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useInitiativeStore } from '../stores/initiativeStore';
 import { useUserStore } from '../stores/userStore';
@@ -18,8 +18,8 @@ const initiative = ref(null);
 const loading = ref(true);
 const error = ref(null);
 
-// Recuperiamo l'ID dall'URL (convertiamo in numero per confronti sicuri)
-const initiativeId = parseInt(route.params.id);
+// Recuperiamo l'ID dall'URL come computed per reagire ai cambiamenti di route
+const initiativeId = computed(() => parseInt(route.params.id));
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/D';
@@ -31,33 +31,61 @@ const currentUrl = computed(() => window.location.href);
 // Computed: Controlla direttamente lo store per vedere se è firmata
 // Questo rende il bottone reattivo: appena lo store si aggiorna, il bottone cambia
 const isUserSigned = computed(() => {
-  return initiativeStore.hasSigned(initiativeId);
+  return initiativeStore.hasSigned(initiativeId.value);
 });
 
-onMounted(async () => {
-  loading.value = true;
-
-  // 1. Fetch Dettagli Iniziativa
-  if (initiativeStore.categories.length === 0) {
-    await initiativeStore.fetchFiltersData();
+// Funzione per caricare l'iniziativa
+const loadInitiative = async (id) => {
+  if (!id || isNaN(id)) {
+    error.value = "ID iniziativa non valido.";
+    loading.value = false;
+    return;
   }
 
-  // 2. Fetch Iniziativa
-  const data = await initiativeStore.fetchInitiativeDetail(initiativeId);
+  loading.value = true;
+  error.value = null;
+  console.log('🔍 Caricamento iniziativa ID:', id);
+
+  // fetchFiltersData viene chiamato in App.vue una sola volta
+
+  // Fetch Iniziativa
+  const data = await initiativeStore.fetchInitiativeDetail(id);
+  console.log('📦 Dati ricevuti:', data);
 
   if (data) {
+    // ADATTAMENTO: Il backend restituisce 'attachments'.
+    // Separiamo in 'images' e 'documents' per il template esistente.
+    if (data.attachments) {
+      data.images = data.attachments.filter(a => a.fileType.startsWith('image/'));
+      data.documents = data.attachments.filter(a => !a.fileType.startsWith('image/'));
+    }
     initiative.value = data;
 
-    // 3. Fetch stato firme utente (Se loggato)
-    // Questo aggiornerà lo store e di conseguenza la computed 'isUserSigned'
+    // 3. Fetch stato firme e preferiti utente (Se loggato)
+    // Chiamiamo entrambi per avere lo stato completo
     if (userStore.isAuthenticated) {
-      await initiativeStore.fetchUserSignedIds();
+      await Promise.all([
+        initiativeStore.fetchUserSignedIds(),
+        initiativeStore.fetchUserFollowedIds()
+      ]);
     }
   } else {
     error.value = "Impossibile trovare l'iniziativa richiesta.";
   }
 
   loading.value = false;
+};
+
+// Carica al mount
+onMounted(() => loadInitiative(initiativeId.value));
+
+// Ricarica se l'ID nell'URL cambia (navigazione tra iniziative)
+// IMPORTANTE: Solo se diverso E non durante il loading per evitare doppie chiamate
+watch(initiativeId, (newId, oldId) => {
+  if (newId !== oldId && newId && !loading.value) {
+    console.log('🔄 Route ID cambiato:', oldId, '→', newId);
+    loadInitiative(newId);
+  }
 });
 
 const handleSignClick = async () => {
@@ -81,6 +109,13 @@ const handleSignClick = async () => {
 
     // Ricarica il dettaglio per aggiornare il contatore firme (es. da 50 a 51)
     const updatedData = await initiativeStore.fetchInitiativeDetail(initiative.value.id);
+    
+    // IMPORTANTE: Processa gli attachments come nel mount
+    if (updatedData && updatedData.attachments) {
+      updatedData.images = updatedData.attachments.filter(a => a.fileType.startsWith('image/'));
+      updatedData.documents = updatedData.attachments.filter(a => !a.fileType.startsWith('image/'));
+    }
+    
     initiative.value = updatedData;
 
     // Logica Prompt Notifiche
@@ -131,6 +166,21 @@ const prevImage = () => {
 };
 
 const currentImageIndex = ref(0);
+const imageError = ref(false);
+
+// Gestione errore caricamento immagine
+const handleImageError = (event) => {
+  console.warn('⚠️ Errore caricamento immagine, uso placeholder');
+  imageError.value = true;
+  event.target.src = defaultImage;
+};
+
+// Watcher: Resetta l'indice quando cambia l'iniziativa
+watch(() => initiative.value?.id, () => {
+  currentImageIndex.value = 0;
+  imageError.value = false;
+  console.log('🔄 Iniziativa cambiata, reset indice immagini');
+});
 
 </script>
 
@@ -152,7 +202,7 @@ const currentImageIndex = ref(0);
 
       <header class="detail-header">
         <nav class="breadcrumbs">
-          <RouterLink to="/" class="back-link">← Torna alla lista</RouterLink>
+          <button @click="router.back()" class="back-link">← Torna indietro</button>
         </nav>
 
         <div class="title-block">
@@ -187,7 +237,7 @@ const currentImageIndex = ref(0);
 
         <article class="main-content">
           <figure class="hero-image">
-            <img :src="mainImageSrc" alt="Immagine iniziativa">
+            <img :src="mainImageSrc" @error="handleImageError" alt="Immagine iniziativa">
             <div v-if="initiative.images && initiative.images.length > 1" class="gallery-nav">
               <button @click="prevImage" class="gallery-btn prev">‹</button>
               <button @click="nextImage" class="gallery-btn next">›</button>
@@ -363,6 +413,9 @@ const currentImageIndex = ref(0);
 }
 
 .back-link {
+  background: none;
+  border: none;
+  padding: 0;
   text-decoration: none;
   color: var(--secondary-text);
   font-weight: 600;
@@ -370,6 +423,8 @@ const currentImageIndex = ref(0);
   display: inline-flex;
   align-items: center;
   transition: color 0.2s;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .back-link:hover {

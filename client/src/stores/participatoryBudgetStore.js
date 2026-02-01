@@ -11,6 +11,7 @@ export const useParticipatoryBudgetStore = defineStore('participatoryBudget', ()
   const budgetArchive = ref([])
   const loading = ref(false)
   const error = ref(null)
+  const isFetchingActive = ref(false) // Protezione chiamate duplicate
 
   // --- HELPERS (Interni) ---
   const getAuthHeaders = () => {
@@ -22,8 +23,16 @@ export const useParticipatoryBudgetStore = defineStore('participatoryBudget', ()
 
   // 1. FETCH BILANCIO ATTIVO (Home Page)
   const fetchActiveBudget = async () => {
+    // Previeni chiamate duplicate
+    if (isFetchingActive.value) {
+      console.log('⏭️ fetchActiveBudget già in corso, skip')
+      return
+    }
+
+    isFetchingActive.value = true
     loading.value = true
     error.value = null
+    
     try {
       // Nota: usiamo l'helper getAuthHeaders() se lo hai aggiunto, altrimenti gestiscilo come prima
       const storedId = localStorage.getItem('tp_mock_id')
@@ -37,12 +46,15 @@ export const useParticipatoryBudgetStore = defineStore('participatoryBudget', ()
     } catch (err) {
       if (err.response && err.response.status === 404) {
         activeBudget.value = null
+      } else if (err.response?.status === 429) {
+        console.warn('⚠️ Rate limit raggiunto per bilancio attivo')
       } else {
         console.error('Errore fetch bilancio attivo:', err)
         error.value = 'Impossibile caricare il bilancio attivo.'
       }
     } finally {
       loading.value = false
+      isFetchingActive.value = false
     }
   }
 

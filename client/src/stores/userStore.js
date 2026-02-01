@@ -37,8 +37,8 @@ export const useUserStore = defineStore('user', () => {
   const loginWithGoogle = async (googleToken) => {
     try {
       // Chiamata al backend per verificare il token Google
-      const response = await axios.post(`${API_URL}/auth/google-login`, {
-        token: googleToken,
+      const response = await axios.post(`${API_URL}/auth/google`, {
+        tokenId: googleToken,
       })
 
       const data = response.data
@@ -106,6 +106,16 @@ export const useUserStore = defineStore('user', () => {
     localStorage.removeItem('tp_mock_id')
     delete axios.defaults.headers.common['X-Mock-User-Id']
 
+    // Reset degli altri store per pulire la cache
+    try {
+      // Importiamo dinamicamente per evitare circular dependencies
+      const { useInitiativeStore } = require('./initiativeStore')
+      const initiativeStore = useInitiativeStore()
+      initiativeStore.$reset()
+    } catch (e) {
+      console.warn('Impossibile resettare initiativeStore:', e)
+    }
+
     // Redirect forzato o gestito dal router
     window.location.href = '/'
   }
@@ -134,10 +144,15 @@ export const useUserStore = defineStore('user', () => {
   const fetchAdminUsers = async (page = 1, fiscalCode = '') => {
     try {
       const storedId = localStorage.getItem('tp_mock_id')
-      let query = `${API_URL}/users/admin/list?currentPage=${page}&objectsPerPage=10`
-      if (fiscalCode) query += `&fiscalCode=${fiscalCode}`
+      const params = {
+        currentPage: page,
+        objectsPerPage: 10,
+        isAdmin: true,
+        ...(fiscalCode && { fiscalCode })
+      }
 
-      const response = await axios.get(query, {
+      const response = await axios.get(`${API_URL}/users`, {
+        params,
         headers: { 'X-Mock-User-Id': storedId },
       })
       return response.data
@@ -150,7 +165,7 @@ export const useUserStore = defineStore('user', () => {
   const findUserByFiscalCode = async (fiscalCode) => {
     try {
       const storedId = localStorage.getItem('tp_mock_id')
-      const response = await axios.get(`${API_URL}/users/search`, {
+      const response = await axios.get(`${API_URL}/users`, {
         params: { fiscalCode },
         headers: { 'X-Mock-User-Id': storedId },
       })
@@ -166,7 +181,7 @@ export const useUserStore = defineStore('user', () => {
     try {
       const storedId = localStorage.getItem('tp_mock_id')
       await axios.patch(
-        `${API_URL}/users/${userId}/role`,
+        `${API_URL}/users/${userId}`,
         { isAdmin: true },
         { headers: { 'X-Mock-User-Id': storedId } },
       )
@@ -181,7 +196,7 @@ export const useUserStore = defineStore('user', () => {
     try {
       const storedId = localStorage.getItem('tp_mock_id')
       await axios.patch(
-        `${API_URL}/users/${userId}/role`,
+        `${API_URL}/users/${userId}`,
         { isAdmin: false },
         { headers: { 'X-Mock-User-Id': storedId } },
       )

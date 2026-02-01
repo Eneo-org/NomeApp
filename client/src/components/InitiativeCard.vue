@@ -1,9 +1,10 @@
 <script setup>
-import { defineProps } from 'vue'
+import { defineProps, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useInitiativeStore } from '@/stores/initiativeStore'
 import { useUserStore } from '@/stores/userStore'
 import { useImage } from '@/composables/useImage'
+import defaultImage from '@/assets/placeholder-initiative.jpg'
 
 const props = defineProps({
   item: {
@@ -16,6 +17,12 @@ const router = useRouter()
 const initiativeStore = useInitiativeStore()
 const userStore = useUserStore()
 const { getImageUrl } = useImage()
+
+// Gestione errore caricamento immagine
+const handleImageError = (event) => {
+  console.warn('⚠️ Errore caricamento immagine card, uso placeholder');
+  event.target.src = defaultImage;
+};
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/D'
@@ -58,7 +65,7 @@ const goToDetail = () => {
       <div v-if="item.platformId !== 1" class="source-badge external">
         {{ initiativeStore.getPlatformName(item.platformId) }} ↗
       </div>
-      <img :src="getImageUrl(item)" class="card-img" alt="Immagine iniziativa">
+      <img :src="getImageUrl(item)" @error="handleImageError" class="card-img" alt="Immagine iniziativa">
     </div>
 
     <div class="card-content">

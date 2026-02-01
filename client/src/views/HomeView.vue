@@ -17,19 +17,30 @@ const toast = useToastStore();
 
 // --- INIT ---
 onMounted(async () => {
-  initiativeStore.fetchFiltersData()
-  loadData()
-  budgetStore.fetchActiveBudget()
+  console.log('🏠 HomeView montata - caricamento dati home');
+  // fetchFiltersData viene chiamato in App.vue una sola volta
+  
+  // Carichiamo tutto in sequenza per evitare rate limiting
+  await loadData()
+  
+  // Aspetta un po' prima di caricare il budget
+  await new Promise(resolve => setTimeout(resolve, 300))
+  await budgetStore.fetchActiveBudget()
+  
+  // Carica preferiti DOPO tutto il resto
   if (userStore.isAuthenticated) {
+    await new Promise(resolve => setTimeout(resolve, 300))
     await initiativeStore.fetchUserFollowedIds();
   }
 })
 
 const loadData = async () => {
+  // Forziamo il caricamento delle iniziative popolari in corso
   await initiativeStore.fetchInitiatives(
     1,
-    'signatures',
-    { status: 'In corso' }
+    2, // 2 = Ordina per Numero Firme (Decrescente di default)
+    { status: 'In corso', order: 'desc' },
+    'home' // IMPORTANTE: contesto home
   );
 };
 
@@ -82,14 +93,14 @@ const handleCreateClick = async () => {
           <h2>Iniziative attive più popolari</h2>
         </div>
 
-        <div v-if="initiativeStore.loading" class="loading-container">
+        <div v-if="initiativeStore.homeLoading" class="loading-container">
           <div class="spinner"></div>
           <p>Caricamento in corso...</p>
         </div>
 
         <div v-else class="cards-container">
           <InitiativeCard 
-            v-for="item in initiativeStore.initiatives" 
+            v-for="item in initiativeStore.homeInitiatives" 
             :key="item.id" 
             :item="item" 
           />
