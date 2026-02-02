@@ -80,15 +80,15 @@ una data di scadenza per la votazione, assicurando il periodo di apertura non si
 \label{rf:consultazione_archivio_bilancio_partecipativo}
 Il sistema deve fornire al personale dell'Amministrazione una sezione dedicata alla consultazione dell'archivio storico di tutti i bilanci partecipativi conclusi. Tale interfaccia deve essere accessibile esclusivamente agli utenti "amministratore". Per ogni bilancio archiviato, il sistema deve visualizzare in modo chiaro i dettagli della consultazione passata, includendo la domanda che era stata proposta, l'elenco delle opzioni disponibili e il relativo periodo di votazione. La vista dovrà riportare anche i risultati finali, specificando il numero totale di votanti e la distribuzione dei voti, sia in numero assoluto che in percentuale, per ciascuna opzione.
 
-\RF{Gestione Ruoli Amministrativi} 
+\RF{Gestione ruoli amministrativi} 
 \label{rf:ruoli_amministrativi}
 Il sistema deve fornire agli utenti Amministratori un'interfaccia dedicata per la gestione dei privilegi amministrativi della piattaforma.
 
-\subRF{Visualizzazione e Ricerca Utenti.}
+\subRF{Visualizzazione e ricerca utenti.}
     \label{subRf:ricerca_utenti}
 Il sistema deve permettere a un Amministratore di visualizzare un elenco completo di tutti gli utenti che attualmente possiedono il ruolo di ``Amministratore'' ed utilizzare una funzione di ricerca tramite \textbf{Codice Fiscale} per identificare un utente da promuovere o pre-autorizzare.
 
-\subRF{Assegnazione Privilegi e Pre-Autorizzazione.}
+\subRF{Assegnazione privilegi e pre-autorizzazione.}
     \label{subRf:assegnazione_privilegi}
 Una volta inserito un Codice Fiscale (tramite RF\ref{subRf:ricerca_utenti}), il sistema verifica l'esistenza dell'utente nel database:
 \begin{itemize}
@@ -97,7 +97,7 @@ Una volta inserito un Codice Fiscale (tramite RF\ref{subRf:ricerca_utenti}), il 
 \end{itemize}
 L'utente promosso (o l'utente pre-autorizzato che effettua il primo accesso) ottiene immediatamente accesso a tutte le funzionalità riservate agli Amministratori (definite nella sezione: \ref{sec:RF_amministrazione}).
 
-\subRF{Revoca Privilegi.}
+\subRF{Revoca privilegi.}
     \label{subRf:revoca_previlegi}
 L'Amministratore deve poter selezionare un utente dall'elenco degli amministratori (RF\ref{subRf:ricerca_utenti}) e revocare il suo ruolo di ``Amministratore''.
 \begin{itemize}
@@ -107,7 +107,7 @@ L'Amministratore deve poter selezionare un utente dall'elenco degli amministrato
 \end{itemize}
 Per ragioni di sicurezza, un Amministratore non può revocare i privilegi a sé stesso.
 
-\subRF{Bootstrapping Amministratore.}
+\subRF{Bootstrapping amministratore.}
     \label{subRf:bootstrapping_amministratore}
 L'esistenza del primo utente Amministratore ("super-utente") è garantita dalla configurazione manuale nel database al momento dell'installazione della piattaforma.
 Questo utente sarà il primo a poter utilizzare RF\ref{subRf:assegnazione_privilegi} per nominare altri amministratori.
