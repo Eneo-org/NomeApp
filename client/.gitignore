@@ -34,3 +34,10 @@ coverage
 
 # Vitest
 __screenshots__/
+
+# Environment variables
+.env
+.env.development
+.env.test
+.env.production
+!.env.example

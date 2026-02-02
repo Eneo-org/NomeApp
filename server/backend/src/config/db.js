@@ -18,7 +18,7 @@ console.log(`🔌 Connessione al DB: ${currentDbName} (Mode: ${process.env.NODE_
  */
 const pool = mysql.createPool({
   host: process.env.DB_HOST || "localhost",
-  port: process.env.DB_PORT || 3306, // DigitalOcean often uses 25060
+  port: process.env.DB_PORT || 25060, // DigitalOcean default port
   user: process.env.DB_USER || "root",
   password: process.env.DB_PASSWORD || "",
   database: currentDbName,
