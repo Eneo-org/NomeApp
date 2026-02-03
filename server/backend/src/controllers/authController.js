@@ -157,7 +157,11 @@ exports.sendOtp = async (req, res) => {
       [email],
     );
     if (existingUser.length > 0) {
-      return res.status(409).json({ message: "Email già registrata." });
+      return res
+        .status(409)
+        .json({
+          message: "Questa email è già stata utilizzata. Inseriscine un'altra.",
+        });
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
