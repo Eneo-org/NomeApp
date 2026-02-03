@@ -76,11 +76,6 @@ exports.googleLogin = async (req, res) => {
     );
 
     if (preAuthRows.length > 0) {
-      // ... logica creazione admin ...
-      // (Omesso per brevità, ma è identico al tuo codice precedente)
-      // Se ti serve il blocco intero della creazione admin dimmelo,
-      // ma qui mi concentro sul fix della mail.
-      // PER SICUREZZA RIMETTO IL BLOCCO STANDARD DI REGISTRAZIONE QUI SOTTO:
       const firstName = payload.given_name || "Utente";
       const lastName = payload.family_name || "Pre-autorizzato";
       const connection = await db.getConnection();
@@ -135,7 +130,7 @@ exports.googleLogin = async (req, res) => {
   }
 };
 
-// --- 2. INVIO OTP (Versione DEBUG/STRICT con il TUO HTML) ---
+// --- 2. INVIO OTP (Versione STRICT con il TUO HTML) ---
 exports.sendOtp = async (req, res) => {
   const { email } = req.body;
 
