@@ -1,0 +1,76 @@
+\documentclass[11pt]{extarticle}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{float}
+\usepackage[italian]{babel}
+\usepackage[a4paper, left=3cm, right=3cm]{geometry}
+\usepackage{titlesec}
+\usepackage{hyperref}
+
+%-- gestione estetica codice yaml
+\usepackage{minted}
+\usepackage{xcolor}
+
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[italian]{babel}
+
+\usepackage{xltabular} 
+\usepackage{ragged2e} 
+\usepackage{longtable}
+\usepackage{array} % Serve per definire meglio le colonne
+% Definiamo un nuovo tipo di colonna "Y" che è come la "X" 
+% ma allineata a sinistra (evita spazi enormi tra le parole)
+% Permette di spezzare stringhe lunghe (URL, codice, variabili) ovunque
+\usepackage{xurl}
+\usepackage{dirtree}
+\newcolumntype{L}{>{\hsize=1.9\hsize\raggedright\arraybackslash}X} % Large (Precondizioni)
+\newcolumntype{M}{>{\hsize=0.9\hsize\raggedright\arraybackslash}X} % Medium (Descrizione)
+\newcolumntype{S}{>{\hsize=0.72\hsize\raggedright\arraybackslash}X} % Small (Dati e Risultati)
+
+% 2. FONT PIÙ PICCOLO
+% Impostiamo il font della tabella a \footnotesize o \scriptsize per far entrare il testo
+\footnotesize
+% Configurazione estetica
+\definecolor{bg}{rgb}{0.95,0.95,0.95} % Sfondo grigio chiaro
+
+% Opzioni globali per minted
+\setminted{
+    style=friendly,      % Stile colori (prova anche 'monokai', 'manni', 'vs')
+    bgcolor=bg,          % Colore di sfondo
+    frame=lines,         % Linee sopra e sotto
+    framesep=2mm,        % Spazio tra frame e codice
+    fontsize=\footnotesize,
+    linenos=true         % Numeri di riga
+}
+
+% --- path per repo organization
+
+
+% --- Section format ---
+\titleformat{\section}
+  {\normalfont\LARGE\bfseries}  % Font style: normal + Large + bold
+  {\thesection}                 % Section number format
+  {6pt}                         % Space between number and title
+  {}
+
+\title{\Huge TRENTO PARTECIPA - D2}
+\author{\LARGE D'Angiò Enea, Mattarolo Alessandro, Nedeljkovic Ivan}
+\date{January 2026}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Introduzione}
+Il seguente documento riporta le informazioni necessarie all'\textbf{implementazione} del progetto \textbf{\texttt{"TRENTO PARTECIPA"}}. 
+
+\include{sections/API}
+\include{sections/Implementation}
+\include{sections/Frontend}
+\include{sections/Deployment}
+
+\end{document}

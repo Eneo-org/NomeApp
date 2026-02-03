@@ -1,0 +1,914 @@
+\section{Implementazione}
+L’applicazione è stata sviluppata adottando un’architettura client-server disaccoppiata, basata interamente sull'ecosistema JavaScript.
+
+
+Per la parte di Backend, è stato utilizzato il runtime environment Node.js con il framework Express.js per la creazione delle API RESTful. Questa scelta tecnologica è stata dettata dalla necessità di gestire un elevato numero di operazioni di I/O asincrone (come upload di file e invio email) in modo non bloccante.
+
+
+Per la persistenza dei dati è stato adottato MySQL. La scelta di un RDBMS risponde alla natura intrinsecamente strutturata e stabile del dominio applicativo (gestione istituzionale), rendendo non necessaria la flessibilità schema-less delle soluzioni NoSQL. Questa architettura garantisce la rigorosa integrità referenziale e la consistenza transazionale (ACID) indispensabili per la validità di firme e votazioni. L'interazione con il database è gestita dalla libreria mysql2, che assicura efficienza e protezione contro SQL Injection tramite l'uso di prepared statements.
+
+
+Per la parte di Frontend, lo sviluppo è stato realizzato con il framework Vue.js 3 (Composition API). È stato scelto Vite come strumento di build per la sua velocità di compilazione e l'Hot Module Replacement (HMR) istantaneo. La gestione dello stato applicativo è centralizzata tramite Pinia, mentre l'interfaccia utente è stata costruita seguendo un approccio a componenti modulari.
+
+%   ----    repo organizations --- 
+\subsection{Organizzazione delle repositories}
+
+\textbf{path di esempio, bisogna riempirlo con il nostro}
+\dirtree{%
+.1 / .
+.2 .github .
+.3 workflows \DTcomment{GitHub Actions per CI/CD}.
+.2 src .
+.3 controllers \DTcomment{Logica di gestione delle richieste}.
+.3 models \DTcomment{Schemi Mongoose per il database}.
+.3 routes \DTcomment{Definizione degli endpoint API}.
+.3 utils \DTcomment{Funzioni di utilità e helper}.
+.3 app.ts \DTcomment{Configurazione dell'applicazione Express}.
+.3 server.ts \DTcomment{Entry point del server}.
+.2 package.json \DTcomment{Gestione dipendenze npm}.
+.2 tsconfig.json \DTcomment{Configurazione TypeScript}.
+.2 .env \DTcomment{Variabili d'ambiente}.
+}
+
+
+%   ----    branching strategy --- 
+\subsection{Branching strategy e organizzazione del lavoro}
+
+Per la gestione del versionamento del codice è stata utilizzata la piattaforma GitHub. Data la dimensione del team e l'interdipendenza tra i moduli backend e frontend, abbiamo optato per una strategia di Trunk-Based Development.
+
+A differenza di strategie complesse come GitFlow (spesso sovrabbondanti per team ristretti), lo sviluppo si è concentrato su un unico ramo principale, il branch main. Questa scelta ha garantito:
+\begin{itemize}
+    \item \textbf{Integrazione Continua}: Ogni funzionalità completata è stata immediatamente integrata nel codice base, evitando il "merge hell" tipico dei branch a lunga vita.
+    \item \textbf{Risoluzione Rapida dei Conflitti}: Lavorando sullo stesso ramo, eventuali conflitti tra il lavoro dei membri (es. modifiche concorrenti allo stesso file) venivano evidenziati e risolti immediatamente.
+\end{itemize}
+
+\subsubsection{Suddivisione Logica del Lavoro}
+Sebbene il lavoro sia confluito tecnicamente sullo stesso branch, lo sviluppo è stato logicamente parallelizzato assegnando a ciascun membro la responsabilità esclusiva di specifiche aree funzionali, riducendo al minimo le sovrapposizioni:
+\begin{description}
+    \item[Enea D'Angiò]: Si è occupato principalmente dell'architettura Backend (configurazione Express, gestione e creazione del database MySQL) e della progettazione e integrazione delle API. Inoltre ha contribuito parzialmente al Frontend attraverso bugfix, refactoring e implementazioni di piccole feature. 
+    \item[Ivan Nedeljkovic]: Ha curato lo sviluppo dei componenti Frontend in Vue.js creando l'intera infrastruttura lato client e gestendo ui e ux. 
+    \item[Alessandro Mattarolo]: Ha seguito lo sviluppo con la scrittura della documentazione e organizzando al meglio i file LaTeX e con la progettazione del Frontend. 
+\end{description}
+L'analisi dei contributi (visibile nella sezione Insights > Contributors della repository) mostra un totale di XX commit, distribuiti tra i membri in modo proporzionale ai task assegnati. Eventuali sbilanciamenti nel numero di commit sono attribuibili alla diversa granularità delle operazioni.
+
+%   ---- dependencies ---
+\subsection{Dipendenze}
+
+Il progetto si basa su un insieme di librerie gestite tramite il package manager \texttt{npm}. Di seguito sono elencate le dipendenze utilizzate, suddivise per ambito applicativo.
+
+\subsubsection{Backend}
+Le seguenti librerie sono state utilizzate per lo sviluppo del server Node.js:
+
+\begin{description}
+    \item[cors] Middleware per abilitare il Cross-Origin Resource Sharing, permettendo al frontend di comunicare con il backend.
+    \item[dotenv] Modulo per caricare le variabili d'ambiente da un file \texttt{.env} a \texttt{process.env}, garantendo la sicurezza delle credenziali.
+    \item[express] Framework web minimalista per Node.js, utilizzato per la gestione del server, del routing e delle API REST.
+    \item[google-auth-library] Libreria client di Google per la verifica sicura dei token di autenticazione e l'integrazione del login Google.
+    \item[joi] Libreria per la validazione degli schemi di dati, utilizzata per verificare la correttezza degli input nelle richieste API.
+    \item[multer] Middleware per la gestione di \texttt{multipart/form-data}, utilizzato per l'upload di file (immagini delle iniziative).
+    \item[mysql2] Client MySQL veloce e sicuro per Node.js, supporta Promise e Prepared Statements per prevenire SQL Injection.
+    \item[node-cron] Scheduler per l'esecuzione di task periodici sul server (cron jobs).
+    \item[nodemailer] Modulo per l'invio di email transazionali (es. notifiche) tramite server SMTP.
+    \item[nodemon] Strumento di sviluppo che monitora le modifiche ai file e riavvia automaticamente il server.
+\end{description}
+
+\subsubsection{Frontend}
+Per lo sviluppo dell'interfaccia utente con Vue.js sono state utilizzate le seguenti dipendenze:
+
+\begin{description}
+    \item[vue] Framework progressivo per la creazione di interfacce utente reattive e basate su componenti.
+    \item[vue-router] Router ufficiale per Vue.js, gestisce la navigazione SPA (Single Page Application).
+    \item[pinia] Store manager per Vue, utilizzato per la gestione centralizzata dello stato dell'applicazione.
+    \item[axios] Client HTTP basato su Promise per effettuare richieste asincrone verso il backend.
+    \item[vite] Build tool di nuova generazione che offre un ambiente di sviluppo rapido e ottimizzazione per la produzione.
+    \item[vue3-google-login] Componente Vue per facilitare l'integrazione del pulsante di accesso Google.
+    \item[eslint / eslint-plugin-vue] Strumenti di analisi statica per identificare problemi nel codice JavaScript e Vue.
+    \item[prettier] Code formatter per garantire uno stile di codice coerente.
+    \item[@vitejs/plugin-vue] Plugin ufficiale per il supporto di Vue.js all'interno di Vite.
+    \item[vite-plugin-vue-devtools] Plugin per migliorare l'esperienza di debugging con i devtools di Vue.
+\end{description}
+
+%----   Database ---
+
+\subsection{Database}
+La decisione di utilizzare un database relazionale rispetto a soluzioni NoSQL (come MongoDB) è stata guidata dall'analisi dei requisiti funzionali (descritti nel documento D1) e dalla natura dei dati trattati. In particolare, il dominio applicativo di \textbf{\texttt{"TRENTO PARTECIPA"}} presenta pochi elementi dinamici o non strutturati: le entità principali (Cittadini, Iniziative, Bilanci) possiedono uno schema stabile e prevedibile, che non richiede la flessibilità "schema-less" di un database a documenti.
+
+Inoltre, la scelta di MySQL garantisce:
+\begin{enumerate}
+    \item \textbf{Struttura Rigida e Validazione}: Essendo una piattaforma istituzionale, è necessario che ogni record rispetti vincoli precisi (es. un'iniziativa deve avere un autore, un voto deve essere collegato a un bilancio esistente).
+    \item \textbf{Integrità Referenziale}: Le relazioni tra le entità sono forti. Ad esempio, la cancellazione di un utente o di un'iniziativa deve essere gestita con regole precise (es. ON DELETE CASCADE o SET NULL) per evitare incoerenze nei dati delle firme o delle risposte ufficiali.
+    \item \textbf{Supporto per Query Complesse}: Le funzionalità di reportistica e filtraggio (es. "visualizzare tutte le iniziative attive di una certa categoria ordinate per numero di firme") beneficiano dell'efficienza delle JOIN SQL.
+\end{enumerate}
+
+Il database è stato strutturato nelle seguenti tabelle principali:
+\subsubsection{Categoria}
+La tabella \texttt{CATEGORIA} gestisce la classificazione tematica delle iniziative presenti sulla piattaforma.
+\begin{itemize}
+    \item \textbf{ID\_CATEGORIA} (\texttt{INT}): Chiave primaria autoincrementale che identifica univocamente la categoria.
+    \item \textbf{NOME} (\texttt{VARCHAR}): Nome della categoria (es. "Ambiente", "Viabilità"), univoco nel sistema.
+\end{itemize}
+
+\subsubsection{Piattaforma}
+La tabella \texttt{PIATTAFORMA} memorizza le informazioni relative ai siti esterni (es. Change.org) da cui possono essere importate le iniziative.
+\begin{itemize}
+    \item \textbf{ID\_PIATTAFORMA} (\texttt{INT}): Chiave primaria autoincrementale per identificare la piattaforma esterna.
+    \item \textbf{NOME\_PIATTAFORMA} (\texttt{VARCHAR}): Nome della piattaforma esterna.
+    \item \textbf{PATH\_ICONA} (\texttt{VARCHAR}): Percorso del file immagine dell'icona associata alla piattaforma.
+    \item \textbf{LINK\_BASE\_PIATTAFORMA} (\texttt{VARCHAR}): URL base della piattaforma esterna.
+\end{itemize}
+
+\subsubsection{Utente}
+La tabella \texttt{UTENTE} centralizza le informazioni di tutti gli attori che interagiscono con la piattaforma (Cittadini e Amministratori).
+\begin{itemize}
+    \item \textbf{ID\_UTENTE} (\texttt{INT}): Chiave primaria autoincrementale che identifica univocamente l'utente.
+    \item \textbf{NOME} (\texttt{VARCHAR}): Nome anagrafico dell'utente.
+    \item \textbf{COGNOME} (\texttt{VARCHAR}): Cognome anagrafico dell'utente.
+    \item \textbf{CODICE\_FISCALE} (\texttt{CHAR}): Codice fiscale univoco (formato standard 16 caratteri).
+    \item \textbf{EMAIL} (\texttt{VARCHAR}): Indirizzo email univoco, utilizzato per l'accesso e le notifiche.
+    \item \textbf{IS\_ADMIN} (\texttt{BOOLEAN}): Definisce se l'utente possiede i privilegi di amministratore.
+    \item \textbf{IS\_CITTADINO} (\texttt{BOOLEAN}): Definisce se l'utente è verificato come residente/cittadino.
+    \item \textbf{CREATED\_AT} (\texttt{TIMESTAMP}): Data e ora di registrazione dell'utente.
+\end{itemize}
+
+\subsubsection{Pre\_Autorizzato}
+La tabella \texttt{PRE\_AUTORIZZATO} funge da whitelist contenente i codici fiscali degli amministratori non cittadini e che quindi otterranno un account con privilegi da admin ma non da cittadino. 
+\begin{itemize}
+    \item \textbf{CODICE\_FISCALE} (\texttt{CHAR}): Chiave primaria, contiene il codice fiscale pre-validato.
+    \item \textbf{DATA\_INSERIMENTO} (\texttt{TIMESTAMP}): Data in cui il codice è stato inserito nel sistema.
+    \item \textbf{INSERITO\_DA} (\texttt{INT}): Chiave esterna verso \texttt{UTENTE}, indica l'amministratore che ha inserito il dato.
+\end{itemize}
+
+\subsubsection{Notifica}
+La tabella \texttt{NOTIFICA} gestisce i messaggi e gli avvisi inviati dal sistema agli utenti.
+\begin{itemize}
+    \item \textbf{ID\_NOTIFICA} (\texttt{INT}): Chiave primaria autoincrementale della notifica.
+    \item \textbf{ID\_UTENTE} (\texttt{INT}): Chiave esterna che associa la notifica al destinatario.
+    \item \textbf{TESTO} (\texttt{TEXT}): Contenuto testuale del messaggio.
+    \item \textbf{LETTA} (\texttt{BOOLEAN}): Flag che indica se la notifica è stata visualizzata dall'utente.
+    \item \textbf{DATA\_CREAZIONE} (\texttt{TIMESTAMP}): Data e ora di generazione della notifica.
+    \item \textbf{LINK\_RIF} (\texttt{VARCHAR}): Collegamento opzionale per reindirizzare l'utente all'evento specifico.
+\end{itemize}
+
+\subsubsection{Bilancio Partecipativo}
+La tabella \texttt{BILANCIO\_PARTECIPATIVO} definisce le consultazioni pubbliche create dall'amministrazione per l'allocazione di risorse.
+\begin{itemize}
+    \item \textbf{ID\_BIL} (\texttt{INT}): Chiave primaria autoincrementale dell'evento di bilancio.
+    \item \textbf{ID\_CREATOR} (\texttt{INT}): Chiave esterna verso l'amministratore che ha creato l'evento.
+    \item \textbf{TITOLO} (\texttt{VARCHAR}): Titolo descrittivo del bilancio partecipativo.
+    \item \textbf{CREATED\_AT} (\texttt{TIMESTAMP}): Data di creazione dell'evento.
+    \item \textbf{DATA\_SCADENZA} (\texttt{DATE}): Data termine oltre la quale non è più possibile votare.
+\end{itemize}
+
+\subsubsection{Iniziativa}
+La tabella \texttt{INIZIATIVA} costituisce il nucleo centrale dell'applicativo web ed include iniziative sia interne che esterne.
+\begin{itemize}
+    \item \textbf{ID\_INIZIATIVA} (\texttt{INT}): Chiave primaria autoincrementale dell'iniziativa.
+    \item \textbf{TITOLO} (\texttt{VARCHAR}): Titolo dell'iniziativa.
+    \item \textbf{DESCRIZIONE} (\texttt{TEXT}): Descrizione dettagliata della proposta.
+    \item \textbf{LUOGO} (\texttt{VARCHAR}): Indicazione geografica o zona di interesse.
+    \item \textbf{STATO} (\texttt{ENUM}): Stato corrente ('In corso', 'Approvata', 'Respinta', 'Scaduta').
+    \item \textbf{NUM\_FIRME} (\texttt{INT}): Contatore delle firme raccolte (aggiornato per iniziative interne o importato per esterne).
+    \item \textbf{DATA\_CREAZIONE} (\texttt{TIMESTAMP}): Data di pubblicazione dell'iniziativa.
+    \item \textbf{DATA\_SCADENZA} (\texttt{DATE}): Termine ultimo per la raccolta firme.
+    \item \textbf{ID\_AUTORE} (\texttt{INT}): Chiave esterna verso l'utente proponente (NULL se di sistema o importata anonimamente).
+    \item \textbf{ID\_CATEGORIA} (\texttt{INT}): Chiave esterna per la categorizzazione tematica.
+    \item \textbf{ID\_PIATTAFORMA} (\texttt{INT}): Chiave esterna valorizzata solo se l'iniziativa proviene da una piattaforma terza.
+    \item \textbf{URL\_ESTERNO} (\texttt{VARCHAR}): Link originale dell'iniziativa se esterna, NULL altrimenti.
+\end{itemize}
+
+\subsubsection{Opzioni Bilancio}
+La tabella \texttt{OPZIONI\_BILANCIO} contiene le singole voci o progetti votabili all'interno di un evento di bilancio partecipativo.
+\begin{itemize}
+    \item \textbf{ID\_OB} (\texttt{INT}): Chiave primaria autoincrementale dell'opzione.
+    \item \textbf{ID\_BIL} (\texttt{INT}): Chiave esterna che collega l'opzione al relativo bilancio partecipativo.
+    \item \textbf{TEXT} (\texttt{VARCHAR}): Descrizione testuale dell'opzione.
+    \item \textbf{POSITION} (\texttt{TINYINT}): Ordine numerico di visualizzazione nella lista.
+\end{itemize}
+
+\subsubsection{Voti Bilancio}
+La tabella \texttt{VOTI\_BILANCIO} registra le preferenze espresse dagli utenti per le opzioni di bilancio.
+\begin{itemize}
+    \item \textbf{ID\_UTENTE} (\texttt{INT}): Chiave esterna dell'utente votante (parte della chiave primaria composta).
+    \item \textbf{ID\_BIL} (\texttt{INT}): Chiave esterna del bilancio (parte della chiave primaria composta per garantire un solo voto per bilancio).
+    \item \textbf{OPTION\_ID} (\texttt{INT}): Chiave esterna dell'opzione scelta.
+    \item \textbf{VOTED\_AT} (\texttt{TIMESTAMP}): Data e ora dell'espressione del voto.
+\end{itemize}
+
+\subsubsection{Firma Iniziativa}
+La tabella \texttt{FIRMA\_INIZIATIVA} memorizza le adesioni degli utenti alle iniziative proposte.
+\begin{itemize}
+    \item \textbf{ID\_UTENTE} (\texttt{INT}): Chiave esterna dell'utente firmatario.
+    \item \textbf{ID\_INIZIATIVA} (\texttt{INT}): Chiave esterna dell'iniziativa firmata.
+    \item \textbf{DATA\_FIRMA} (\texttt{TIMESTAMP}): Data e ora della firma.
+\end{itemize}
+
+\subsubsection{Iniziativa Salvata}
+La tabella \texttt{INIZIATIVA\_SALVATA} permette agli utenti di salvare iniziative nei propri preferiti per consultazione futura.
+\begin{itemize}
+    \item \textbf{ID\_UTENTE} (\texttt{INT}): Chiave esterna dell'utente che salva l'iniziativa.
+    \item \textbf{ID\_INIZIATIVA} (\texttt{INT}): Chiave esterna dell'iniziativa salvata.
+    \item \textbf{SAVED\_AT} (\texttt{TIMESTAMP}): Data e ora del salvataggio.
+\end{itemize}
+
+\subsubsection{Risposta}
+La tabella \texttt{RISPOSTA} contiene le comunicazioni ufficiali dell'amministrazione in merito a una specifica iniziativa.
+\begin{itemize}
+    \item \textbf{ID\_RISPOSTA} (\texttt{INT}): Chiave primaria autoincrementale della risposta.
+    \item \textbf{ID\_INIZIATIVA} (\texttt{INT}): Chiave esterna dell'iniziativa a cui la risposta si riferisce.
+    \item \textbf{ID\_ADMIN} (\texttt{INT}): Chiave esterna dell'amministratore che ha redatto la risposta.
+    \item \textbf{TEXT\_RISP} (\texttt{TEXT}): Contenuto della risposta ufficiale.
+    \item \textbf{DATA\_CREAZIONE} (\texttt{TIMESTAMP}): Data di pubblicazione della risposta.
+\end{itemize}
+
+\subsubsection{Allegato}
+La tabella \texttt{ALLEGATO} gestisce i file multimediali associati alle entità del sistema, implementando un vincolo di esclusività (XOR) tra Iniziative e Risposte.
+\begin{itemize}
+    \item \textbf{ID\_ALLEGATO} (\texttt{INT}): Chiave primaria autoincrementale del file.
+    \item \textbf{FILE\_NAME} (\texttt{VARCHAR}): Nome originale del file.
+    \item \textbf{FILE\_PATH} (\texttt{VARCHAR}): Percorso di archiviazione del file nel server.
+    \item \textbf{FILE\_TYPE} (\texttt{VARCHAR}): Tipologia del file (estensione).
+    \item \textbf{UPLOADED\_AT} (\texttt{TIMESTAMP}): Data di caricamento.
+    \item \textbf{ID\_INIZIATIVA} (\texttt{INT}): Chiave esterna (opzionale) se l'allegato appartiene a un'iniziativa.
+    \item \textbf{ID\_RISPOSTA} (\texttt{INT}): Chiave esterna (opzionale) se l'allegato appartiene a una risposta.
+\end{itemize}
+
+% ----  testing
+
+\subsection{Testing}
+
+
+% Font piccolo per far stare tutto
+\footnotesize 
+
+\begin{xltabular}{\textwidth}{|l|M|S|L|c|S|S|c|}
+
+    % --- INTESTAZIONE PRIMA PAGINA ---
+    \hline 
+    \textbf{N.} & \textbf{Desc.} & \textbf{\textit{Test Data}} & \textbf{Precondizioni} & \textbf{Dip.} & \textbf{R. Atteso} & \textbf{R. Risc.} & \textbf{Note}\\ 
+    \hline 
+    \endfirsthead
+    
+    % --- INTESTAZIONE PAGINE SUCCESSIVE ---
+    \multicolumn{8}{l}{\textit{...continua dalla pagina precedente}} \\
+    \hline 
+    \textbf{N.} & \textbf{Desc.} & \textbf{\textit{Test Data}} & \textbf{Precondizioni} & \textbf{Dip.} & \textbf{R. Atteso} & \textbf{R. Risc.} & \textbf{Note}\\ 
+    \hline
+    \endhead
+    
+    % --- PIÈ DI PAGINA ---
+    \hline 
+    \multicolumn{8}{r}{\textit{continua nella pagina successiva...}}\\ 
+    \hline
+    \endfoot
+    
+    % --- FINE TABELLA ---
+    \hline
+    \endlastfoot
+    
+    % =========================================================================
+    % FILE: auth.test.js (Autenticazione)
+    % =========================================================================
+    
+    1.1 & Login con token Google non valido & 
+    \path{token="INVALID"} & 
+    Il client invia un token che Google non riesce a validare o che risulta malformato. & - & 
+    Err \path{401} "Token non valido" & 
+    Err \path{401} "Token non valido" & RF1.1 \\
+    \hline
+    
+    1.2 & Login utente esistente (match Codice Fiscale) & 
+    \path{token="VALID_EXISTING"} & 
+    L'utente deve essere già registrato nel database e il Codice Fiscale calcolato dal token Google deve corrispondere esattamente a quello salvato. & DB & 
+    Status \path{200} \newline JSON Utente & 
+    Status \path{200} \newline JSON Utente & RF1.2 \\
+    \hline
+    
+    1.3 & Login utente esistente (fallback Email) & 
+    \path{token="VALID_EMAIL"} & 
+    L'utente non viene trovato per Codice Fiscale, ma esiste un utente con la stessa email. Il CF nel DB è diverso da quello calcolato. & DB & 
+    Status \path{200} \newline CF Aggiornato & 
+    Status \path{200} \newline CF Aggiornato & RF1.3 \\
+    \hline
+
+    1.4 & Login nuovo utente (non registrato) & 
+    \path{token="VALID_NEW"} & 
+    L'utente non deve essere presente nel database né per CF né per email, e non deve essere nella lista dei pre-autorizzati. & DB & 
+    Err \path{404} \path{NEED_REGISTRATION} & 
+    Err \path{404} \path{NEED_REGISTRATION} & RF1.4 \\
+    \hline
+
+    1.5 & Login Admin pre-autorizzato & 
+    \path{token="PREAUTH_ADMIN"} & 
+    L'utente non esiste in anagrafica, ma il suo CF è presente nella tabella \path{PRE_AUTORIZZATO} inserita da un altro admin. & DB & 
+    Status \path{200} \newline Profilo Admin creato & 
+    Status \path{200} \newline Profilo Admin creato & RF2.2 \\
+    \hline
+
+    2.1 & Richiesta OTP: Email non valida & 
+    \path{email="not-an-email"} & 
+    Il formato dell'email inviata non rispetta la regex standard per gli indirizzi email. & - & 
+    Err \path{400} "Email non valida" & 
+    Err \path{400} "Email non valida" & RF2.0 \\
+    \hline
+
+    2.2 & Richiesta OTP: Email già usata & 
+    \path{email="exist@test.com"} & 
+    L'indirizzo email specificato è già associato a un utente attivo nel database \path{UTENTE}. & DB & 
+    Err \path{409} "Email già utilizzata" & 
+    Err \path{409} "Email già utilizzata" & RF2.0 \\
+    \hline
+
+    2.3 & Richiesta OTP: Successo & 
+    \path{email="new@test.com"} & 
+    L'email è valida e non è presente nel database. Il servizio di posta (o mock) deve essere pronto. & SMTP & 
+    Status \path{200} "Codice inviato" & 
+    Status \path{200} "Codice inviato" & RF2.0 \\
+    \hline
+    
+    2.4 & Richiesta OTP: DevMode & 
+    \path{email="dev@test.com"} & 
+    Le credenziali SMTP non sono configurate nell'ambiente (variabili d'ambiente mancanti). & Env & 
+    Status \path{200} "Check console" & 
+    Status \path{200} "Check console" & Dev \\
+    \hline
+
+    3.1 & \path{Registrazione} completamento Cittadino & 
+    \path{otp="123456"}, \path{token="VALID"} & 
+    È stato generato un OTP valido per l'email associata al token Google e l'OTP non è ancora scaduto. & Redis / Mem & 
+    Status \path{201} \newline Utente creato & 
+    Status \path{201} \newline Utente creato & RF2.1 \\
+    \hline
+
+    3.2 & \path{Registrazione} Admin (via email) & 
+    \path{otp="654321"}, \path{email="...admin..."} & 
+    L'email contiene la sottostringa "admin" (logica di test) e l'OTP è valido. & Redis / Mem & 
+    Status \path{201} \newline Admin creato & 
+    Status \path{201} \newline Admin creato & RF2.1 \\
+    \hline
+
+    3.3 & \path{Registrazione:} OTP Errato & 
+    \path{otp="999999"} & 
+    L'OTP fornito non corrisponde a quello salvato temporaneamente per l'email specificata. & Redis / Mem & 
+    Err \path{400} "Codice OTP errato" & 
+    Err \path{400} "Codice OTP errato" & RF2.0 \\
+    \hline
+
+    3.4 & \path{Registrazione:} OTP Scaduto & 
+    \path{otp="111111"} & 
+    L'OTP salvato ha superato il tempo di validità (es. 5 minuti) ed è considerato scaduto. & Redis / Mem & 
+    Err \path{400} "Codice OTP scaduto" & 
+    Err \path{400} "Codice OTP scaduto" & RF2.0 \\
+    \hline
+    
+    3.5 & \path{Registrazione:} Token Google Invalido & 
+    \path{googleToken="INVALID"} & 
+    L'OTP è corretto ma il token Google fornito per la verifica finale non è valido o è scaduto. & Google API & 
+    Err \path{401} "Token non valido" & 
+    Err \path{401} "Token non valido" & RF2.0 \\
+    \hline
+    
+    3.6 & \path{Registrazione:} Email duplicata & 
+    \path{email="dup@test.com"} & 
+    Si verifica una race condition dove l'email viene inserita nel DB tra la richiesta OTP e la conferma registrazione. & DB & 
+    Err \path{409} "Email già registrata" & 
+    Err \path{409} "Email già registrata" & RF2.0 \\
+    \hline
+    
+    4.0 & Logout & 
+    - & 
+    Nessuna precondizione particolare (stateless), la richiesta deve essere processata correttamente. & - & 
+    Status \path{200} "Logout effettuato" & 
+    Status \path{200} "Logout effettuato" & RF5 \\
+    \hline
+
+    % =========================================================================
+    % FILE: initiatives.test.js (Gestione Iniziative)
+    % =========================================================================
+
+    5.1 & Creazione iniziativa (Successo) & 
+    \path{title}, \path{desc}, \path{place}, \path{catId}, \path{file} & 
+    L'utente deve essere autenticato come Cittadino. Tutti i campi obbligatori sono presenti e validi. & DB & 
+    Status \path{201} \newline ID Iniziativa & 
+    Status \path{201} \newline ID Iniziativa & RF1 \\
+    \hline
+
+    5.2 & Creazione iniziativa: Validazione & 
+    \path{title} (manca descrizione) & 
+    L'utente è autenticato. Il payload manca di uno o più campi obbligatori (es. descrizione). & - & 
+    Err \path{400} Bad Request & 
+    Err \path{400} Bad Request & - \\
+    \hline
+    
+    5.3 & Creazione iniziativa: Non autenticato & 
+    \path{title}, \path{desc} & 
+    L'intestazione della richiesta non contiene un token di sessione valido o nessun utente è loggato. & - & 
+    Err \path{401} Unauthorized & 
+    Err \path{401} Unauthorized & - \\
+    \hline
+
+    5.4 & Creazione iniziativa: Cooldown & 
+    \path{title}, \path{desc} & 
+    L'utente ha già creato un'iniziativa ed è trascorsa meno di una soglia di tempo (14 giorni) da tale creazione. & DB & 
+    Err \path{422} "Già creato di recente" & 
+    Err \path{422} "Già creato di recente" & RF13 \\
+    \hline
+
+    6.1 & Lista iniziative: Paginazione & 
+    \path{page=1}, \path{limit=2} & 
+    Devono esistere nel database più iniziative di quante richieste per pagina per verificare lo split. & DB & 
+    Status \path{200} \newline Array limitato & 
+    Status \path{200} \newline Array limitato & - \\
+    \hline
+
+    6.2 & Lista iniziative: Filtro Stato & 
+    \path{status="Approvata"} & 
+    Il database deve contenere iniziative con stati diversi (Approvata, In Corso, Respinta). & DB & 
+    Status \path{200} \newline Solo "Approvata" & 
+    Status \path{200} \newline Solo "Approvata" & RF3 \\
+    \hline
+    
+    6.3 & Lista iniziative: Filtro Categoria & 
+    \path{category=3} & 
+    Il database deve contenere iniziative associate a diverse categorie. & DB & 
+    Status \path{200} \newline Solo Cat. 3 & 
+    Status \path{200} \newline Solo Cat. 3 & RF3 \\
+    \hline
+    
+    6.4 & Lista iniziative: Filtro Firme & 
+    \path{minSignatures=100} & 
+    Devono esistere iniziative con un numero di firme superiore e inferiore alla soglia. & DB & 
+    Status \path{200} \newline Firme >= 100 & 
+    Status \path{200} \newline Firme >= 100 & RF3 \\
+    \hline
+
+    6.5 & Lista iniziative: Ricerca testo & 
+    \path{search="Libro"} & 
+    Deve esistere almeno un'iniziativa il cui titolo contenga la parola chiave specificata. & DB & 
+    Status \path{200} \newline Include "Libro" & 
+    Status \path{200} \newline Include "Libro" & - \\
+    \hline
+    
+    6.6 & Lista iniziative: Ordinamento & 
+    \path{sortBy=1}, \path{order="asc"} & 
+    Le iniziative devono avere date di creazione diverse per verificare l'ordinamento temporale. & DB & 
+    Status \path{200} \newline Ordine cronologico & 
+    Status \path{200} \newline Ordine cronologico & - \\
+    \hline
+
+    7.1 & Dettaglio Iniziativa: Successo & 
+    \path{id=101} & 
+    L'ID richiesto deve corrispondere a un'iniziativa esistente nel database. & DB & 
+    Status \path{200} \newline Oggetto Iniziativa & 
+    Status \path{200} \newline Oggetto Iniziativa & - \\
+    \hline
+
+    7.2 & Dettaglio Iniziativa: Non Trovato & 
+    \path{id=9999} & 
+    L'ID richiesto non deve corrispondere ad alcuna iniziativa presente nel database. & DB & 
+    Err \path{404} Not Found & 
+    Err \path{404} Not Found & - \\
+    \hline
+
+    8.1 & Patch Iniziativa: Admin Estende Data & 
+    \path{expirationDate="2099..."} & 
+    L'utente deve essere Admin. L'iniziativa deve esistere. La nuova data deve essere futura. & DB & 
+    Status \path{200} \newline Data aggiornata & 
+    Status \path{200} \newline Data aggiornata & RF7 \\
+    \hline
+
+    8.2 & Patch Iniziativa: Cittadino non autorizzato & 
+    \path{expirationDate="2099..."} & 
+    L'utente è autenticato ma ha ruolo di Cittadino (non Admin). & - & 
+    Err \path{403} Forbidden & 
+    Err \path{403} Forbidden & RF7 \\
+    \hline
+
+    9.1 & Risposta Admin: Approvazione & 
+    \path{status="Approvata"}, \path{motivo} & 
+    L'utente deve essere Admin. L'iniziativa esiste ed è in attesa di valutazione. & DB & 
+    Status \path{201} \newline Stato cambiato & 
+    Status \path{201} \newline Stato cambiato & RF7 \\
+    \hline
+    
+    9.2 & Risposta Admin: Cittadino vietato & 
+    \path{status="Approvata"} & 
+    L'utente è un Cittadino e tenta di chiamare l'endpoint riservato alla moderazione. & - & 
+    Err \path{403} Forbidden & 
+    Err \path{403} Forbidden & RF7 \\
+    \hline
+    
+    9.3 & Risposta Admin: Stato Invalido & 
+    \path{status="Inventato"} & 
+    L'utente è Admin ma fornisce una stringa di stato non prevista dall'enum del sistema. & - & 
+    Err \path{400} Bad Request & 
+    Err \path{400} Bad Request & - \\
+    \hline
+
+    10.1 & Firma iniziativa: Successo & 
+    \path{id=103} & 
+    L'utente è Cittadino e non ha ancora apposto la firma digitale a questa specifica iniziativa. & DB & 
+    Status \path{201} "Firma registrata" & 
+    Status \path{201} "Firma registrata" & RF11 \\
+    \hline
+
+    10.2 & Firma iniziativa: Doppia firma & 
+    \path{id=103} & 
+    L'utente ha già firmato l'iniziativa in precedenza (record presente in \path{FIRMA_INIZIATIVA}). & DB & 
+    Err \path{409} "Già firmato" & 
+    Err \path{409} "Già firmato" & RF11 \\
+    \hline
+    
+    10.3 & Firma iniziativa: Anonimo & 
+    \path{id=103} & 
+    Nessun utente è loggato nella sessione corrente. & - & 
+    Err \path{401} Unauthorized & 
+    Err \path{401} Unauthorized & RF11 \\
+    \hline
+
+    11.1 & Follow iniziativa: Successo & 
+    \path{id=104} & 
+    L'utente è autenticato e non sta seguendo l'iniziativa (non presente in \path{INIZIATIVA_SALVATA}). & DB & 
+    Status \path{200} "Aggiunta preferiti" & 
+    Status \path{200} "Aggiunta preferiti" & RF14 \\
+    \hline
+
+    11.2 & Follow iniziativa: Idempotenza & 
+    \path{id=104} & 
+    L'utente sta già seguendo l'iniziativa. Il sistema non deve generare errore ma confermare. & DB & 
+    Status \path{200} Success & 
+    Status \path{200} Success & - \\
+    \hline
+
+    11.3 & Unfollow iniziativa & 
+    \path{id=104} & 
+    L'utente sta seguendo l'iniziativa e richiede la rimozione dai preferiti. & DB & 
+    Status \path{200} "Rimossa seguiti" & 
+    Status \path{200} "Rimossa seguiti" & RF14 \\
+    \hline
+
+    % =========================================================================
+    % FILE: participatory.test.js (Bilancio Partecipativo)
+    % =========================================================================
+
+    12.1 & Crea Bilancio: Successo Admin & 
+    \path{title}, \path{options[]}, \path{expDate} & 
+    L'utente è Admin. Non ci sono altri bilanci attivi. Le opzioni sono tra 2 e 5. & DB & 
+    Status \path{201} \newline ID Bilancio & 
+    Status \path{201} \newline ID Bilancio & RF8 \\
+    \hline
+
+    12.2 & Crea Bilancio: Cittadino & 
+    \path{title}, \path{options[]} & 
+    L'utente è un Cittadino e non ha i permessi per creare un bilancio partecipativo. & - & 
+    Err \path{403} Forbidden & 
+    Err \path{403} Forbidden & - \\
+    \hline
+
+    12.3 & Crea Bilancio: Durata insufficiente & 
+    \path{expDate} = oggi + 5gg & 
+    L'utente è Admin, ma la data di scadenza è inferiore al minimo richiesto (14 giorni). & - & 
+    Err \path{400}/\path{422} Durata < 14gg & 
+    Err \path{400}/\path{422} Durata < 14gg & - \\
+    \hline
+    
+    12.4 & Crea Bilancio: Opzioni insufficienti & 
+    \path{options} (lunghezza 1) & 
+    L'array delle opzioni contiene un solo elemento. Minimo richiesto è 2. & - & 
+    Err \path{400} Bad Request & 
+    Err \path{400} Bad Request & - \\
+    \hline
+    
+    12.5 & Crea Bilancio: Troppe Opzioni & 
+    \path{options} (lunghezza 6) & 
+    L'array delle opzioni contiene più di 5 elementi. Massimo consentito è 5. & - & 
+    Err \path{400} Bad Request & 
+    Err \path{400} Bad Request & - \\
+    \hline
+
+    12.6 & Crea Bilancio: Conflitto Attivo & 
+    \path{title}, \path{options[]} & 
+    Esiste già un bilancio nel sistema con stato 'Attivo' (data scadenza futura). & DB & 
+    Err \path{409} "Bilancio attivo" & 
+    Err \path{409} "Bilancio attivo" & - \\
+    \hline
+
+    13.1 & \path{Consultazione Bilancio Attivo} & 
+    - & 
+    Esiste un bilancio con data scadenza futura. Nessun filtro utente applicato. & DB & 
+    Status \path{200} \newline Dati + Opzioni & 
+    Status \path{200} \newline Dati + Opzioni & - \\
+    \hline
+    
+    13.2 & \path{Consultazione con Voto Utente} & 
+    Header \path{X-Mock-User} & 
+    L'utente specificato ha già votato per questo bilancio. L'API deve restituire l'ID dell'opzione votata. & DB & 
+    Status \path{200} \newline \path{votedOptionId} & 
+    Status \path{200} \newline \path{votedOptionId} & - \\
+    \hline
+    
+    13.3 & \path{Consultazione: Nessun Attivo} & 
+    - & 
+    Non ci sono bilanci attivi nel database al momento della richiesta. & DB & 
+    Status \path{200} \newline Dati \path{null} & 
+    Status \path{200} \newline Dati \path{null} & - \\
+    \hline
+
+    14.1 & Votazione: Cittadino Successo & 
+    \path{position=1} & 
+    L'utente è Cittadino, il bilancio è attivo e l'utente non ha ancora votato. & DB & 
+    Status \path{200} \newline Voto registrato & 
+    Status \path{200} \newline Voto registrato & RF15 \\
+    \hline
+
+    14.2 & Votazione: Doppia (Conflitto) & 
+    \path{position=2} & 
+    L'utente ha già registrato un voto per questo stesso bilancio in precedenza. & DB & 
+    Err \path{409} "Già votato" & 
+    Err \path{409} "Già votato" & RF15 \\
+    \hline
+
+    14.3 & Votazione: Admin & 
+    \path{position=1} & 
+    L'utente è autenticato come Amministratore (non può votare nei bilanci partecipativi). & - & 
+    Err \path{403} Solo cittadini & 
+    Err \path{403} Solo cittadini & RF15 \\
+    \hline
+    
+    14.4 & Votazione: Bilancio Scaduto & 
+    \path{position=1} & 
+    Il bilancio esiste ma la sua data di scadenza è passata. & DB & 
+    Err \path{403} Scaduto & 
+    Err \path{403} Scaduto & - \\
+    \hline
+    
+    14.5 & Votazione: Opzione Inesistente & 
+    \path{position=99} & 
+    L'ID o la posizione dell'opzione inviata non corrisponde a nessuna opzione del bilancio corrente. & DB & 
+    Err \path{400} Non esiste & 
+    Err \path{400} Non esiste & - \\
+    \hline
+    
+    14.6 & Votazione: Bilancio non trovato & 
+    \path{id=9999} & 
+    L'ID del bilancio passato nell'URL non esiste nel database. & DB & 
+    Err \path{404} Non trovato & 
+    Err \path{404} Non trovato & - \\
+    \hline
+
+    15.1 & Archivio Storico: Lista Admin & 
+    \path{page=1} & 
+    L'utente è Admin. Esistono bilanci scaduti nel database. & DB & 
+    Status \path{200} \newline Lista bilanci & 
+    Status \path{200} \newline Lista bilanci & RF9 \\
+    \hline
+    
+    15.2 & Archivio Storico: Paginazione & 
+    \path{limit=2} & 
+    Esistono più bilanci scaduti del limite per pagina impostato. & DB & 
+    Status \path{200} \newline Limite rispettato & 
+    Status \path{200} \newline Limite rispettato & - \\
+    \hline
+    
+    15.3 & Archivio Storico: Cittadino & 
+    - & 
+    L'utente è un Cittadino e tenta di accedere all'archivio storico (riservato admin). & - & 
+    Err \path{403} Forbidden & 
+    Err \path{403} Forbidden & - \\
+    \hline
+    
+    15.4 & Archivio Storico: Conteggio & 
+    - & 
+    I bilanci restituiti devono includere il campo dei voti totali per ogni opzione. & DB & 
+    Status \path{200} \newline \path{votes} presente & 
+    Status \path{200} \newline \path{votes} presente & - \\
+    \hline
+
+    % =========================================================================
+    % FILE: users.test.js (Gestione Utenti e Profilo)
+    % =========================================================================
+
+    16.1 & Profilo Utente: Non Autenticato & 
+    - & 
+    Nessun token di sessione fornito nell'header della richiesta. & - & 
+    Err \path{401} Accesso negato & 
+    Err \path{401} Accesso negato & - \\
+    \hline
+
+    16.2 & Profilo Utente: Successo & 
+    - & 
+    L'utente è autenticato. Il database contiene i dati anagrafici corretti per l'ID utente. & DB & 
+    Status \path{200} \newline JSON Profilo & 
+    Status \path{200} \newline JSON Profilo & RF12 \\
+    \hline
+
+    16.3 & Iniziative Utente: Manca Relation & 
+    - & 
+    Richiesta GET senza il parametro query obbligatorio \path{relation}. & - & 
+    Err \path{400} Bad Request & 
+    Err \path{400} Bad Request & - \\
+    \hline
+
+    16.4 & Iniziative Utente: Create & 
+    \path{relation=created} & 
+    L'utente ha creato almeno un'iniziativa in passato. & DB & 
+    Status \path{200} \newline Lista Create & 
+    Status \path{200} \newline Lista Create & - \\
+    \hline
+
+    16.5 & Iniziative Utente: Firmate & 
+    \path{relation=signed} & 
+    L'utente ha firmato almeno un'iniziativa creata da altri. & DB & 
+    Status \path{200} \newline Lista Firmate & 
+    Status \path{200} \newline Lista Firmate & - \\
+    \hline
+
+    16.6 & Iniziative Utente: Seguite & 
+    \path{relation=followed} & 
+    L'utente segue almeno un'iniziativa (preferiti). & DB & 
+    Status \path{200} \newline Lista Seguite & 
+    Status \path{200} \newline Lista Seguite & - \\
+    \hline
+    
+    16.7 & Iniziative Utente: Paginazione & 
+    \path{page=1}, \path{limit=5} & 
+    La lista risultante (create/firmate/seguite) contiene elementi paginabili. & DB & 
+    Status \path{200} \newline Meta pagination & 
+    Status \path{200} \newline Meta pagination & - \\
+    \hline
+
+    17.1 & Notifiche: Lista & 
+    - & 
+    L'utente ha delle notifiche assegnate nel database. & DB & 
+    Status \path{200} \newline Lista Notifiche & 
+    Status \path{200} \newline Lista Notifiche & RF20 \\
+    \hline
+
+    17.2 & Notifiche: Isolamento Utenti & 
+    - & 
+    Esistono notifiche per altri utenti (es. Admin) nel DB. Queste non devono apparire. & DB & 
+    Status \path{200} \newline Solo proprie & 
+    Status \path{200} \newline Solo proprie & RF20 \\
+    \hline
+    
+    17.3 & Notifiche: Filtro Non Lette & 
+    \path{read=false} & 
+    L'utente ha sia notifiche lette che non lette nel database. & DB & 
+    Status \path{200} \newline Solo non lette & 
+    Status \path{200} \newline Solo non lette & - \\
+    \hline
+
+    17.4 & Notifiche: Segna come Letta & 
+    \path{id=ID_NOTIF}, \path{isRead=true} & 
+    La notifica esiste, appartiene all'utente ed è attualmente non letta. & DB & 
+    Status \path{200} \newline DB Aggiornato & 
+    Status \path{200} \newline DB Aggiornato & RF20 \\
+    \hline
+    
+    17.5 & Notifiche: Body Invalido & 
+    \path{isRead=false} & 
+    Il payload della richiesta non è coerente con l'operazione (es. settare false o campo mancante). & - & 
+    Status \path{200}/\path{400} & 
+    Status \path{200}/\path{400} & - \\
+    \hline
+    
+    17.6 & Notifiche: Non Trovata & 
+    \path{id=88888} & 
+    L'ID della notifica non esiste nel database. & DB & 
+    Err \path{404} Not Found & 
+    Err \path{404} Not Found & - \\
+    \hline
+    
+    17.7 & Notifiche: Sicurezza Accesso & 
+    \path{id=ID_ADMIN_NOTIF} & 
+    La notifica esiste ma appartiene a un altro utente (es. Admin). L'utente corrente non deve poterla modificare. & DB & 
+    Err \path{404} (Security) & 
+    Err \path{404} (Security) & RF20 \\
+    \hline
+
+    18.1 & Gestione Admin: Lista (401) & 
+    \path{isAdmin=true} & 
+    Utente non autenticato tenta di accedere alla lista utenti. & - & 
+    Err \path{401} Unauthorized & 
+    Err \path{401} Unauthorized & - \\
+    \hline
+    
+    18.2 & Gestione Admin: Lista (403) & 
+    \path{isAdmin=true} & 
+    Utente Cittadino (autenticato) tenta di accedere alla lista admin. & - & 
+    Err \path{403} Forbidden & 
+    Err \path{403} Forbidden & - \\
+    \hline
+    
+    18.3 & Gestione Admin: Lista Successo & 
+    \path{isAdmin=true} & 
+    Utente Admin richiede la lista. Nel DB sono presenti almeno 2 admin. & DB & 
+    Status \path{200} \newline Lista Admin & 
+    Status \path{200} \newline Lista Admin & RF10 \\
+    \hline
+    
+    18.4 & Gestione Admin: Filtro CF & 
+    \path{fiscalCode="ADMIN2"} & 
+    Esiste un utente admin con il codice fiscale parziale specificato. & DB & 
+    Status \path{200} \newline Match CF & 
+    Status \path{200} \newline Match CF & - \\
+    \hline
+
+    19.1 & Modifica Ruolo: Non Auth & 
+    \path{isAdmin=true} & 
+    Utente non autenticato tenta di promuovere un utente. & - & 
+    Err \path{401} Unauthorized & 
+    Err \path{401} Unauthorized & - \\
+    \hline
+    
+    19.2 & Modifica Ruolo: Cittadino & 
+    \path{isAdmin=true} & 
+    Utente Cittadino tenta di promuovere un altro utente. & - & 
+    Err \path{403} Forbidden & 
+    Err \path{403} Forbidden & - \\
+    \hline
+    
+    19.3 & Modifica Ruolo: Promozione & 
+    \path{isAdmin=true} & 
+    Utente Admin modifica utente Cittadino. L'utente target esiste. & DB & 
+    Status \path{200} \newline Ruolo Aggiornato & 
+    Status \path{200} \newline Ruolo Aggiornato & RF10 \\
+    \hline
+    
+    19.4 & Modifica Ruolo: Revoca & 
+    \path{isAdmin=false} & 
+    Utente Admin modifica un altro Admin per degradarlo a Cittadino. & DB & 
+    Status \path{200} \newline Ruolo Aggiornato & 
+    Status \path{200} \newline Ruolo Aggiornato & RF10 \\
+    \hline
+    
+    19.5 & Modifica Ruolo: Self-Demotion & 
+    \path{isAdmin=false} & 
+    Utente Admin tenta di revocare i privilegi a se stesso (vietato per sicurezza). & - & 
+    Err \path{400}/\path{403} & 
+    Err \path{400}/\path{403} & - \\
+    \hline
+    
+    19.6 & Modifica Ruolo: Body Invalido & 
+    \path{isAdmin="string"} & 
+    Il valore passato per \path{isAdmin} non è un booleano valido. & - & 
+    Err \path{400} Bad Request & 
+    Err \path{400} Bad Request & - \\
+    \hline
+    
+    19.7 & Modifica Ruolo: Utente Inesistente & 
+    \path{id=99999} & 
+    L'ID utente target non esiste nel database. & DB & 
+    Err \path{404} Not Found & 
+    Err \path{404} Not Found & - \\
+    \hline
+
+    20.1 & Ricerca Utente: Per CF & 
+    \path{fiscalCode="CITIZEN1..."} & 
+    L'utente Admin cerca un utente specifico esistente tramite CF esatto. & DB & 
+    Status \path{200} \newline Utente Trovato & 
+    Status \path{200} \newline Utente Trovato & - \\
+    \hline
+    
+    20.2 & Ricerca Utente: Parametri Mancanti & 
+    - & 
+    Richiesta GET senza parametri di ricerca obbligatori (es. \path{fiscalCode} o \path{isAdmin}). & - & 
+    Err \path{400} Bad Request & 
+    Err \path{400} Bad Request & - \\
+    \hline
+    
+    20.3 & Ricerca Utente: Non Trovato & 
+    \path{fiscalCode="NONEXIST"} & 
+    Nessun utente corrisponde al criterio di ricerca fornito. & DB & 
+    Err \path{404} Not Found & 
+    Err \path{404} Not Found & - \\
+    \hline
+
+    21.1 & \path{Pre-autorizzazione: Non Admin} & 
+    \path{fiscalCode="NEW..."} & 
+    Utente Cittadino tenta di pre-autorizzare un nuovo amministratore. & - & 
+    Err \path{403} Forbidden & 
+    Err \path{403} Forbidden & - \\
+    \hline
+    
+    21.2 & \path{Pre-autorizzazione: Successo} & 
+    \path{fiscalCode="PREAUTH..."} & 
+    Utente Admin inserisce un nuovo CF non esistente né in UTENTE né in \path{PRE_AUTORIZZATO}. & DB & 
+    Status \path{201} \newline Inserito & 
+    Status \path{201} \newline Inserito & - \\
+    \hline
+    
+    21.3 & \path{Pre-autorizzazione: Conflitto} & 
+    \path{fiscalCode="EXISTING"} & 
+    Il CF inserito appartiene già a un utente registrato o è già pre-autorizzato. & DB & 
+    Err \path{409} Conflict & 
+    Err \path{409} Conflict & - \\
+    \hline
+
+    22.1 & Sicurezza: Accesso Risorse Altrui & 
+    \path{id=NOTIF_ADMIN} & 
+    Un utente Cittadino tenta di accedere tramite API diretta a una risorsa (es. notifica) di un Admin. & DB & 
+    Err \path{404} Not Found & 
+    Err \path{404} Not Found & - \\
+    \hline
+
+\end{xltabular}
