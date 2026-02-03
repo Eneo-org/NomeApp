@@ -143,7 +143,7 @@ exports.sendOtp = async (req, res) => {
 
   // *** DIAGNOSTIC LOG ***
   console.log("\n------------------------------------------------");
-  console.log("🚀 [RESEND FIX] STARTING OTP SEND VIA API");
+  console.log("🚀 [RESEND PROD] STARTING OTP SEND VIA API");
   console.log("📧 Target Email:", email);
   console.log("------------------------------------------------\n");
 
@@ -178,7 +178,8 @@ exports.sendOtp = async (req, res) => {
 
     // SEND VIA API (No SMTP!)
     const data = await resend.emails.send({
-      from: "Trento Partecipa <onboarding@resend.dev>", // Default testing sender
+      // ✅ UPDATED: Using verified domain sender
+      from: "Trento Partecipa <info@trentopartecipa.me>",
       to: email,
       subject: "🔐 Il tuo codice di verifica - Trento Partecipa",
       html: `
