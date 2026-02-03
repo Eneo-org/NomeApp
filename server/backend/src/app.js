@@ -14,9 +14,20 @@ const filterRoutes = require("./routes/filters");
 
 // 1. Middleware Base
 app.use(express.json());
-app.use(cors());
 
-// 2. RATE LIMITER (Importante: skippa se siamo in test)
+// 2. CORS Configuration for Production
+// Allow frontend origin from environment variable or localhost for development
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
+};
+app.use(cors(corsOptions));
+
+// 3. Trust Proxy (Required for Render.com load balancer)
+// This ensures express-rate-limit and other middleware get the real client IP
+app.set('trust proxy', 1);
+
+// 4. RATE LIMITER (Importante: skippa se siamo in test)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minuti
   max: 500, // Aumentato a 500 per development (era 100)
@@ -26,6 +37,15 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // 2. File Statici (Immagini)
+/**
+ * ⚠️ WARNING - EPHEMERAL FILESYSTEM ON RENDER:
+ * Render's filesystem is ephemeral. All files uploaded to /uploads will be deleted
+ * on every deploy or restart. For production, consider using:
+ * - AWS S3
+ * - Cloudinary
+ * - DigitalOcean Spaces
+ * - Any other persistent storage service
+ */
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // 3. Collegamento Rotte
