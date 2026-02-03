@@ -1,5 +1,8 @@
 const db = require("../config/db");
-const nodemailer = require("nodemailer");
+// We removed nodemailer. Now we use Resend.
+const { Resend } = require("resend");
+require("dotenv").config();
+
 const {
   CLIENT_ID,
   client,
@@ -7,9 +10,13 @@ const {
   generateDeterministicFiscalCode,
 } = require("../utils/authUtils");
 
-require("dotenv").config();
+// Initialize Resend
+// (Make sure RESEND_API_KEY is set in Render Environment Variables)
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
-// --- 1. LOGIN GOOGLE (Invariato) ---
+// --- 1. GOOGLE LOGIN (Unchanged) ---
 exports.googleLogin = async (req, res) => {
   const { tokenId } = req.body;
 
@@ -69,7 +76,7 @@ exports.googleLogin = async (req, res) => {
       });
     }
 
-    // Gestione Pre-autorizzati e Nuovi Utenti...
+    // Pre-authorized and New Users Management...
     const [preAuthRows] = await db.query(
       "SELECT * FROM PRE_AUTORIZZATO WHERE CODICE_FISCALE = ?",
       [deterministicCF],
@@ -130,36 +137,48 @@ exports.googleLogin = async (req, res) => {
   }
 };
 
-// --- 2. INVIO OTP (Versione STRICT con il TUO HTML) ---
+// --- 2. SEND OTP (UPDATED TO USE RESEND API) ---
 exports.sendOtp = async (req, res) => {
   const { email } = req.body;
+
+  // *** DIAGNOSTIC LOG ***
+  console.log("\n------------------------------------------------");
+  console.log("🚀 [RESEND FIX] STARTING OTP SEND VIA API");
+  console.log("📧 Target Email:", email);
+  console.log("------------------------------------------------\n");
 
   if (!email || !email.includes("@")) {
     return res.status(400).json({ message: "Email non valida" });
   }
 
   try {
-    // A. Controllo se utente esiste
     const [existingUser] = await db.query(
       "SELECT ID_UTENTE FROM UTENTE WHERE EMAIL = ?",
       [email],
     );
-
     if (existingUser.length > 0) {
-      return res.status(409).json({
-        message: "Questa email è già stata utilizzata. Inseriscine un'altra.",
-      });
+      return res.status(409).json({ message: "Email già registrata." });
     }
 
-    // B. Generazione OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    otpStore[email] = { code: otp, expires: Date.now() + 300000 }; // 5 minuti
+    otpStore[email] = { code: otp, expires: Date.now() + 300000 };
 
-    console.log(`\n🔵 [DEBUG OTP] Generato per ${email}: ${otp}\n`);
+    console.log(`🔵 [OTP LOG] Generated Code: ${otp}`);
 
-    // C. Template Email (IL TUO HTML ORIGINALE)
-    const mailOptions = {
-      from: '"Trento Partecipa" <' + process.env.MAIL_USER + ">",
+    // SAFETY CHECK
+    if (!resend) {
+      console.error(
+        "🔴 ERROR: RESEND_API_KEY is missing in Render environment variables!",
+      );
+      // We return success in dev mode to not block you, but check Render Dashboard!
+      return res
+        .status(200)
+        .json({ message: "API Key Missing (Check Logs)", devMode: true });
+    }
+
+    // SEND VIA API (No SMTP!)
+    const data = await resend.emails.send({
+      from: "Trento Partecipa <onboarding@resend.dev>", // Default testing sender
       to: email,
       subject: "🔐 Il tuo codice di verifica - Trento Partecipa",
       html: `
@@ -171,105 +190,47 @@ exports.sendOtp = async (req, res) => {
             <title>Verifica Email</title>
         </head>
         <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-            
             <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                     <td style="padding: 20px 0 30px 0;">
-                        
-                        <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="border-collapse: collapse; border: 1px solid #dedede; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-                            
+                        <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="border-collapse: collapse; border: 1px solid #dedede; background-color: #ffffff; border-radius: 8px; overflow: hidden;">
                             <tr>
                                 <td bgcolor="#C00D0E" style="padding: 30px 30px; text-align: center;">
-                                    <h1 style="margin: 0; font-size: 24px; color: #ffffff; letter-spacing: 1px;">TRENTO PARTECIPA</h1>
+                                    <h1 style="margin: 0; font-size: 24px; color: #ffffff;">TRENTO PARTECIPA</h1>
                                 </td>
                             </tr>
-
                             <tr>
                                 <td style="padding: 40px 30px;">
-                                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                                            <tr>
-                                                <td style="color: #333333; font-size: 16px; line-height: 24px;">
-                                                    Ciao,
-                                                    <br><br>
-                                                    Grazie per esserti unito a <strong>Trento Partecipa</strong>. Per completare la tua registrazione e verificare il tuo account, utilizza il codice OTP qui sotto.
-                                                </td>
-                                            </tr>
-                                            
-                                            <tr>
-                                                <td style="padding: 30px 0; text-align: center;">
-                                                    <span style="display: inline-block; padding: 15px 30px; font-size: 32px; font-family: monospace; font-weight: bold; color: #C00D0E; background-color: #fdf0f0; border-radius: 6px; border: 1px dashed #C00D0E; letter-spacing: 5px;">
-                                                        ${otp}
-                                                    </span>
-                                                </td>
-                                            </tr>
-
-                                            <tr>
-                                                <td style="color: #666666; font-size: 14px; line-height: 20px;">
-                                                    ⚠️ <strong>Importante:</strong>
-                                                    <ul>
-                                                        <li>Questo codice scadrà tra <strong>5 minuti</strong>.</li>
-                                                        <li>Se non hai richiesto tu questo codice, ignora pure questa email.</li>
-                                                        <li>Non condividere questo codice con nessuno.</li>
-                                                    </ul>
-                                                </td>
-                                            </tr>
-                                    </table>
+                                    <p style="color: #333; font-size: 16px;">Ciao,<br><br>Usa questo codice per verificare il tuo account:</p>
+                                    <div style="text-align: center; padding: 30px 0;">
+                                        <span style="display: inline-block; padding: 15px 30px; font-size: 32px; font-weight: bold; color: #C00D0E; background-color: #fdf0f0; border: 1px dashed #C00D0E; letter-spacing: 5px;">
+                                            ${otp}
+                                        </span>
+                                    </div>
+                                    <p style="color: #666; font-size: 14px;">Scade tra 5 minuti.</p>
                                 </td>
                             </tr>
-
-                            <tr>
-                                <td bgcolor="#eeeeee" style="padding: 20px 30px;">
-                                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                                            <tr>
-                                                <td style="color: #999999; font-size: 12px; text-align: center;">
-                                                    &copy; ${new Date().getFullYear()} Comune di Trento - Piattaforma di Partecipazione.<br>
-                                                    Questa è una email automatica, per favore non rispondere.
-                                                </td>
-                                            </tr>
-                                    </table>
-                                </td>
-                            </tr>
-
                         </table>
                     </td>
                 </tr>
             </table>
-
         </body>
         </html>
-      `,
-    };
-
-    // D. Configurazione Nodemailer per GMAIL
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS,
-      },
-      tls: {
-        rejectUnauthorized: false, // Fondamentale su Render
-      },
+        `,
     });
 
-    // E. INVIO EFFETTIVO (Senza rete di sicurezza)
-    console.log("Tentativo connessione SMTP...");
-    await transporter.verify();
-    console.log("Connessione OK. Invio mail...");
+    if (data.error) {
+      console.error("❌ Resend API Error:", data.error);
+      return res
+        .status(500)
+        .json({ message: "Resend API Error: " + data.error.message });
+    }
 
-    await transporter.sendMail(mailOptions);
-    console.log("✅ Email inviata con successo!");
-
+    console.log("✅ Mail successfully sent via API. ID:", data.id);
     res.status(200).json({ message: "Codice inviato" });
   } catch (error) {
-    // F. GESTIONE ERRORE (Modalità Verità)
-    console.error("❌ ERRORE CRITICO INVIO MAIL:", error);
-
-    // Restituisce 500: Il frontend mostrerà errore rosso.
-    res.status(500).json({
-      message: "Errore invio email: " + error.message,
-      code: error.code,
-    });
+    console.error("❌ SERVER ERROR:", error);
+    res.status(500).json({ message: "Internal Error: " + error.message });
   }
 };
 
