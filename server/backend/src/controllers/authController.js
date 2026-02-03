@@ -26,7 +26,7 @@ exports.googleLogin = async (req, res) => {
 
     const [rowsByCF] = await db.query(
       "SELECT * FROM UTENTE WHERE CODICE_FISCALE = ?",
-      [deterministicCF]
+      [deterministicCF],
     );
 
     if (rowsByCF.length > 0) {
@@ -47,17 +47,19 @@ exports.googleLogin = async (req, res) => {
 
     const [rowsByEmail] = await db.query(
       "SELECT * FROM UTENTE WHERE EMAIL = ?",
-      [payload.email]
+      [payload.email],
     );
 
     if (rowsByEmail.length > 0) {
       const user = rowsByEmail[0];
-      console.log(`[LOGIN] Utente trovato tramite email (fallback): ${user.EMAIL}. Aggiorno il CF.`);
-      
-      await db.query("UPDATE UTENTE SET CODICE_FISCALE = ? WHERE ID_UTENTE = ?", [
-        deterministicCF,
-        user.ID_UTENTE,
-      ]);
+      console.log(
+        `[LOGIN] Utente trovato tramite email (fallback): ${user.EMAIL}. Aggiorno il CF.`,
+      );
+
+      await db.query(
+        "UPDATE UTENTE SET CODICE_FISCALE = ? WHERE ID_UTENTE = ?",
+        [deterministicCF, user.ID_UTENTE],
+      );
 
       return res.status(200).json({
         status: "LOGIN_SUCCESS",
@@ -72,16 +74,20 @@ exports.googleLogin = async (req, res) => {
       });
     }
 
-    console.log(`[LOGIN] Utente non trovato. Verifico pre-autorizzazione per CF: ${deterministicCF}`);
+    console.log(
+      `[LOGIN] Utente non trovato. Verifico pre-autorizzazione per CF: ${deterministicCF}`,
+    );
 
     const [preAuthRows] = await db.query(
       "SELECT * FROM PRE_AUTORIZZATO WHERE CODICE_FISCALE = ?",
-      [deterministicCF]
+      [deterministicCF],
     );
 
     if (preAuthRows.length > 0) {
-      console.log(`[LOGIN] CF trovato nella tabella di pre-autorizzazione. Creo utente admin.`);
-      
+      console.log(
+        `[LOGIN] CF trovato nella tabella di pre-autorizzazione. Creo utente admin.`,
+      );
+
       const firstName = payload.given_name || "Utente";
       const lastName = payload.family_name || "Pre-autorizzato";
 
@@ -92,24 +98,26 @@ exports.googleLogin = async (req, res) => {
         const [insertResult] = await connection.query(
           `INSERT INTO UTENTE (NOME, COGNOME, EMAIL, CODICE_FISCALE, IS_ADMIN, IS_CITTADINO, CREATED_AT)
            VALUES (?, ?, ?, ?, 1, 0, NOW())`,
-          [firstName, lastName, payload.email, deterministicCF]
+          [firstName, lastName, payload.email, deterministicCF],
         );
         const newUserId = insertResult.insertId;
 
         await connection.query(
           "DELETE FROM PRE_AUTORIZZATO WHERE CODICE_FISCALE = ?",
-          [deterministicCF]
+          [deterministicCF],
         );
 
         await connection.commit();
 
         const [newUserRows] = await connection.query(
           "SELECT * FROM UTENTE WHERE ID_UTENTE = ?",
-          [newUserId]
+          [newUserId],
         );
         const user = newUserRows[0];
 
-        console.log(`[LOGIN] Utente admin creato con successo. ID: ${user.ID_UTENTE}`);
+        console.log(
+          `[LOGIN] Utente admin creato con successo. ID: ${user.ID_UTENTE}`,
+        );
         return res.status(200).json({
           status: "LOGIN_SUCCESS",
           user: {
@@ -121,17 +129,23 @@ exports.googleLogin = async (req, res) => {
             isCitizen: Boolean(user.IS_CITTADINO),
           },
         });
-
       } catch (error) {
         await connection.rollback();
-        console.error("Errore durante la creazione dell'utente pre-autorizzato:", error);
-        return res.status(500).json({ message: "Errore durante la creazione dell'utente pre-autorizzato." });
+        console.error(
+          "Errore durante la creazione dell'utente pre-autorizzato:",
+          error,
+        );
+        return res.status(500).json({
+          message: "Errore durante la creazione dell'utente pre-autorizzato.",
+        });
       } finally {
         connection.release();
       }
     }
 
-    console.log(`[LOGIN] Utente non trovato e non pre-autorizzato. Avvio registrazione per: ${payload.email}`);
+    console.log(
+      `[LOGIN] Utente non trovato e non pre-autorizzato. Avvio registrazione per: ${payload.email}`,
+    );
     return res.status(404).json({
       status: "NEED_REGISTRATION",
       googleData: {
@@ -158,7 +172,7 @@ exports.sendOtp = async (req, res) => {
   try {
     const [existingUser] = await db.query(
       "SELECT ID_UTENTE FROM UTENTE WHERE EMAIL = ?",
-      [email]
+      [email],
     );
 
     if (existingUser.length > 0) {
@@ -254,22 +268,30 @@ exports.sendOtp = async (req, res) => {
       `,
     };
 
-    // --- CORREZIONE QUI ---
     // Creiamo il transporter SOLO se ci sono le credenziali e SOLO al momento dell'invio
     if (process.env.MAIL_USER && process.env.MAIL_PASS) {
       const transporter = nodemailer.createTransport({
-        service: "gmail",
+        host: "smtp.gmail.com", // Server esplicito
+        port: 465, // Porta sicura SSL (risolve il timeout di Render)
+        secure: true, // Obbligatorio per la porta 465
         auth: {
           user: process.env.MAIL_USER,
           pass: process.env.MAIL_PASS,
+        },
+        tls: {
+          rejectUnauthorized: false,
         },
       });
 
       await transporter.sendMail(mailOptions);
       res.status(200).json({ message: "Codice inviato" });
     } else {
-      console.log("⚠️  [MODALITÀ SVILUPPO] Le credenziali email non sono impostate. L'invio è stato saltato.");
-      res.status(200).json({ message: "Check console (DevMode)", devMode: true });
+      console.log(
+        "⚠️  [MODALITÀ SVILUPPO] Le credenziali email non sono impostate. L'invio è stato saltato.",
+      );
+      res
+        .status(200)
+        .json({ message: "Check console (DevMode)", devMode: true });
     }
   } catch (error) {
     console.error("Errore sendOtp:", error);
