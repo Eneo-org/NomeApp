@@ -1,4 +1,4 @@
-gi# Trento Partecipa
+# Trento Partecipa
 
 A full-stack web application for participatory budgeting and citizen initiatives, enabling democratic participation in local government decision-making.
 
