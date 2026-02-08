@@ -1109,7 +1109,7 @@ paths:
       security: []
   /auth/otp:
     post:
-      summary: RichiestaOTP
+      summary: richiestaOTP
       deprecated: false
       description: >-
         Invia un codice OTP (One-Time Password) via email per la verifica
