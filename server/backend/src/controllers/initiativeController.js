@@ -1,5 +1,5 @@
 const db = require("../config/db");
-const fs = require("fs"); // Necessario per cancellare i file in caso di errore
+const fs = require("fs");
 const path = require("path");
 const { initiativeSchema } = require("../validators/initiativeSchema");
 const { changeExpirationSchema } = require("../validators/initiativeSchema");
@@ -8,13 +8,26 @@ const { INITIATIVE_SORT_MAP } = require("../config/constants");
 
 /**
  * Funzione Helper per cancellare i file caricati se la procedura fallisce
+ * NOTA: Con Cloudinary i file non sono locali. Questa funzione ora controlla
+ * se il path è un URL (Cloudinary) o un percorso locale.
  */
 const cleanupFiles = (files) => {
   if (!files || files.length === 0) return;
   files.forEach((file) => {
+    // Se il file ha un path che inizia con http (Cloudinary), non usiamo fs.unlink
+    if (file.path && file.path.startsWith("http")) {
+      // Per cancellare da Cloudinary servirebbe le API Cloudinary uploader.destroy
+      // Per ora saltiamo, tanto non occupa spazio sul server.
+      return;
+    }
+
+    // Se siamo qui, è un file locale (vecchio metodo o fallback)
     fs.unlink(file.path, (err) => {
       if (err)
-        console.error(`[Cleanup] Errore cancellazione file ${file.path}:`, err);
+        console.error(
+          `[Cleanup] Errore cancellazione file locale ${file.path}:`,
+          err,
+        );
     });
   });
 };
@@ -31,7 +44,7 @@ exports.getAllInitiatives = async (req, res) => {
       place,
       category,
       platform,
-      status, // <--- Qui sta il problema se è un array
+      status,
       not_status,
       minSignatures,
       maxSignatures,
@@ -65,16 +78,16 @@ exports.getAllInitiatives = async (req, res) => {
       queryParams.push(parseInt(category));
     }
 
-    // --- FILTRI GENERALI (FIX QUI SOTTO) ---
+    // --- FILTRI GENERALI ---
 
     // Filtro: Status (Gestisce sia stringa singola che array)
     if (status) {
       if (Array.isArray(status) && status.length > 0) {
-        const placeholders = status.map(() => '?').join(',');
+        const placeholders = status.map(() => "?").join(",");
         whereConditions.push(`i.STATO IN (${placeholders})`);
         queryParams.push(...status);
-      } else if (typeof status === 'string' && status) {
-        whereConditions.push('i.STATO = ?');
+      } else if (typeof status === "string" && status) {
+        whereConditions.push("i.STATO = ?");
         queryParams.push(status);
       }
     } else {
@@ -105,14 +118,11 @@ exports.getAllInitiatives = async (req, res) => {
     }
 
     // Filtro: Periodo Date (Data Creazione)
-    // Se dal frontend arriva dateFrom (es. 2025-09-01)
     if (req.query.dateFrom) {
       whereConditions.push("i.DATA_CREAZIONE >= ?");
       queryParams.push(req.query.dateFrom);
     }
-    // Se dal frontend arriva dateTo (es. 2025-10-10)
     if (req.query.dateTo) {
-      // Aggiungiamo fine giornata per includere tutto il giorno indicato
       whereConditions.push("i.DATA_CREAZIONE <= ?");
       queryParams.push(req.query.dateTo + " 23:59:59");
     }
@@ -145,7 +155,6 @@ exports.getAllInitiatives = async (req, res) => {
             LIMIT ? OFFSET ?
         `;
 
-    // Aggiungiamo limit e offset in coda ai parametri dei filtri
     const dataParams = [...queryParams, limit, offset];
     const [rows] = await db.query(dataQuery, dataParams);
 
@@ -197,7 +206,7 @@ exports.createInitiative = async (req, res) => {
     // --- 🛑 CHECK COOLDOWN 🛑 ---
     const [cooldownCheck] = await db.execute(
       "SELECT ID_INIZIATIVA FROM INIZIATIVA WHERE ID_AUTORE = ? AND DATA_CREAZIONE > NOW() - INTERVAL 14 DAY",
-      [userId]
+      [userId],
     );
 
     if (cooldownCheck.length > 0) {
@@ -224,7 +233,6 @@ exports.createInitiative = async (req, res) => {
       });
     }
 
-    // Estraiamo anche platformId (o usiamo 1 come default se manca)
     const { title, description, place, categoryId, platformId } = value;
     const finalPlatformId = platformId || 1; // Default Trento Partecipa
 
@@ -236,7 +244,6 @@ exports.createInitiative = async (req, res) => {
     expiration.setDate(expiration.getDate() + 30);
 
     // 2. Inserimento Iniziativa
-    // FIX: Ho sostituito 'NULL' con '?' nella posizione di ID_PIATTAFORMA
     const queryIniziativa = `
             INSERT INTO INIZIATIVA (TITOLO, DESCRIZIONE, LUOGO, ID_CATEGORIA, ID_AUTORE, STATO, ID_PIATTAFORMA, DATA_CREAZIONE, DATA_SCADENZA, NUM_FIRME)
             VALUES (?, ?, ?, ?, ?, 'In corso', ?, ?, ?, 0)
@@ -248,14 +255,14 @@ exports.createInitiative = async (req, res) => {
       place || null,
       categoryId,
       userId,
-      finalPlatformId, // <--- Ora passiamo l'ID corretto (1)
+      finalPlatformId,
       now,
       expiration,
     ]);
 
     const newInitiativeId = resultInit.insertId;
 
-    // 3. Inserimento Allegati
+    // 3. Inserimento Allegati (CORRETTO PER CLOUDINARY)
     let responseAttachments = null;
 
     if (files && files.length > 0) {
@@ -266,12 +273,14 @@ exports.createInitiative = async (req, res) => {
             `;
 
       for (const file of files) {
-        // Costruiamo il path relativo da salvare nel DB (es. uploads/initiatives/nomefile.jpg)
-        const relativePath = path.join("uploads", "initiatives", file.filename);
+        // --- MODIFICA CLOUDINARY ---
+        // Con Cloudinary, file.path è l'URL completo (https://res.cloudinary.com/...)
+        // Non usiamo più path.join per costruire un percorso locale.
+        const filePath = file.path;
 
         const [resAtt] = await connection.execute(queryAllegato, [
           file.originalname,
-          relativePath,
+          filePath, // Salviamo l'URL completo
           file.mimetype,
           newInitiativeId,
         ]);
@@ -279,7 +288,7 @@ exports.createInitiative = async (req, res) => {
         responseAttachments.push({
           id: resAtt.insertId,
           fileName: file.originalname,
-          filePath: relativePath,
+          filePath: filePath,
           fileType: file.mimetype,
           uploadedAt: new Date().toISOString(),
         });
@@ -300,7 +309,7 @@ exports.createInitiative = async (req, res) => {
       expirationDate: expiration.toISOString(),
       authorId: parseInt(userId),
       categoryId: parseInt(categoryId),
-      platformId: parseInt(finalPlatformId), // <--- Ritorniamo l'ID corretto
+      platformId: parseInt(finalPlatformId),
       externalURL: null,
       attachments: responseAttachments,
       reply: null,
@@ -321,18 +330,15 @@ exports.createInitiative = async (req, res) => {
   }
 };
 
-// --- NUOVO METODO PER IL CHECK LEGGERO (GET) ---
 exports.checkCooldown = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Cerca l'ultima iniziativa
     const [rows] = await db.execute(
       "SELECT DATA_CREAZIONE FROM INIZIATIVA WHERE ID_AUTORE = ? ORDER BY DATA_CREAZIONE DESC LIMIT 1",
-      [userId]
+      [userId],
     );
 
-    // Se non ha mai creato iniziative, via libera
     if (rows.length === 0) {
       return res.status(200).json({ allowed: true });
     }
@@ -340,12 +346,10 @@ exports.checkCooldown = async (req, res) => {
     const lastDate = new Date(rows[0].DATA_CREAZIONE);
     const now = new Date();
 
-    // Calcola fine cooldown (14 giorni)
     const cooldownEnd = new Date(lastDate);
     cooldownEnd.setDate(lastDate.getDate() + 14);
 
     if (now < cooldownEnd) {
-      // Cooldown attivo
       return res.status(200).json({
         allowed: false,
         remainingMs: cooldownEnd - now,
@@ -373,10 +377,8 @@ exports.getInitiativeById = async (req, res) => {
       });
     }
 
-    // Richiamiamo la funzione helper che contiene tutta la logica complessa
     const data = await _getDetailedInitiativeData(id);
 
-    // Se la funzione helper ritorna null, significa che non esiste
     if (!data) {
       return res.status(404).json({
         timeStamp: new Date().toISOString(),
@@ -384,7 +386,6 @@ exports.getInitiativeById = async (req, res) => {
       });
     }
 
-    // Se esiste, restituiamo i dati
     res.status(200).json(data);
   } catch (err) {
     console.error("Errore getInitiativeById:", err);
@@ -396,15 +397,13 @@ exports.getInitiativeById = async (req, res) => {
   }
 };
 
-// --- ADMIN: Dashboard Iniziative in Scadenza ---
 exports.getExpiringInitiatives = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Check Admin... (codice uguale a prima)
     const [admins] = await db.query(
       "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
-      [userId]
+      [userId],
     );
     if (admins.length === 0 || !admins[0].IS_ADMIN)
       return res.status(403).json({ message: "Accesso negato" });
@@ -414,7 +413,6 @@ exports.getExpiringInitiatives = async (req, res) => {
     const limit = parseInt(objectsPerPage) || 10;
     const offset = (page - 1) * limit;
 
-    // --- QUERY CORRETTA ---
     const whereClause = `
         WHERE i.STATO = 'In corso' AND i.DATA_SCADENZA > NOW()
     `;
@@ -468,7 +466,6 @@ exports.changeExpirationDate = async (req, res) => {
     const initiativeId = req.params.id;
     const userId = req.user.id;
 
-    // 2. Validazione Body (Joi)
     const { error, value } = changeExpirationSchema.validate(req.body);
     if (error) {
       return res.status(422).json({
@@ -482,10 +479,9 @@ exports.changeExpirationDate = async (req, res) => {
     }
     const { expirationDate } = value;
 
-    // 3. Controllo Permessi (Solo Admin)
     const [users] = await db.query(
       "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
-      [userId]
+      [userId],
     );
 
     if (users.length === 0) {
@@ -499,10 +495,9 @@ exports.changeExpirationDate = async (req, res) => {
       });
     }
 
-    // 4. Verifica Esistenza Iniziativa
     const [initiatives] = await db.query(
       "SELECT ID_INIZIATIVA FROM INIZIATIVA WHERE ID_INIZIATIVA = ?",
-      [initiativeId]
+      [initiativeId],
     );
     if (initiatives.length === 0) {
       return res.status(404).json({
@@ -511,8 +506,6 @@ exports.changeExpirationDate = async (req, res) => {
       });
     }
 
-    // 5. Update nel Database
-    // Logica: Aggiorna la data E se lo stato era 'Scaduta', lo riporta a 'In corso'.
     const updateQuery = `
             UPDATE INIZIATIVA 
             SET DATA_SCADENZA = ?, 
@@ -522,8 +515,6 @@ exports.changeExpirationDate = async (req, res) => {
 
     await db.query(updateQuery, [expirationDate, initiativeId]);
 
-    // 6. Recupero Dati Aggiornati (Formato DetailedInitiative)
-    // Usiamo una funzione helper per non duplicare la logica di lettura complessa
     const updatedInitiative = await _getDetailedInitiativeData(initiativeId);
 
     return res.status(200).json(updatedInitiative);
@@ -536,59 +527,6 @@ exports.changeExpirationDate = async (req, res) => {
     });
   }
 };
-
-// exports.updateInitiative = async (req, res) => {
-//   try {
-//     const initiativeId = req.params.id;
-//     const userId = req.user.id;
-//     const { title, description, place, categoryId } = req.body;
-
-//     // 1. Verifica esistenza e proprietà
-//     const [rows] = await db.query(
-//       "SELECT ID_AUTORE, STATO FROM INIZIATIVA WHERE ID_INIZIATIVA = ?",
-//       [initiativeId]
-//     );
-
-//     if (rows.length === 0) {
-//       return res.status(404).json({ message: "Iniziativa non trovata" });
-//     }
-
-//     const initiative = rows[0];
-
-//     // 2. Controllo permessi (solo autore può modificare)
-//     if (initiative.ID_AUTORE !== parseInt(userId)) {
-//       return res.status(403).json({ message: "Non sei l'autore di questa iniziativa" });
-//     }
-
-//     // 3. Controllo stato (solo 'In corso' modificabile)
-//     if (initiative.STATO !== 'In corso') {
-//       return res.status(400).json({ message: "Impossibile modificare un'iniziativa non in corso" });
-//     }
-
-//     // 4. Update
-//     const updateQuery = `
-//       UPDATE INIZIATIVA 
-//       SET TITOLO = COALESCE(?, TITOLO), 
-//           DESCRIZIONE = COALESCE(?, DESCRIZIONE), 
-//           LUOGO = COALESCE(?, LUOGO), 
-//           ID_CATEGORIA = COALESCE(?, ID_CATEGORIA)
-//       WHERE ID_INIZIATIVA = ?
-//     `;
-
-//     await db.query(updateQuery, [title, description, place, categoryId, initiativeId]);
-
-//     res.status(200).json({ message: "Iniziativa aggiornata con successo" });
-
-//   } catch (err) {
-//     console.error("Errore updateInitiative:", err);
-//     res.status(500).json({ message: "Errore interno del server" });
-//   }
-// };
-
-// Assicurati di importare lo schema di validazione all'inizio del file se non c'è già
-// const { administrationReplySchema } = require('../validators/initiativeSchema');
-
-// --- MODIFICA: CreateReply con Multer per la gestione dei file---
 
 exports.createReply = async (req, res) => {
   let connection;
@@ -619,7 +557,7 @@ exports.createReply = async (req, res) => {
     // Check permessi Admin
     const [users] = await connection.query(
       "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
-      [adminId]
+      [adminId],
     );
     if (users.length === 0 || !users[0].IS_ADMIN) {
       await connection.rollback();
@@ -630,7 +568,7 @@ exports.createReply = async (req, res) => {
     // Check Iniziativa
     const [initiatives] = await connection.query(
       "SELECT ID_INIZIATIVA, TITOLO FROM INIZIATIVA WHERE ID_INIZIATIVA = ?",
-      [initiativeId]
+      [initiativeId],
     );
     if (initiatives.length === 0) {
       await connection.rollback();
@@ -642,7 +580,7 @@ exports.createReply = async (req, res) => {
     // Check Risposta Esistente
     const [existingReply] = await connection.query(
       "SELECT ID_RISPOSTA FROM RISPOSTA WHERE ID_INIZIATIVA = ?",
-      [initiativeId]
+      [initiativeId],
     );
     if (existingReply.length > 0) {
       await connection.rollback();
@@ -662,32 +600,37 @@ exports.createReply = async (req, res) => {
     // Update Stato Iniziativa
     await connection.execute(
       "UPDATE INIZIATIVA SET STATO = ? WHERE ID_INIZIATIVA = ?",
-      [status, initiativeId]
+      [status, initiativeId],
     );
 
-    // Insert Allegati (se presenti)
+    // Insert Allegati (CORRETTO PER CLOUDINARY)
     let savedAttachments = [];
     if (files && files.length > 0) {
       const queryAllegato = `INSERT INTO ALLEGATO (FILE_NAME, FILE_PATH, FILE_TYPE, ID_RISPOSTA) VALUES (?, ?, ?, ?)`;
+
       const insertPromises = files.map((file) => {
-        const relativePath = path.join("uploads", "replies", file.filename);
-        // Salviamo il path relativo nell'oggetto file per usarlo nella risposta
-        file.dbPath = relativePath;
+        // --- MODIFICA CLOUDINARY ---
+        // Usiamo file.path (URL Cloudinary) invece di costruire il percorso locale
+        const filePath = file.path;
+        file.dbPath = filePath; // Lo salviamo nell'oggetto per usarlo nella risposta JSON
+
         return connection.execute(queryAllegato, [
           file.originalname,
-          relativePath,
+          filePath,
           file.mimetype,
           newReplyId,
         ]);
       });
+
       await Promise.all(insertPromises);
+
       savedAttachments = files.map((f) => ({
         fileName: f.originalname,
         filePath: f.dbPath,
       }));
     }
 
-    // Invio Notifiche (Logica Preservata)
+    // Invio Notifiche
     const queryRecipients = `
             SELECT ID_AUTORE AS ID_UTENTE FROM INIZIATIVA WHERE ID_INIZIATIVA = ? AND ID_AUTORE IS NOT NULL
             UNION
@@ -711,7 +654,7 @@ exports.createReply = async (req, res) => {
           user.ID_UTENTE,
           notificationText,
           linkRef,
-        ])
+        ]),
       );
       await Promise.all(notificationPromises);
     }
@@ -747,7 +690,7 @@ exports.signInitiative = async (req, res) => {
     // 1. BLOCCO SICUREZZA (Controllo residenza)
     const [userCheck] = await connection.execute(
       "SELECT IS_CITTADINO FROM UTENTE WHERE ID_UTENTE = ?",
-      [userId]
+      [userId],
     );
 
     if (userCheck.length === 0 || !userCheck[0].IS_CITTADINO) {
@@ -761,37 +704,33 @@ exports.signInitiative = async (req, res) => {
     // 2. Inserimento Firma
     await connection.execute(
       `INSERT INTO FIRMA_INIZIATIVA (ID_UTENTE, ID_INIZIATIVA) VALUES (?, ?)`,
-      [userId, initiativeId]
+      [userId, initiativeId],
     );
 
     // 3. Aggiornamento Contatore Firme
     await connection.execute(
       `UPDATE INIZIATIVA SET NUM_FIRME = NUM_FIRME + 1 WHERE ID_INIZIATIVA = ?`,
-      [initiativeId]
+      [initiativeId],
     );
 
-    // 4. Recupero dati aggiornati (Titolo e Nuovo numero firme)
+    // 4. Recupero dati aggiornati
     const [rows] = await connection.execute(
       "SELECT TITOLO, NUM_FIRME FROM INIZIATIVA WHERE ID_INIZIATIVA = ?",
-      [initiativeId]
+      [initiativeId],
     );
     const newCount = rows[0].NUM_FIRME;
     const title = rows[0].TITOLO;
 
-    await connection.commit(); // Salva tutto definitivamente
+    await connection.commit();
 
-    // --- DA QUI IN POI LE AZIONI NON BLOCCANTI ---
-
-    // 5. 🔔 NOTIFICHE MILESTONE (Logica aggiunta)
-    // Controlliamo se abbiamo raggiunto un traguardo importante (50, 100, 500...)
+    // 5. 🔔 NOTIFICHE MILESTONE
     if (newCount === 50 || newCount === 100 || newCount % 500 === 0) {
       const msg = `🚀 L'iniziativa "${title}" ha appena raggiunto ${newCount} firme!`;
       const link = `/initiative/${initiativeId}`;
 
-      // Funzione helper "Fire & Forget" (senza await per non rallentare la risposta)
       notifyFollowers(initiativeId, msg, link);
       console.log(
-        `[NOTIFICA] Milestone ${newCount} raggiunta per iniziativa ${initiativeId}`
+        `[NOTIFICA] Milestone ${newCount} raggiunta per iniziativa ${initiativeId}`,
       );
     }
 
@@ -819,17 +758,12 @@ exports.followInitiative = async (req, res) => {
     const initiativeId = req.params.id;
     const userId = req.user.id;
 
-    // USA "INSERT IGNORE" invece di INSERT normale
-    // Questo evita l'errore ER_DUP_ENTRY se esiste già
     const query = `
       INSERT IGNORE INTO INIZIATIVA_SALVATA (ID_UTENTE, ID_INIZIATIVA)
       VALUES (?, ?)
     `;
 
     const [result] = await db.execute(query, [userId, initiativeId]);
-
-    // Se affectedRows è 0, significava che c'era già, ma va bene lo stesso!
-    // Restituiamo 200 OK in entrambi i casi.
 
     res.status(200).json({
       success: true,
@@ -848,7 +782,6 @@ exports.unfollowInitiative = async (req, res) => {
     const initiativeId = req.params.id;
     const userId = req.user.id;
 
-    // 2. Query di Eliminazione
     const query = `
             DELETE FROM INIZIATIVA_SALVATA 
             WHERE ID_UTENTE = ? AND ID_INIZIATIVA = ?
@@ -856,7 +789,6 @@ exports.unfollowInitiative = async (req, res) => {
 
     const [result] = await db.execute(query, [userId, initiativeId]);
 
-    // 3. Verifica del Risultato
     if (result.affectedRows === 0) {
       return res.status(404).json({
         timeStamp: new Date().toISOString(),
@@ -865,7 +797,6 @@ exports.unfollowInitiative = async (req, res) => {
       });
     }
 
-    // 4. Risposta di Successo
     res.status(200).json({
       message: "Iniziativa rimossa dai seguiti con successo",
       initiativeId: parseInt(initiativeId),
@@ -883,12 +814,8 @@ exports.unfollowInitiative = async (req, res) => {
   }
 };
 
-// --- Funzioni Helper Private (Non esportate) ---
+// --- Funzioni Helper Private ---
 
-/**
- * Recupera tutti i dati di un'iniziativa formattati secondo lo schema DetailedInitiative.
- * Include allegati, risposte amministrative e allegati delle risposte.
- */
 async function _getDetailedInitiativeData(id) {
   // 1. Recupero dati base
   const queryIniziativa = "SELECT * FROM INIZIATIVA WHERE ID_INIZIATIVA = ?";
@@ -904,7 +831,6 @@ async function _getDetailedInitiativeData(id) {
     `;
   const queryRisposta = "SELECT * FROM RISPOSTA WHERE ID_INIZIATIVA = ?";
 
-  // Esecuzione parallela
   const [attachmentsInit] = await db.query(queryAllegatiInit, [id]);
   const [replies] = await db.query(queryRisposta, [id]);
 
@@ -950,49 +876,40 @@ async function _getDetailedInitiativeData(id) {
     categoryId: initiative.ID_CATEGORIA,
     platformId: initiative.ID_PIATTAFORMA,
     externalURL: initiative.URL_ESTERNO,
-    attachments: attachmentsInit.map(att => ({
-        id: att.ID_ALLEGATO,
-        fileName: att.FILE_NAME,
-        filePath: att.FILE_PATH,
-        fileType: att.FILE_TYPE,
-        uploadedAt: att.UPLOADED_AT,
+    attachments: attachmentsInit.map((att) => ({
+      id: att.ID_ALLEGATO,
+      fileName: att.FILE_NAME,
+      filePath: att.FILE_PATH,
+      fileType: att.FILE_TYPE,
+      uploadedAt: att.UPLOADED_AT,
     })),
     reply: formattedReply,
-    attachment: attachmentsInit.length > 0 ? { filePath: attachmentsInit[0].FILE_PATH } : null,
+    attachment:
+      attachmentsInit.length > 0
+        ? { filePath: attachmentsInit[0].FILE_PATH }
+        : null,
   };
 }
-// Funzione Helper Privata per inviare notifiche ai follower
+
 const notifyFollowers = async (initiativeId, message, link) => {
   try {
-    // 1. Trova tutti gli utenti che seguono questa iniziativa
     const queryFollowers = `SELECT ID_UTENTE FROM INIZIATIVA_SALVATA WHERE ID_INIZIATIVA = ?`;
     const [followers] = await db.query(queryFollowers, [initiativeId]);
 
-    if (followers.length === 0) return; // Nessuno la segue
+    if (followers.length === 0) return;
 
-    // 2. Prepara i dati per l'inserimento multiplo (Bulk Insert)
     const queryInsert = `INSERT INTO NOTIFICA (ID_UTENTE, TESTO, LINK_RIF, LETTA) VALUES ?`;
+    const values = followers.map((f) => [f.ID_UTENTE, message, link, 0]);
 
-    // Mappiamo l'array per il formato richiesto da mysql2 per le bulk insert: [[val1, val2], [val1, val2]]
-    const values = followers.map((f) => [
-      f.ID_UTENTE,
-      message,
-      link,
-      0, // 0 = Non letta
-    ]);
-
-    // 3. Esegui l'inserimento
     await db.query(queryInsert, [values]);
     console.log(
-      `[NOTIFICHE] Inviate ${followers.length} notifiche per l'iniziativa ${initiativeId}`
+      `[NOTIFICHE] Inviate ${followers.length} notifiche per l'iniziativa ${initiativeId}`,
     );
   } catch (err) {
     console.error("Errore invio notifiche:", err);
-    // Non lanciamo errore per non bloccare la risposta HTTP principale
   }
 };
 
-// Helper per inviare una notifica a un singolo utente (es. Autore)
 const notifySingleUser = async (userId, message, link) => {
   try {
     const query = `INSERT INTO NOTIFICA (ID_UTENTE, TESTO, LINK_RIF, LETTA) VALUES (?, ?, ?, 0)`;
@@ -1002,81 +919,3 @@ const notifySingleUser = async (userId, message, link) => {
     console.error("Errore notifica singola:", err);
   }
 };
-
-/**
- * CAMBIO STATO INIZIATIVA (Solo Admin)
- * Aggiorna lo stato e notifica i follower.
- */
-// exports.updateInitiativeStatus = async (req, res) => {
-//   try {
-//     const initiativeId = req.params.id;
-//     const userId = req.user.id;
-
-//     const { status } = req.body;
-
-//     if (!status)
-//       return res.status(400).json({ message: "Dati mancanti" });
-
-//     // 1. Controllo Admin
-//     const [admins] = await db.query(
-//       "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
-//       [userId]
-//     );
-
-//     // Controllo robusto: verifica che l'utente esista E sia admin
-//     if (admins.length === 0 || !admins[0].IS_ADMIN) {
-//       return res.status(403).json({ message: "Accesso negato: Solo Admin." });
-//     }
-
-//     // 2. Recupero Info Iniziativa e Autore
-//     const [rows] = await db.query(
-//       "SELECT TITOLO, ID_AUTORE FROM INIZIATIVA WHERE ID_INIZIATIVA = ?",
-//       [initiativeId]
-//     );
-//     if (rows.length === 0)
-//       return res.status(404).json({ message: "Iniziativa non trovata" });
-
-//     const { TITOLO: title, ID_AUTORE: authorId } = rows[0];
-
-//     // 3. Aggiornamento DB
-//     await db.query("UPDATE INIZIATIVA SET STATO = ? WHERE ID_INIZIATIVA = ?", [
-//       status,
-//       initiativeId,
-//     ]);
-
-//     // 4. GESTIONE NOTIFICHE INTELLIGENTE 🔔
-//     const link = `/initiative/${initiativeId}`;
-
-//     // A. Notifica all'AUTORE
-//     if (authorId) {
-//       let authorMsg = `Lo stato della tua iniziativa "${title}" è cambiato in: ${status}.`;
-
-//       // Personalizzazione tono
-//       if (status === "Respinta") {
-//         authorMsg = `⚠️ Attenzione: La tua iniziativa "${title}" non è stata approvata.`;
-//       } else if (status === "Approvata") {
-//         authorMsg = `✅ Complimenti! La tua iniziativa "${title}" è stata approvata ed è ora pubblica.`;
-//       }
-
-//       // Await qui è utile per essere sicuri che l'autore riceva la notifica prima di chiudere
-//       await notifySingleUser(authorId, authorMsg, link);
-//     }
-
-//     // B. Notifica ai FOLLOWER (Solo se notizie positive/neutre)
-//     if (status !== "Respinta") {
-//       let followerMsg = `Aggiornamento: L'iniziativa "${title}" è ora ${status}.`;
-//       if (status === "Approvata")
-//         followerMsg = `🚀 L'iniziativa "${title}" che segui è stata approvata!`;
-
-//       // Non usiamo 'await' qui per non rallentare la risposta se i follower sono tanti (Fire & Forget)
-//       notifyFollowers(initiativeId, followerMsg, link);
-//     }
-
-//     res
-//       .status(200)
-//       .json({ message: "Stato aggiornato con successo", newStatus: status });
-//   } catch (err) {
-//     console.error("Errore updateStatus:", err);
-//     res.status(500).json({ message: "Errore server durante l'aggiornamento" });
-//   }
-// };
