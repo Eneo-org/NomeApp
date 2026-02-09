@@ -124,10 +124,16 @@ export const useParticipatoryBudgetStore = defineStore('participatoryBudget', ()
     loading.value = true
     error.value = null
 
-    // Validazione Client-side aggiornata: da 3 a 5 opzioni
+    // Validazione Client-side aggiornata: da 3 a 5 opzioni e nessuna vuota
     if (!budgetData.options || budgetData.options.length < 3 || budgetData.options.length > 5) {
       loading.value = false
       throw new Error('Un bilancio partecipativo deve avere da 3 a 5 opzioni.')
+    }
+    // Nessuna opzione deve essere vuota
+    const emptyOption = budgetData.options.find((opt) => !opt.text || opt.text.trim() === '')
+    if (emptyOption) {
+      loading.value = false
+      throw new Error('Tutte le opzioni devono essere compilate.')
     }
 
     if (!localStorage.getItem('tp_mock_id')) {

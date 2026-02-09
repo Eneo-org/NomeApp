@@ -63,11 +63,14 @@ const handleSubmit = async () => {
     options: optionsWithPos
   };
 
-  const success = await store.createParticipatoryBudget(payload);
-
-  if (success) {
-    toast.showToast("Bilancio creato con successo! 🎉", "success");
-    router.push('/');
+  try {
+    const success = await store.createParticipatoryBudget(payload);
+    if (success) {
+      toast.showToast("Bilancio creato con successo! 🎉", "success");
+      router.push('/');
+    }
+  } catch (err) {
+    toast.showToast(err.message || "Errore nella creazione del bilancio.", "error");
   }
 };
 </script>
