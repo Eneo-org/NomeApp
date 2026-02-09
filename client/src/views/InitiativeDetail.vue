@@ -4,21 +4,23 @@ import { useRoute, useRouter } from 'vue-router';
 import { useInitiativeStore } from '../stores/initiativeStore';
 import { useUserStore } from '../stores/userStore';
 import { useToastStore } from '../stores/toastStore';
+import { useImage } from '@/composables/useImage';
 import defaultImage from '@/assets/placeholder-initiative.jpg';
 
-const API_URL = 'http://localhost:3000';
+// Usiamo la variabile d'ambiente corretta per i documenti (PDF), non localhost fisso!
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 const route = useRoute();
 const userStore = useUserStore();
 const router = useRouter();
 const initiativeStore = useInitiativeStore();
 const toast = useToastStore();
+const { getImageUrl } = useImage();
 
 const initiative = ref(null);
 const loading = ref(true);
 const error = ref(null);
 
-// Recuperiamo l'ID dall'URL come computed per reagire ai cambiamenti di route
 const initiativeId = computed(() => parseInt(route.params.id));
 
 const formatDate = (dateString) => {
@@ -28,13 +30,10 @@ const formatDate = (dateString) => {
 
 const currentUrl = computed(() => window.location.href);
 
-// Computed: Controlla direttamente lo store per vedere se è firmata
-// Questo rende il bottone reattivo: appena lo store si aggiorna, il bottone cambia
 const isUserSigned = computed(() => {
   return initiativeStore.hasSigned(initiativeId.value);
 });
 
-// Funzione per caricare l'iniziativa
 const loadInitiative = async (id) => {
   if (!id || isNaN(id)) {
     error.value = "ID iniziativa non valido.";
@@ -44,25 +43,16 @@ const loadInitiative = async (id) => {
 
   loading.value = true;
   error.value = null;
-  console.log('🔍 Caricamento iniziativa ID:', id);
 
-  // fetchFiltersData viene chiamato in App.vue una sola volta
-
-  // Fetch Iniziativa
   const data = await initiativeStore.fetchInitiativeDetail(id);
-  console.log('📦 Dati ricevuti:', data);
 
   if (data) {
-    // ADATTAMENTO: Il backend restituisce 'attachments'.
-    // Separiamo in 'images' e 'documents' per il template esistente.
     if (data.attachments) {
       data.images = data.attachments.filter(a => a.fileType.startsWith('image/'));
       data.documents = data.attachments.filter(a => !a.fileType.startsWith('image/'));
     }
     initiative.value = data;
 
-    // 3. Fetch stato firme e preferiti utente (Se loggato)
-    // Chiamiamo entrambi per avere lo stato completo
     if (userStore.isAuthenticated) {
       await Promise.all([
         initiativeStore.fetchUserSignedIds(),
@@ -76,14 +66,10 @@ const loadInitiative = async (id) => {
   loading.value = false;
 };
 
-// Carica al mount
 onMounted(() => loadInitiative(initiativeId.value));
 
-// Ricarica se l'ID nell'URL cambia (navigazione tra iniziative)
-// IMPORTANTE: Solo se diverso E non durante il loading per evitare doppie chiamate
 watch(initiativeId, (newId, oldId) => {
   if (newId !== oldId && newId && !loading.value) {
-    console.log('🔄 Route ID cambiato:', oldId, '→', newId);
     loadInitiative(newId);
   }
 });
@@ -91,7 +77,6 @@ watch(initiativeId, (newId, oldId) => {
 const handleSignClick = async () => {
   if (!initiative.value) return;
 
-  // Controllo preventivo basato sullo store
   if (isUserSigned.value) {
     toast.showToast("⚠️ Hai già firmato questa iniziativa!", "info");
     return;
@@ -106,19 +91,15 @@ const handleSignClick = async () => {
 
   if (result.success) {
     toast.showToast("✅ Firma registrata con successo!", "success");
-
-    // Ricarica il dettaglio per aggiornare il contatore firme (es. da 50 a 51)
     const updatedData = await initiativeStore.fetchInitiativeDetail(initiative.value.id);
-    
-    // IMPORTANTE: Processa gli attachments come nel mount
+
     if (updatedData && updatedData.attachments) {
       updatedData.images = updatedData.attachments.filter(a => a.fileType.startsWith('image/'));
       updatedData.documents = updatedData.attachments.filter(a => !a.fileType.startsWith('image/'));
     }
-    
+
     initiative.value = updatedData;
 
-    // Logica Prompt Notifiche
     const hidePrompt = localStorage.getItem('hideNotificationPrompt_v2');
     const alreadyFollowing = initiativeStore.isFollowed(initiative.value.id);
 
@@ -132,8 +113,6 @@ const handleSignClick = async () => {
       });
     }
   }
-  // Nota: Se result.success è false perché era già firmato (409),
-  // lo store si è aggiornato da solo dentro signInitiative e il bottone diventerà grigio automaticamente.
 };
 
 const handleCopyLink = async () => {
@@ -145,12 +124,13 @@ const handleCopyLink = async () => {
   }
 };
 
+// --- MODIFICATO: Usa getImageUrl invece di costruire l'URL a mano ---
 const mainImageSrc = computed(() => {
   if (!initiative.value || !initiative.value.images || initiative.value.images.length === 0) {
     return defaultImage;
   }
-  const cleanPath = initiative.value.images[currentImageIndex.value].filePath.replace(/\\/g, '/');
-  return `${API_URL}/${cleanPath}`;
+  // Passiamo l'oggetto immagine direttamente a getImageUrl
+  return getImageUrl(initiative.value.images[currentImageIndex.value]);
 });
 
 const nextImage = () => {
@@ -168,19 +148,24 @@ const prevImage = () => {
 const currentImageIndex = ref(0);
 const imageError = ref(false);
 
-// Gestione errore caricamento immagine
 const handleImageError = (event) => {
   console.warn('⚠️ Errore caricamento immagine, uso placeholder');
   imageError.value = true;
   event.target.src = defaultImage;
 };
 
-// Watcher: Resetta l'indice quando cambia l'iniziativa
 watch(() => initiative.value?.id, () => {
   currentImageIndex.value = 0;
   imageError.value = false;
-  console.log('🔄 Iniziativa cambiata, reset indice immagini');
 });
+
+// Helper per i documenti (PDF): controlla se è URL assoluto o relativo
+const getDocumentUrl = (filePath) => {
+  if (!filePath) return '#';
+  if (filePath.startsWith('http')) return filePath;
+  const cleanPath = filePath.replace(/\\/g, '/');
+  return `${API_URL}/${cleanPath}`;
+}
 
 </script>
 
@@ -243,9 +228,11 @@ watch(() => initiative.value?.id, () => {
               <button @click="nextImage" class="gallery-btn next">›</button>
             </div>
           </figure>
+
           <div v-if="initiative.images && initiative.images.length > 1" class="thumbnail-gallery">
-            <img v-for="(image, index) in initiative.images" :key="image.id" :src="`${API_URL}/${image.filePath.replace(/\\/g, '/')}`" @click="currentImageIndex = index" :class="{ 'active': currentImageIndex === index }" alt="Thumbnail">
-           </div>
+            <img v-for="(image, index) in initiative.images" :key="image.id" :src="getImageUrl(image)"
+              @click="currentImageIndex = index" :class="{ 'active': currentImageIndex === index }" alt="Thumbnail">
+          </div>
 
           <section class="description-box">
             <h3>Dettagli dell'iniziativa</h3>
@@ -256,7 +243,7 @@ watch(() => initiative.value?.id, () => {
             <h3>Allegati scaricabili</h3>
             <ul>
               <li v-for="doc in initiative.documents" :key="doc.id">
-                <a :href="`${API_URL}/${doc.filePath.replace(/\\/g, '/')}`" target="_blank" class="file-link">
+                <a :href="getDocumentUrl(doc.filePath)" target="_blank" class="file-link">
                   📄 {{ doc.fileName }}
                 </a>
               </li>
@@ -277,7 +264,7 @@ watch(() => initiative.value?.id, () => {
                 <h5>Allegati scaricabili:</h5>
                 <ul>
                   <li v-for="att in initiative.reply.attachments" :key="att.id">
-                    <a :href="`${API_URL}/${att.filePath.replace(/\\/g, '/')}`" target="_blank" class="file-link">
+                    <a :href="getDocumentUrl(att.filePath)" target="_blank" class="file-link">
                       📄 {{ att.fileName }}
                     </a>
                   </li>
@@ -302,7 +289,6 @@ watch(() => initiative.value?.id, () => {
                 </p>
               </div>
 
-              <!-- INIZIATIVA INTERNA: Mostra form firma -->
               <div v-if="initiative.platformId === 1">
                 <button @click="handleSignClick" class="btn-sign" :class="{ 'signed': isUserSigned }"
                   :disabled="initiative.status !== 'In corso' || (userStore.isAuthenticated && !userStore.canVote)">
@@ -314,7 +300,6 @@ watch(() => initiative.value?.id, () => {
                 <p class="deadline-text">Hai tempo fino al {{ formatDate(initiative.expirationDate) }}</p>
               </div>
 
-              <!-- INIZIATIVA ESTERNA: Mostra CTA per piattaforma esterna -->
               <div v-else class="external-initiative-box">
                 <div class="external-platform-info">
                   <span class="platform-icon">🌐</span>
@@ -323,13 +308,10 @@ watch(() => initiative.value?.id, () => {
                     <span class="platform-name">{{ initiativeStore.getPlatformName(initiative.platformId) }}</span>
                   </div>
                 </div>
-                <p class="external-description">Questa iniziativa è ospitata su una piattaforma esterna. Per firmare o partecipare, visita il sito originale.</p>
-                <a 
-                  :href="initiative.externalURL || '#'" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  class="btn-external-cta"
-                >
+                <p class="external-description">Questa iniziativa è ospitata su una piattaforma esterna. Per firmare o
+                  partecipare, visita il sito originale.</p>
+                <a :href="initiative.externalURL || '#'" target="_blank" rel="noopener noreferrer"
+                  class="btn-external-cta">
                   Vai su {{ initiativeStore.getPlatformName(initiative.platformId) }} per firmare ↗
                 </a>
               </div>
@@ -1065,7 +1047,6 @@ watch(() => initiative.value?.id, () => {
 
   .sidebar {
     order: -1;
-    /* La sidebar va sopra su mobile se preferisci, altrimenti rimuovi */
   }
 }
 
