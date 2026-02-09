@@ -21,13 +21,13 @@ export function useImage() {
 
     // --- MODIFICA QUI ---
     if (fileData && fileData.path) {
-      // Cloudinary usa 'path' o 'secure_url'
-      // Se è già un URL completo (Cloudinary), usalo direttamente
-      if (fileData.path.startsWith('http')) {
-        return fileData.path
+      // Protezione: se il path contiene già un URL assoluto, restituiscilo pulito
+      let cleanPath = fileData.path.replace(/^[^h]*http/, 'http')
+      if (cleanPath.startsWith('http')) {
+        return cleanPath
       }
       // Altrimenti (fallback per vecchie immagini locali), costruisci l'URL
-      const cleanPath = fileData.path.replace(/\\/g, '/')
+      cleanPath = cleanPath.replace(/\\/g, '/')
       return `${API_URL}/${cleanPath}`
     }
 
