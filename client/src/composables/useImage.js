@@ -8,25 +8,29 @@ export function useImage() {
   const { isDark } = useTheme()
 
   const getImageUrl = (item) => {
-    // Se l'oggetto passato ha direttamente path o filePath, usali subito
+    // Se l'oggetto passato ha direttamente path, filePath o image, usali subito
     if (item) {
+      // Controlla item.image (stringa diretta, es. da getExpiringInitiatives)
+      if (typeof item.image === 'string' && item.image) {
+        if (item.image.startsWith('http')) {
+          return item.image
+        }
+        const cleanPath = item.image.replace(/\\/g, '/')
+        return `${API_URL}/${cleanPath}`
+      }
       if (item.path) {
         let cleanPath = item.path.replace(/^[^h]*http/, 'http')
         if (cleanPath.startsWith('http')) {
-          console.log('[getImageUrl] Uso path diretto:', cleanPath)
           return cleanPath
         }
         cleanPath = cleanPath.replace(/\\/g, '/')
-        console.log('[getImageUrl] Uso path locale diretto:', `${API_URL}/${cleanPath}`)
         return `${API_URL}/${cleanPath}`
       }
       if (item.filePath) {
         if (item.filePath.startsWith('http')) {
-          console.log('[getImageUrl] Uso filePath diretto:', item.filePath)
           return item.filePath
         }
         const cleanPath = item.filePath.replace(/\\/g, '/')
-        console.log('[getImageUrl] Uso filePath locale diretto:', `${API_URL}/${cleanPath}`)
         return `${API_URL}/${cleanPath}`
       }
     }
@@ -41,27 +45,20 @@ export function useImage() {
       fileData = item.attachment
     }
 
-    console.log('[getImageUrl] item (fallback):', item)
-    console.log('[getImageUrl] fileData (fallback):', fileData)
-
     if (fileData) {
       if (fileData.path) {
         let cleanPath = fileData.path.replace(/^[^h]*http/, 'http')
         if (cleanPath.startsWith('http')) {
-          console.log('[getImageUrl] Uso path:', cleanPath)
           return cleanPath
         }
         cleanPath = cleanPath.replace(/\\/g, '/')
-        console.log('[getImageUrl] Uso path locale:', `${API_URL}/${cleanPath}`)
         return `${API_URL}/${cleanPath}`
       }
       if (fileData.filePath) {
         if (fileData.filePath.startsWith('http')) {
-          console.log('[getImageUrl] Uso filePath:', fileData.filePath)
           return fileData.filePath
         }
         const cleanPath = fileData.filePath.replace(/\\/g, '/')
-        console.log('[getImageUrl] Uso filePath locale:', `${API_URL}/${cleanPath}`)
         return `${API_URL}/${cleanPath}`
       }
     }
