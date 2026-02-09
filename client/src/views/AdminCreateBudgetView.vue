@@ -108,8 +108,7 @@ const handleSubmit = async () => {
           <div class="options-grid">
             <div v-for="(opt, index) in form.options" :key="index" class="option-input-group">
               <span class="option-number">#{{ index + 1 }}</span>
-              <input v-model="opt.text" type="text" :placeholder="'Testo opzione ' + (index + 1)" required
-                maxlength="250" />
+              <input v-model="opt.text" type="text" :placeholder="'Testo opzione ' + (index + 1)" maxlength="250" />
               <button v-if="form.options.length > 3" @click="removeOption(index)" type="button"
                 class="option-btn remove-btn" title="Rimuovi opzione">
                 &ndash;
