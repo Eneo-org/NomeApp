@@ -33,19 +33,15 @@ exports.createBudgetSchema = Joi.object({
     .required()
     .messages({
       "date.greater": "La data di scadenza deve essere futura",
-      "date.min": "La data di scadenza deve essere almeno 14 giorni dalla data odierna (RF8)",
+      "date.min":
+        "La data di scadenza deve essere almeno 14 giorni dalla data odierna (RF8)",
     }),
 
-  options: Joi.array()
-    .items(optionSchema)
-    .min(2)
-    .max(5)
-    .required()
-    .messages({
-      "array.min": "Devi inserire almeno 2 opzioni per il voto",
-      "array.max": "Puoi inserire al massimo 5 opzioni per il voto",
-      "any.required": "Le opzioni sono obbligatorie",
-    }),
+  options: Joi.array().items(optionSchema).min(3).max(5).required().messages({
+    "array.min": "Devi inserire almeno 3 opzioni per il voto",
+    "array.max": "Puoi inserire al massimo 5 opzioni per il voto",
+    "any.required": "Le opzioni sono obbligatorie",
+  }),
 
   createdAt: Joi.date(),
 });

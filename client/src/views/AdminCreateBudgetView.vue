@@ -1,10 +1,13 @@
 <script setup>
+
 import { ref } from 'vue';
 import { useParticipatoryBudgetStore } from '../stores/participatoryBudgetStore';
 import { useRouter } from 'vue-router';
+import { useToastStore } from '../stores/toastStore';
 
 const store = useParticipatoryBudgetStore();
 const router = useRouter();
+const toast = useToastStore();
 
 // Stato del form - Ora parte con 3 opzioni
 const form = ref({
@@ -34,31 +37,36 @@ const removeOption = (index) => {
 const handleSubmit = async () => {
   // Validazione di base
   if (!form.value.title || !form.value.expirationDate) {
-    alert("Inserisci titolo e data di scadenza.");
+    toast.showToast("Inserisci titolo e data di scadenza.", "error");
     return;
   }
 
-  // Filtra le opzioni vuote e assegna le posizioni
-  const filledOptions = form.value.options
-    .map((opt, index) => ({ ...opt, position: index + 1 }))
-    .filter(opt => opt.text && opt.text.trim() !== '');
+  // Assegna le posizioni
+  const optionsWithPos = form.value.options.map((opt, index) => ({ ...opt, position: index + 1 }));
 
-  // Validazione sul numero di opzioni compilate
-  if (filledOptions.length < 3) {
-    alert("Devi compilare almeno 3 opzioni.");
+  // Validazione: nessuna opzione deve essere vuota
+  const emptyOption = optionsWithPos.find(opt => !opt.text || opt.text.trim() === '');
+  if (emptyOption) {
+    toast.showToast("Tutte le opzioni devono essere compilate.", "error");
+    return;
+  }
+
+  // Validazione sul numero di opzioni
+  if (optionsWithPos.length < 3 || optionsWithPos.length > 5) {
+    toast.showToast("Devi inserire da 3 a 5 opzioni.", "error");
     return;
   }
 
   // Prepara l'oggetto da inviare
   const payload = {
     ...form.value,
-    options: filledOptions
+    options: optionsWithPos
   };
 
   const success = await store.createParticipatoryBudget(payload);
 
   if (success) {
-    alert("Bilancio creato con successo! 🎉");
+    toast.showToast("Bilancio creato con successo! 🎉", "success");
     router.push('/');
   }
 };
@@ -97,26 +105,17 @@ const handleSubmit = async () => {
           <div class="options-grid">
             <div v-for="(opt, index) in form.options" :key="index" class="option-input-group">
               <span class="option-number">#{{ index + 1 }}</span>
-              <input v-model="opt.text" type="text" :placeholder="'Testo opzione ' + (index + 1)" required maxlength="250" />
-              <button
-                v-if="form.options.length > 3"
-                @click="removeOption(index)"
-                type="button"
-                class="option-btn remove-btn"
-                title="Rimuovi opzione"
-              >
+              <input v-model="opt.text" type="text" :placeholder="'Testo opzione ' + (index + 1)" required
+                maxlength="250" />
+              <button v-if="form.options.length > 3" @click="removeOption(index)" type="button"
+                class="option-btn remove-btn" title="Rimuovi opzione">
                 &ndash;
               </button>
             </div>
           </div>
 
           <div class="add-option-container">
-            <button
-              v-if="form.options.length < 5"
-              @click="addOption"
-              type="button"
-              class="option-btn add-btn"
-            >
+            <button v-if="form.options.length < 5" @click="addOption" type="button" class="option-btn add-btn">
               + Aggiungi opzione
             </button>
           </div>

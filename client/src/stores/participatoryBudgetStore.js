@@ -32,7 +32,7 @@ export const useParticipatoryBudgetStore = defineStore('participatoryBudget', ()
     isFetchingActive.value = true
     loading.value = true
     error.value = null
-    
+
     try {
       // Nota: usiamo l'helper getAuthHeaders() se lo hai aggiunto, altrimenti gestiscilo come prima
       const storedId = localStorage.getItem('tp_mock_id')
@@ -124,10 +124,10 @@ export const useParticipatoryBudgetStore = defineStore('participatoryBudget', ()
     loading.value = true
     error.value = null
 
-    // Validazione Client-side
-    if (!budgetData.options || budgetData.options.length !== 5) {
+    // Validazione Client-side aggiornata: da 3 a 5 opzioni
+    if (!budgetData.options || budgetData.options.length < 3 || budgetData.options.length > 5) {
       loading.value = false
-      throw new Error('Un bilancio partecipativo deve avere esattamente 5 opzioni.')
+      throw new Error('Un bilancio partecipativo deve avere da 3 a 5 opzioni.')
     }
 
     if (!localStorage.getItem('tp_mock_id')) {
