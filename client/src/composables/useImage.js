@@ -23,28 +23,28 @@ export function useImage() {
     console.log('[getImageUrl] item:', item)
     console.log('[getImageUrl] fileData:', fileData)
 
-    if (fileData && fileData.path) {
-      // Protezione: se il path contiene già un URL assoluto, restituiscilo pulito
-      let cleanPath = fileData.path.replace(/^[^h]*http/, 'http')
-      if (cleanPath.startsWith('http')) {
-        console.log('[getImageUrl] Uso path:', cleanPath)
-        return cleanPath
+    if (fileData) {
+      // Prima prova path
+      if (fileData.path) {
+        let cleanPath = fileData.path.replace(/^[^h]*http/, 'http')
+        if (cleanPath.startsWith('http')) {
+          console.log('[getImageUrl] Uso path:', cleanPath)
+          return cleanPath
+        }
+        cleanPath = cleanPath.replace(/\\/g, '/')
+        console.log('[getImageUrl] Uso path locale:', `${API_URL}/${cleanPath}`)
+        return `${API_URL}/${cleanPath}`
       }
-      // Altrimenti (fallback per vecchie immagini locali), costruisci l'URL
-      cleanPath = cleanPath.replace(/\\/g, '/')
-      console.log('[getImageUrl] Uso path locale:', `${API_URL}/${cleanPath}`)
-      return `${API_URL}/${cleanPath}`
-    }
-
-    // Vecchia gestione 'filePath' se presente nel DB
-    if (fileData && fileData.filePath) {
-      if (fileData.filePath.startsWith('http')) {
-        console.log('[getImageUrl] Uso filePath:', fileData.filePath)
-        return fileData.filePath
+      // Poi prova filePath
+      if (fileData.filePath) {
+        if (fileData.filePath.startsWith('http')) {
+          console.log('[getImageUrl] Uso filePath:', fileData.filePath)
+          return fileData.filePath
+        }
+        const cleanPath = fileData.filePath.replace(/\\/g, '/')
+        console.log('[getImageUrl] Uso filePath locale:', `${API_URL}/${cleanPath}`)
+        return `${API_URL}/${cleanPath}`
       }
-      const cleanPath = fileData.filePath.replace(/\\/g, '/')
-      console.log('[getImageUrl] Uso filePath locale:', `${API_URL}/${cleanPath}`)
-      return `${API_URL}/${cleanPath}`
     }
     // --------------------
 
