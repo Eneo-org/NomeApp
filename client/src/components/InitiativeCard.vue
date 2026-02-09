@@ -72,12 +72,8 @@ const goToDetail = () => {
           {{ item.status }}
         </div>
 
-        <button 
-          v-if="item.status && item.status.toLowerCase() === 'in corso'" 
-          class="follow-btn-wrapper"
-          @click.prevent="handleStarClick" 
-          title="Segui questa iniziativa"
-        >
+        <button v-if="item.status && item.status.toLowerCase() === 'in corso'" class="follow-btn-wrapper"
+          @click.prevent="handleStarClick" title="Segui questa iniziativa">
           <span v-if="initiativeStore.isFollowed(item.id)" class="followed-badge">★ Segui già</span>
           <span v-else class="unfollowed-badge">☆ Segui aggiornamenti</span>
         </button>

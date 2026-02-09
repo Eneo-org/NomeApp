@@ -3,6 +3,8 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useInitiativeStore } from '../stores/initiativeStore';
 import { useToastStore } from '../stores/toastStore';
+import { useImage } from '@/composables/useImage';
+const { getImageUrl } = useImage();
 import defaultImage from '@/assets/placeholder-initiative.jpg';
 
 const initiativeStore = useInitiativeStore();
@@ -42,14 +44,6 @@ const updateTickers = () => {
     item.displayTime = calculateTimeLeft(item.expirationDate);
     item.isUrgent = !item.displayTime.includes("g") && item.displayTime !== "SCADUTA";
   });
-};
-
-const getImageUrl = (item) => {
-  const imageObj = item.image || item.attachment;
-  if (!imageObj) return defaultImage;
-  const path = typeof imageObj === 'string' ? imageObj : imageObj.filePath;
-  if (!path) return defaultImage;
-  return `${API_URL}/${path.replace(/\\/g, '/')}`;
 };
 
 const formatDate = (date) => new Date(date).toLocaleDateString('it-IT');
