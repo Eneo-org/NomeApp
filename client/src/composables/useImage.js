@@ -19,22 +19,31 @@ export function useImage() {
       fileData = item.attachment
     }
 
-    // --- MODIFICA QUI ---
+    // DEBUG: Mostra cosa arriva a getImageUrl e cosa viene usato
+    console.log('[getImageUrl] item:', item)
+    console.log('[getImageUrl] fileData:', fileData)
+
     if (fileData && fileData.path) {
       // Protezione: se il path contiene già un URL assoluto, restituiscilo pulito
       let cleanPath = fileData.path.replace(/^[^h]*http/, 'http')
       if (cleanPath.startsWith('http')) {
+        console.log('[getImageUrl] Uso path:', cleanPath)
         return cleanPath
       }
       // Altrimenti (fallback per vecchie immagini locali), costruisci l'URL
       cleanPath = cleanPath.replace(/\\/g, '/')
+      console.log('[getImageUrl] Uso path locale:', `${API_URL}/${cleanPath}`)
       return `${API_URL}/${cleanPath}`
     }
 
     // Vecchia gestione 'filePath' se presente nel DB
     if (fileData && fileData.filePath) {
-      if (fileData.filePath.startsWith('http')) return fileData.filePath
+      if (fileData.filePath.startsWith('http')) {
+        console.log('[getImageUrl] Uso filePath:', fileData.filePath)
+        return fileData.filePath
+      }
       const cleanPath = fileData.filePath.replace(/\\/g, '/')
+      console.log('[getImageUrl] Uso filePath locale:', `${API_URL}/${cleanPath}`)
       return `${API_URL}/${cleanPath}`
     }
     // --------------------
