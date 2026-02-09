@@ -129,8 +129,9 @@ const mainImageSrc = computed(() => {
   if (!initiative.value || !initiative.value.images || initiative.value.images.length === 0) {
     return defaultImage;
   }
-  // Passiamo l'oggetto immagine direttamente a getImageUrl
-  return getImageUrl(initiative.value.images[currentImageIndex.value]);
+  const imgObj = initiative.value.images[currentImageIndex.value];
+  console.log('[mainImageSrc] imgObj:', imgObj);
+  return getImageUrl(imgObj);
 });
 
 const nextImage = () => {
@@ -230,8 +231,9 @@ const getDocumentUrl = (filePath) => {
           </figure>
 
           <div v-if="initiative.images && initiative.images.length > 1" class="thumbnail-gallery">
-            <img v-for="(image, index) in initiative.images" :key="image.id" :src="getImageUrl(image)"
-              @click="currentImageIndex = index" :class="{ 'active': currentImageIndex === index }" alt="Thumbnail">
+            <img v-for="(image, index) in initiative.images" :key="image.id"
+              :src="(console.log('[thumbnail] image:', image), getImageUrl(image))" @click="currentImageIndex = index"
+              :class="{ 'active': currentImageIndex === index }" alt="Thumbnail">
           </div>
 
           <section class="description-box">
