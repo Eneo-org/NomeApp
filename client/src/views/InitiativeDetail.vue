@@ -127,6 +127,7 @@ const handleCopyLink = async () => {
 // --- MODIFICATO: Usa getImageUrl invece di costruire l'URL a mano ---
 const mainImageSrc = computed(() => {
   if (!initiative.value || !initiative.value.images || initiative.value.images.length === 0) {
+    console.log('[mainImageSrc] NO IMAGE:', initiative.value && initiative.value.images);
     return defaultImage;
   }
   const imgObj = initiative.value.images[currentImageIndex.value];
