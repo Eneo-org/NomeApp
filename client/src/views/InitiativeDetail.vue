@@ -30,6 +30,15 @@ const formatDate = (dateString) => {
 
 const currentUrl = computed(() => window.location.href);
 
+const authorLabel = computed(() => {
+  const firstName = initiative.value?.authorFirstName?.trim();
+  const lastName = initiative.value?.authorLastName?.trim();
+  if (firstName || lastName) {
+    return `${firstName || ''} ${lastName || ''}`.trim();
+  }
+  return 'Cittadino';
+});
+
 const isUserSigned = computed(() => {
   return initiativeStore.hasSigned(initiativeId.value);
 });
@@ -224,7 +233,7 @@ const getDocumentUrl = (filePath) => {
           <span class="meta-item category-item">🏷️ {{ initiativeStore.getCategoryName(initiative.categoryId) }}</span>
           <span class="meta-item">📍 {{ initiative.place || 'Trento' }}</span>
           <span class="meta-item">📅 Creato il {{ formatDate(initiative.creationDate) }}</span>
-          <span class="meta-item author-item">👤 Autore: Cittadino #{{ initiative.authorId }}</span>
+          <span class="meta-item author-item">👤 Autore: {{ authorLabel }}</span>
         </div>
       </header>
 

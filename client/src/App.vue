@@ -25,7 +25,8 @@ const handleSearch = () => {
 
 // Calcola l'iniziale dell'utente per l'avatar
 const userInitial = computed(() => {
-  return userStore.user?.name ? userStore.user.name.charAt(0).toUpperCase() : 'U';
+  const firstName = userStore.user?.firstName || userStore.user?.name || userStore.fullName;
+  return firstName ? firstName.trim().charAt(0).toUpperCase() : 'U';
 });
 
 const logout = () => {
