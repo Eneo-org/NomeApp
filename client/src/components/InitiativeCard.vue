@@ -1,6 +1,6 @@
 <script setup>
 import { defineProps, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useInitiativeStore } from '@/stores/initiativeStore'
 import { useUserStore } from '@/stores/userStore'
 import { useImage } from '@/composables/useImage'
@@ -14,6 +14,7 @@ const props = defineProps({
 })
 
 const router = useRouter()
+const route = useRoute()
 const initiativeStore = useInitiativeStore()
 const userStore = useUserStore()
 const { getImageUrl } = useImage()
@@ -42,9 +43,7 @@ const getStatusClass = (status) => {
 const handleStarClick = async (event) => {
   event.stopPropagation() // Evita di triggerare il click sulla card
   if (!userStore.isAuthenticated) {
-    if (confirm("Devi accedere per seguire le iniziative. Vuoi andare al login?")) {
-      router.push('/login');
-    }
+    router.push({ path: '/login', query: { redirect: route.fullPath } });
     return;
   }
   await initiativeStore.toggleFollow(props.item.id, props.item.title);

@@ -1,11 +1,12 @@
 <script setup>
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useUserStore } from '../stores/userStore';
 import { useToastStore } from '../stores/toastStore';
 import { GoogleLogin } from 'vue3-google-login';
 
 const store = useUserStore();
 const router = useRouter();
+const route = useRoute();
 const toast = useToastStore();
 
 // Funzione chiamata quando Google risponde con successo
@@ -17,12 +18,16 @@ const handleGoogleCallback = async (response) => {
     if (result === true) {
       // Caso 1: Login completato con successo
       toast.showToast(`Benvenuto, ${store.fullName}! 👋`, "success");
-      router.push('/');
+      const redirectPath = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/')
+        ? route.query.redirect
+        : '/';
+      router.push(redirectPath);
     } else if (result === 'REGISTER') {
       // Caso 2: Utente nuovo, serve completare la registrazione
       toast.showToast("Account non trovato. Completa la registrazione.", "info");
       // Reindirizza alla pagina di registrazione (assicurati che esista nel router)
-      router.push('/register');
+      const redirectPath = typeof route.query.redirect === 'string' ? route.query.redirect : undefined;
+      router.push({ path: '/register', query: redirectPath ? { redirect: redirectPath } : {} });
     } else {
       // Caso 3: Errore generico
       toast.showToast("Errore durante l'accesso con Google.", "error");

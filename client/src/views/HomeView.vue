@@ -5,7 +5,7 @@ import { useParticipatoryBudgetStore } from '../stores/participatoryBudgetStore'
 import { useUserStore } from '../stores/userStore'
 import ParticipatoryBudgetCard from '@/components/ParticipatoryBudgetCard.vue'
 import InitiativeCard from '@/components/InitiativeCard.vue'
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useToastStore } from '../stores/toastStore';
 import { formatCooldownTime } from '@/utils/dateUtils';
 
@@ -13,20 +13,21 @@ const initiativeStore = useInitiativeStore()
 const budgetStore = useParticipatoryBudgetStore()
 const userStore = useUserStore()
 const router = useRouter();
+const route = useRoute();
 const toast = useToastStore();
 
 // --- INIT ---
 onMounted(async () => {
   console.log('🏠 HomeView montata - caricamento dati home');
   // fetchFiltersData viene chiamato in App.vue una sola volta
-  
+
   // Carichiamo tutto in sequenza per evitare rate limiting
   await loadData()
-  
+
   // Aspetta un po' prima di caricare il budget
   await new Promise(resolve => setTimeout(resolve, 300))
   await budgetStore.fetchActiveBudget()
-  
+
   // Carica preferiti DOPO tutto il resto
   if (userStore.isAuthenticated) {
     await new Promise(resolve => setTimeout(resolve, 300))
@@ -47,7 +48,7 @@ const loadData = async () => {
 // --- LOGICA CREAZIONE ---
 const handleCreateClick = async () => {
   if (!userStore.isAuthenticated) {
-    router.push('/login');
+    router.push({ path: '/login', query: { redirect: route.fullPath } });
     return;
   }
   const status = await initiativeStore.checkUserCooldown();
@@ -99,11 +100,7 @@ const handleCreateClick = async () => {
         </div>
 
         <div v-else class="cards-container">
-          <InitiativeCard 
-            v-for="item in initiativeStore.homeInitiatives" 
-            :key="item.id" 
-            :item="item" 
-          />
+          <InitiativeCard v-for="item in initiativeStore.homeInitiatives" :key="item.id" :item="item" />
         </div>
       </main>
     </div>
@@ -125,16 +122,20 @@ const handleCreateClick = async () => {
   display: flex;
   gap: 20px;
   margin-bottom: 40px;
-  align-items: center; /* Assicura che i figli abbiano la stessa altezza */
+  align-items: center;
+  /* Assicura che i figli abbiano la stessa altezza */
 }
 
 .budget-card-container {
-  flex: 2; /* Più spazio per il budget */
+  flex: 2;
+  /* Più spazio per il budget */
 }
 
 .create-initiative-box {
-  flex: 1; /* Meno spazio per la call to action */
-  display: flex; /* Centra il contenuto verticalmente */
+  flex: 1;
+  /* Meno spazio per la call to action */
+  display: flex;
+  /* Centra il contenuto verticalmente */
   background-color: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 16px;

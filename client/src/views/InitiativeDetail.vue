@@ -83,7 +83,7 @@ const handleSignClick = async () => {
   }
 
   if (!userStore.isAuthenticated) {
-    if (confirm("Devi accedere per firmare. Login?")) router.push('/login');
+    router.push({ path: '/login', query: { redirect: route.fullPath } });
     return;
   }
 
@@ -113,6 +113,15 @@ const handleSignClick = async () => {
       });
     }
   }
+};
+
+const handleFollowClick = async () => {
+  if (!initiative.value) return;
+  if (!userStore.isAuthenticated) {
+    router.push({ path: '/login', query: { redirect: route.fullPath } });
+    return;
+  }
+  await initiativeStore.toggleFollow(initiative.value.id, initiative.value.title);
 };
 
 const handleCopyLink = async () => {
@@ -206,8 +215,7 @@ const getDocumentUrl = (filePath) => {
           </div>
 
           <button v-if="initiative.status === 'In corso'" class="btn-follow"
-            :class="{ 'active': initiativeStore.isFollowed(initiative.id) }"
-            @click="initiativeStore.toggleFollow(initiative.id, initiative.title)">
+            :class="{ 'active': initiativeStore.isFollowed(initiative.id) }" @click="handleFollowClick">
             {{ initiativeStore.isFollowed(initiative.id) ? '⭐ Segui già' : '☆ Segui aggiornamenti' }}
           </button>
         </div>

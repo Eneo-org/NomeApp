@@ -1,12 +1,13 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useInitiativeStore } from '../stores/initiativeStore'
 import { useUserStore } from '../stores/userStore'
 import { useToastStore } from '../stores/toastStore';
 import { formatCooldownTime } from '@/utils/dateUtils';
 
 const router = useRouter()
+const route = useRoute()
 const store = useInitiativeStore()
 const userStore = useUserStore()
 const toast = useToastStore();
@@ -26,7 +27,7 @@ onMounted(() => {
   store.fetchFiltersData()
   if (!userStore.isAuthenticated) {
     toast.showToast("Devi accedere per creare un'iniziativa", "error");
-    router.push('/login');
+    router.push({ path: '/login', query: { redirect: route.fullPath } });
   }
 })
 
