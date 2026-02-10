@@ -6,6 +6,7 @@ import HomeView from '../views/HomeView.vue'
 import InitiativesView from '../views/InitiativesView.vue'
 import InitiativeDetail from '../views/InitiativeDetail.vue'
 import LoginView from '../views/LoginView.vue'
+import TeacherLoginView from '../views/TeacherLoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import CreateInitiativeView from '../views/CreateInitiativeView.vue'
 import UserDashboard from '../views/UserDashboard.vue'
@@ -40,6 +41,11 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: LoginView,
+    },
+    {
+      path: '/teacher-login',
+      name: 'teacher-login',
+      component: TeacherLoginView,
     },
     {
       path: '/register',

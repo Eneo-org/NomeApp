@@ -59,9 +59,31 @@ export const useUserStore = defineStore('user', () => {
         }
         return 'REGISTER' // Ritorniamo una stringa specifica per la View
       }
-      
+
       console.error('Errore loginWithGoogle:', err)
       return false
+    }
+  }
+
+  // 1b. LOGIN DOCENTI (Account test)
+  const loginWithTeacherSecret = async (secret, accountKey) => {
+    try {
+      const response = await axios.post(`${API_URL}/auth/teacher-login`, {
+        secret,
+        accountKey,
+      })
+
+      const data = response.data
+
+      if (data.status === 'LOGIN_SUCCESS') {
+        setUserData(data.user)
+        return true
+      }
+
+      return false
+    } catch (err) {
+      console.error('Errore loginWithTeacherSecret:', err)
+      throw err.response?.data?.message || 'Errore login docenti'
     }
   }
 
@@ -150,7 +172,7 @@ export const useUserStore = defineStore('user', () => {
         currentPage: page,
         objectsPerPage: 10,
         isAdmin: true,
-        ...(fiscalCode && { fiscalCode })
+        ...(fiscalCode && { fiscalCode }),
       }
 
       const response = await axios.get(`${API_URL}/users`, {
@@ -239,6 +261,7 @@ export const useUserStore = defineStore('user', () => {
 
     // Actions
     loginWithGoogle,
+    loginWithTeacherSecret,
     sendOtp,
     registerUser,
     logout,

@@ -48,6 +48,9 @@ const handleGoogleCallback = async (response) => {
 
       <div class="info-box">
         <p>ℹ️ <strong>Nota:</strong> In produzione, questo verrebbe sostituito da SPID/CIE.</p>
+        <p class="teacher-link">
+          <RouterLink to="/teacher-login">Accesso docenti</RouterLink>
+        </p>
       </div>
     </div>
   </div>
@@ -86,5 +89,14 @@ const handleGoogleCallback = async (response) => {
   color: var(--secondary-text);
   border-top: 1px solid var(--header-border);
   padding-top: 20px;
+}
+
+.teacher-link {
+  margin-top: 10px;
+}
+
+.teacher-link a {
+  color: var(--secondary-text);
+  text-decoration: underline;
 }
 </style>

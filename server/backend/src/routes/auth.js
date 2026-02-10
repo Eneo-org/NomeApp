@@ -9,6 +9,9 @@ const userController = require("../controllers/userController");
 // Questa è la rotta che il frontend chiama con axios.post('/auth/google')
 router.post("/google", authController.googleLogin);
 
+// 1b. Teacher Login: accesso test per docenti con secret
+router.post("/teacher-login", authController.teacherLogin);
+
 // 2. Invio OTP: Manda la mail con il codice (per i nuovi utenti)
 router.post("/otp", authController.sendOtp);
 
