@@ -41,6 +41,14 @@ export function useImage() {
       fileData = item.images[0]
     } else if (item && Array.isArray(item.attachments) && item.attachments.length > 0) {
       fileData = item.attachments.find((att) => att.fileType && att.fileType.startsWith('image/'))
+    } else if (
+      item &&
+      item.attachments &&
+      typeof item.attachments === 'object' &&
+      !Array.isArray(item.attachments)
+    ) {
+      // Gestisci il caso in cui attachments è un oggetto singolo (non array)
+      fileData = item.attachments
     } else if (item && item.attachment) {
       fileData = item.attachment
     }
