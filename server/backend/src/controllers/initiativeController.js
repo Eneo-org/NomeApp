@@ -824,6 +824,15 @@ async function _getDetailedInitiativeData(id) {
   if (rows.length === 0) return null;
   const initiative = rows[0];
 
+  let authorData = null;
+  if (initiative.ID_AUTORE) {
+    const [authorRows] = await db.query(
+      "SELECT NOME, COGNOME FROM UTENTE WHERE ID_UTENTE = ?",
+      [initiative.ID_AUTORE],
+    );
+    authorData = authorRows[0] || null;
+  }
+
   // 2. Recupero Allegati Iniziativa e Risposta
   const queryAllegatiInit = `
         SELECT ID_ALLEGATO, FILE_NAME, FILE_PATH, FILE_TYPE, UPLOADED_AT 
@@ -873,6 +882,8 @@ async function _getDetailedInitiativeData(id) {
     creationDate: initiative.DATA_CREAZIONE,
     expirationDate: initiative.DATA_SCADENZA,
     authorId: initiative.ID_AUTORE,
+    authorFirstName: authorData?.NOME || null,
+    authorLastName: authorData?.COGNOME || null,
     categoryId: initiative.ID_CATEGORIA,
     platformId: initiative.ID_PIATTAFORMA,
     externalURL: initiative.URL_ESTERNO,

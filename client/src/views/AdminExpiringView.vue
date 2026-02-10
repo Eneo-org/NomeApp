@@ -52,7 +52,7 @@ const goToReply = (id) => router.push(`/admin/reply/${id}`);
 // --- LOGICA PROROGA RAPIDA ---
 const handleQuickExtend = (item) => {
   if (item.alreadyExtended) {
-    toast.showToast("⛔ Errore: Questa iniziativa è già stata prorogata una volta.", "error");
+    toast.showToast("La data di scadenza è già stata prorogata una volta.", "info");
     return;
   }
 
@@ -69,6 +69,7 @@ const handleQuickExtend = (item) => {
             try {
               await initiativeStore.extendDeadline(item.id, item.expirationDate);
               toast.showToast("Scadenza aggiornata (+60gg)!", "success");
+              item.alreadyExtended = true;
               // Ricarica i dati per vedere l'ordinamento aggiornato
               loadData(currentPage.value);
             } catch (err) {
@@ -95,7 +96,7 @@ const loadData = async (page = 1) => {
       ...init,
       displayTime: calculateTimeLeft(init.expirationDate),
       isUrgent: false,
-      alreadyExtended: false // Se il backend non fornisce questo dato
+      alreadyExtended: Boolean(init.alreadyExtended) // Se il backend non fornisce questo dato
     }));
 
     if (responseData.meta) {
@@ -355,16 +356,15 @@ onUnmounted(() => {
   background-color: #f39c12;
 }
 
-.action-btn.extend:hover {
+.action-btn.extend:not(.disabled):hover {
   background-color: #e67e22;
 }
 
 /* Stato Disabilitato (Grigio) per Proroga */
 .action-btn.extend.disabled {
-  background-color: #95a5a6;
-  /* Grigio */
+  background-color: #6f7c7d;
   cursor: not-allowed;
-  opacity: 0.7;
+  opacity: 0.65;
 }
 
 /* Al click sul disabilitato gestiamo il toast, quindi non mettiamo pointer-events: none */

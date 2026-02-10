@@ -25,7 +25,8 @@ const handleSearch = () => {
 
 // Calcola l'iniziale dell'utente per l'avatar
 const userInitial = computed(() => {
-  return userStore.user?.name ? userStore.user.name.charAt(0).toUpperCase() : 'U';
+  const firstName = userStore.user?.firstName || userStore.user?.name || userStore.fullName;
+  return firstName ? firstName.trim().charAt(0).toUpperCase() : 'U';
 });
 
 const logout = () => {
@@ -58,10 +59,10 @@ const handleNotificationClick = (notification) => {
 onMounted(() => {
   initTheme();
   userStore.initializeStore();
-  
+
   // Carica filtri globalmente una sola volta
   initiativeStore.fetchFiltersData();
-  
+
   if (userStore.isAuthenticated) {
     dashboardStore.fetchNotifications();
   }
@@ -83,231 +84,226 @@ const formatDate = (dateString) => {
 <template>
   <div class="app-layout">
 
-        <TheToast />
+    <TheToast />
 
-    
 
-        <nav class="navbar">
 
-          <div class="nav-left">
+    <nav class="navbar">
 
-            <RouterLink to="/" class="brand-logo-inline">
+      <div class="nav-left">
 
-              <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none"
+        <RouterLink to="/" class="brand-logo-inline">
 
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="brand-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="brand-icon">
 
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
 
-              </svg>
+          </svg>
 
-    
 
-              <span class="brand-text-inline">
 
-                <span class="brand-city">Trento</span><span class="brand-action">Partecipa</span>
+          <span class="brand-text-inline">
 
-              </span>
+            <span class="brand-city">Trento</span><span class="brand-action">Partecipa</span>
 
-            </RouterLink>
+          </span>
 
-          </div>
+        </RouterLink>
 
-    
+      </div>
 
-          <div class="nav-center">
 
-            <form @submit.prevent="handleSearch" class="nav-search-form">
 
-              <input type="text" v-model="searchTerm" placeholder="Cerca iniziative..." class="nav-search-input">
+      <div class="nav-center">
 
-              <button type="submit" class="nav-search-btn">
+        <form @submit.prevent="handleSearch" class="nav-search-form">
 
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          <input type="text" v-model="searchTerm" placeholder="Cerca iniziative..." class="nav-search-input">
 
-                  stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <button type="submit" class="nav-search-btn">
 
-                  <circle cx="11" cy="11" r="8" />
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              <circle cx="11" cy="11" r="8" />
 
-                </svg>
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
 
-              </button>
+            </svg>
 
-            </form>
+          </button>
 
-          </div>
+        </form>
 
-    
+      </div>
 
-          <div class="nav-right">
 
-            <RouterLink to="/" class="nav-link">Home</RouterLink>
 
-            <RouterLink :to="{ path: '/initiatives', query: { status: 'In corso' } }" class="nav-link">Iniziative</RouterLink>
+      <div class="nav-right">
 
-    
+        <RouterLink to="/" class="nav-link">Home</RouterLink>
 
-            <RouterLink v-if="userStore.isAuthenticated" to="/dashboard" class="nav-link">
+        <RouterLink :to="{ path: '/initiatives', query: { status: 'In corso' } }" class="nav-link">Iniziative
+        </RouterLink>
 
-              Dashboard
 
-            </RouterLink>
 
-    
+        <RouterLink v-if="userStore.isAuthenticated" to="/dashboard" class="nav-link">
 
-            <RouterLink v-if="userStore.isAuthenticated && userStore.user?.isAdmin" to="/admin/dashboard"
+          Dashboard
 
-              class="nav-link admin-pill">
+        </RouterLink>
 
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
 
+
+        <RouterLink v-if="userStore.isAuthenticated && userStore.user?.isAdmin" to="/admin/dashboard"
+          class="nav-link admin-pill">
+
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+
+          </svg>
+
+          Area Admin
+
+        </RouterLink>
+
+
+
+        <RouterLink v-if="!userStore.isAuthenticated" to="/login" class="login-btn">
+
+          Accedi
+
+        </RouterLink>
+
+
+
+        <div v-else class="user-control-panel">
+
+          <div class="notification-wrapper">
+
+            <button @click="toggleNotifications" class="notification-btn">
+
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
 
               </svg>
 
-              Area Admin
-
-            </RouterLink>
-
-    
-
-            <RouterLink v-if="!userStore.isAuthenticated" to="/login" class="login-btn">
-
-              Accedi
-
-            </RouterLink>
-
-    
-
-            <div v-else class="user-control-panel">
-
-              <div class="notification-wrapper">
-
-                <button @click="toggleNotifications" class="notification-btn">
-
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-
-                  </svg>
-
-                  <span class="notification-badge" v-if="unreadCount > 0">{{ unreadCount }}</span>
-
-                </button>
-
-    
-
-                <div v-if="showNotifications" class="notifications-dropdown" @click.stop>
-
-                  <div class="dropdown-header">
-
-                    <h4>Notifiche</h4>
-
-                    <button @click="markAllAsRead" class="mark-as-read-btn" v-if="unreadCount > 0">Segna come lette</button>
-
-                  </div>
-
-                  <ul class="notification-list">
-
-                    <li v-for="notification in notifications" :key="notification.id" @click="handleNotificationClick(notification)" :class="{ 'is-read': notification.isRead }">
-
-                      <p>{{ notification.text }}</p>
-
-                      <small>{{ formatDate(notification.creationDate) }}</small>
-
-                    </li>
-
-                    <li v-if="notifications.length === 0" class="no-notifications">
-
-                      Nessuna notifica
-
-                    </li>
-
-                  </ul>
-
-                </div>
-
-              </div>
-
-              <div class="divider-vertical"></div>
-
-              <div class="user-info">
-
-                <div class="avatar-circle">{{ userInitial }}</div>
-
-                <span class="user-name">{{ userStore.fullName }}</span>
-
-              </div>
-
-              <div class="divider-vertical"></div>
-
-              <button @click="logout" class="logout-icon-btn" title="Esci">
-
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-
-                  <polyline points="16 17 21 12 16 7" />
-
-                  <line x1="21" y1="12" x2="9" y2="12" />
-
-                </svg>
-
-              </button>
-
-            </div>
-
-    
-
-            <button @click="toggleTheme" class="theme-toggle-btn"
-
-              :title="isDark ? 'Passa a Light Mode' : 'Passa a Dark Mode'">
-
-              <svg v-if="isDark" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                <circle cx="12" cy="12" r="5" />
-
-                <line x1="12" y1="1" x2="12" y2="3" />
-
-                <line x1="12" y1="21" x2="12" y2="23" />
-
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-
-                <line x1="1" y1="12" x2="3" y2="12" />
-
-                <line x1="21" y1="12" x2="23" y2="12" />
-
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-
-              </svg>
-
-              <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-
-              </svg>
+              <span class="notification-badge" v-if="unreadCount > 0">{{ unreadCount }}</span>
 
             </button>
 
+
+
+            <div v-if="showNotifications" class="notifications-dropdown" @click.stop>
+
+              <div class="dropdown-header">
+
+                <h4>Notifiche</h4>
+
+                <button @click="markAllAsRead" class="mark-as-read-btn" v-if="unreadCount > 0">Segna come lette</button>
+
+              </div>
+
+              <ul class="notification-list">
+
+                <li v-for="notification in notifications" :key="notification.id"
+                  @click="handleNotificationClick(notification)" :class="{ 'is-read': notification.isRead }">
+
+                  <p>{{ notification.text }}</p>
+
+                  <small>{{ formatDate(notification.creationDate) }}</small>
+
+                </li>
+
+                <li v-if="notifications.length === 0" class="no-notifications">
+
+                  Nessuna notifica
+
+                </li>
+
+              </ul>
+
+            </div>
+
           </div>
 
-        </nav>
+          <div class="divider-vertical"></div>
+
+          <div class="user-info">
+
+            <div class="avatar-circle">{{ userInitial }}</div>
+
+            <span class="user-name">{{ userStore.fullName }}</span>
+
+          </div>
+
+          <div class="divider-vertical"></div>
+
+          <button @click="logout" class="logout-icon-btn" title="Esci">
+
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+
+              <polyline points="16 17 21 12 16 7" />
+
+              <line x1="21" y1="12" x2="9" y2="12" />
+
+            </svg>
+
+          </button>
+
+        </div>
+
+
+
+        <button @click="toggleTheme" class="theme-toggle-btn"
+          :title="isDark ? 'Passa a Light Mode' : 'Passa a Dark Mode'">
+
+          <svg v-if="isDark" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+            <circle cx="12" cy="12" r="5" />
+
+            <line x1="12" y1="1" x2="12" y2="3" />
+
+            <line x1="12" y1="21" x2="12" y2="23" />
+
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+
+            <line x1="1" y1="12" x2="3" y2="12" />
+
+            <line x1="21" y1="12" x2="23" y2="12" />
+
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+
+          </svg>
+
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+
+          </svg>
+
+        </button>
+
+      </div>
+
+    </nav>
 
     <main class="main-content">
       <RouterView />
@@ -681,6 +677,7 @@ body {
   .user-name {
     display: none;
   }
+
   .nav-right {
     gap: 10px;
   }
@@ -693,14 +690,17 @@ body {
     flex-direction: column;
     gap: 15px;
   }
+
   .nav-center {
     min-width: 100%;
     padding: 0;
     order: 3;
   }
+
   .nav-right {
     order: 2;
   }
+
   .nav-left {
     order: 1;
   }
@@ -708,6 +708,7 @@ body {
   .nav-link {
     display: inline-block;
   }
+
   .user-name {
     display: inline-block;
   }

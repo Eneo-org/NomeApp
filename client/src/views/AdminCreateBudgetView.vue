@@ -9,6 +9,31 @@ const store = useParticipatoryBudgetStore();
 const router = useRouter();
 const toast = useToastStore();
 
+const formatDateInput = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const parseLocalDate = (dateString) => {
+  if (!dateString) return null;
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const todayMidnight = new Date();
+todayMidnight.setHours(0, 0, 0, 0);
+const todayDate = formatDateInput(todayMidnight);
+
+const handleDateChange = () => {
+  const selectedDate = parseLocalDate(form.value.expirationDate);
+  if (selectedDate && selectedDate < todayMidnight) {
+    form.value.expirationDate = '';
+    toast.showToast("Non puoi selezionare una data passata.", "error");
+  }
+};
+
 // Stato del form - Ora parte con 3 opzioni
 const form = ref({
   title: '',
@@ -38,6 +63,15 @@ const handleSubmit = async () => {
   // Validazione di base
   if (!form.value.title || !form.value.expirationDate) {
     toast.showToast("Inserisci titolo e data di scadenza.", "error");
+    return;
+  }
+
+  const selectedDate = parseLocalDate(form.value.expirationDate);
+  const minDate = new Date();
+  minDate.setHours(0, 0, 0, 0);
+  minDate.setDate(minDate.getDate() + 14);
+  if (!selectedDate || selectedDate <= minDate) {
+    toast.showToast("La data di scadenza deve essere almeno oltre i 14 giorni.", "error");
     return;
   }
 
@@ -94,7 +128,7 @@ const handleSubmit = async () => {
 
           <div class="form-group">
             <label>Data di Scadenza</label>
-            <input v-model="form.expirationDate" type="date" required />
+            <input v-model="form.expirationDate" type="date" :min="todayDate" @change="handleDateChange" required />
             <small>La votazione si chiuderà automaticamente dopo questa data.</small>
           </div>
         </div>
