@@ -36,15 +36,12 @@ jobs:
         with:
           node-version: '18.x' # Sostituisci con la tua versione di Node (es. 20.x se usi Node 20)
 
-      # 4. Installa le dipendenze del backend
-      - name: Installazione Dipendenze Backend
-        working-directory: ./server/backend
-        # Usiamo npm install invece di npm ci per evitare problemi di "hoisting" nei monorepo
-        run: npm install --no-workspaces
+      # 4. Installa le dipendenze del progetto (dalla radice)
+      - name: Installazione Dipendenze
+        run: npm install
 
       # 5. Eseguiamo i test (Questa è la fase CI)
       - name: Esecuzione Test Backend
-        working-directory: ./server/backend
         env:
           NODE_ENV: test
           DB_HOST: 127.0.0.1
