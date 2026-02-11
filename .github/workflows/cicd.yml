@@ -1,0 +1,67 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ] # La pipeline parte quando pushi sul main
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+
+    # 1. Creiamo un DB MySQL temporaneo solo per la durata dei test
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: backend_testing
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      # 2. Scarica il codice dal repository
+      - name: Checkout del codice
+        uses: actions/checkout@v4
+
+      # 3. Prepara l'ambiente Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x' # Sostituisci con la tua versione di Node (es. 20.x se usi Node 20)
+
+      # 4. Installa le dipendenze del backend
+      - name: Installazione Dipendenze Backend
+        working-directory: ./server/backend
+        run: npm ci # 'ci' è più sicuro di 'install' nelle pipeline
+
+      # 5. Eseguiamo i test (Questa è la fase CI)
+      - name: Esecuzione Test Backend
+        working-directory: ./server/backend
+        env:
+          NODE_ENV: test
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASS: root
+          DB_NAME: backend_testing
+          DB_PORT: 3306
+          JWT_SECRET: supersecret_test_key
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY_TEST }}
+        run: npm test
+
+      # 6. Deploy su Render (Questa è la fase CD - si avvia SOLO se lo step precedente ha successo)
+      - name: Deploy Backend su Render
+        # Esegue il deploy SOLO se siamo sul branch main e non è una Pull Request
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}
+
+      # (Opzionale) Deploy Frontend
+      - name: Deploy Frontend su Render
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_FRONTEND }}

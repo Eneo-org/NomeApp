@@ -273,14 +273,14 @@ exports.createInitiative = async (req, res) => {
             `;
 
       for (const file of files) {
-        // --- MODIFICA CLOUDINARY ---
+        // --- MODIFICA CLOUDINARY (con supporto test locale) ---
         // Con Cloudinary, file.path è l'URL completo (https://res.cloudinary.com/...)
-        // Non usiamo più path.join per costruire un percorso locale.
+        // In test mode con storage locale, file.path è il percorso relativo
         const filePath = file.path;
 
         const [resAtt] = await connection.execute(queryAllegato, [
           file.originalname,
-          filePath, // Salviamo l'URL completo
+          filePath, // Salviamo l'URL o il path locale
           file.mimetype,
           newInitiativeId,
         ]);
