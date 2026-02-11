@@ -96,7 +96,12 @@ const handleCreateClick = async () => {
             :disabled="userStore.isAuthenticated && !userStore.isCitizen"
             :title="userStore.isAuthenticated && !userStore.isCitizen ? 'Solo i cittadini possono creare iniziative' : ''"
           >
-            ✨ Crea la tua Iniziativa
+            <span v-if="!userStore.isAuthenticated || userStore.isCitizen">
+              ✨ Crea la tua Iniziativa
+            </span>
+            <span v-else>
+              🔒 Solo per cittadini
+            </span>
           </button>
         </div>
       </div>
@@ -190,19 +195,18 @@ const handleCreateClick = async () => {
   border-radius: 8px;
   padding: 12px 25px;
   font-weight: bold;
-  cursor: pointer:not(:disabled) {
-  transform: scale(1.05);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .btn-create:disabled {
   background: #cccccc;
   cursor: not-allowed;
   opacity: 0.6;
-  box-shadow: none
+  box-shadow: none;
 }
 
-.btn-create:hover {
+.btn-create:not(:disabled):hover {
   transform: scale(1.05);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
