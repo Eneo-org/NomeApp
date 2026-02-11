@@ -39,7 +39,8 @@ jobs:
       # 4. Installa le dipendenze del backend
       - name: Installazione Dipendenze Backend
         working-directory: ./server/backend
-        run: npm ci # 'ci' è più sicuro di 'install' nelle pipeline
+        # Usiamo npm install invece di npm ci per evitare problemi di "hoisting" nei monorepo
+        run: npm install --no-workspaces
 
       # 5. Eseguiamo i test (Questa è la fase CI)
       - name: Esecuzione Test Backend
