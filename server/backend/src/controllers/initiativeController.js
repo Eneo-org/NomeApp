@@ -203,6 +203,21 @@ exports.createInitiative = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    // --- 🛑 CHECK CITTADINANZA 🛑 ---
+    const [userCheck] = await db.execute(
+      "SELECT IS_CITTADINO FROM UTENTE WHERE ID_UTENTE = ?",
+      [userId],
+    );
+
+    if (userCheck.length === 0 || !userCheck[0].IS_CITTADINO) {
+      if (files) cleanupFiles(files);
+      return res.status(403).json({
+        message:
+          "Azione non consentita: Solo i cittadini residenti possono creare iniziative.",
+      });
+    }
+    // --- ✅ FINE CHECK CITTADINANZA ---
+
     // --- 🛑 CHECK COOLDOWN 🛑 ---
     const [cooldownCheck] = await db.execute(
       "SELECT ID_INIZIATIVA FROM INIZIATIVA WHERE ID_AUTORE = ? AND DATA_CREAZIONE > NOW() - INTERVAL 14 DAY",
