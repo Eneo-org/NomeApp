@@ -90,9 +90,8 @@ exports.getAllInitiatives = async (req, res) => {
         whereConditions.push("i.STATO = ?");
         queryParams.push(status);
       }
-    } else {
-      whereConditions.push("i.STATO = 'In corso'");
     }
+    // Rimosso il default "In corso" - ora senza filtri si vedono tutte le iniziative
 
     // Filtro: Not Status (Escludi stato)
     if (not_status) {
