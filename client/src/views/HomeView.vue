@@ -51,6 +51,16 @@ const handleCreateClick = async () => {
     router.push({ path: '/login', query: { redirect: route.fullPath } });
     return;
   }
+
+  if (!userStore.isCitizen) {
+    toast.showToast(
+      '⚠️ Solo i cittadini registrati possono creare iniziative.',
+      'error',
+      { duration: 4000 }
+    );
+    return;
+  }
+
   const status = await initiativeStore.checkUserCooldown();
 
   if (status && status.allowed === false) {
@@ -80,7 +90,12 @@ const handleCreateClick = async () => {
             Proponi un'iniziativa per migliorare la comunità. La tua idea potrebbe essere la prossima a
             essere realizzata!
           </p>
-          <button @click="handleCreateClick" class="btn-create">
+          <button 
+            @click="handleCreateClick" 
+            class="btn-create"
+            :disabled="userStore.isAuthenticated && !userStore.isCitizen"
+            :title="userStore.isAuthenticated && !userStore.isCitizen ? 'Solo i cittadini possono creare iniziative' : ''"
+          >
             ✨ Crea la tua Iniziativa
           </button>
         </div>
@@ -175,9 +190,16 @@ const handleCreateClick = async () => {
   border-radius: 8px;
   padding: 12px 25px;
   font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  cursor: pointer:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.btn-create:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none
 }
 
 .btn-create:hover {
