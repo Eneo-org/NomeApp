@@ -130,6 +130,7 @@ const handleFollowClick = async () => {
     router.push({ path: '/login', query: { redirect: route.fullPath } });
     return;
   }
+  if (!userStore.isCitizen) return; // Solo i cittadini possono seguire
   await initiativeStore.toggleFollow(initiative.value.id, initiative.value.title);
 };
 
@@ -223,7 +224,7 @@ const getDocumentUrl = (filePath) => {
             </div>
           </div>
 
-          <button v-if="initiative.status === 'In corso'" class="btn-follow"
+          <button v-if="initiative.status === 'In corso' && (!userStore.isAuthenticated || userStore.isCitizen)" class="btn-follow"
             :class="{ 'active': initiativeStore.isFollowed(initiative.id) }" @click="handleFollowClick">
             {{ initiativeStore.isFollowed(initiative.id) ? '⭐ Segui già' : '☆ Segui aggiornamenti' }}
           </button>

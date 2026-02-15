@@ -149,7 +149,7 @@ const formatDate = (dateString) => {
 
 
 
-        <RouterLink v-if="userStore.isAuthenticated" to="/dashboard" class="nav-link">
+        <RouterLink v-if="userStore.isAuthenticated && userStore.isCitizen" to="/dashboard" class="nav-link">
 
           Dashboard
 

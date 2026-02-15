@@ -772,6 +772,17 @@ exports.followInitiative = async (req, res) => {
     const initiativeId = req.params.id;
     const userId = req.user.id;
 
+    // --- CHECK CITTADINANZA ---
+    const [userCheck] = await db.execute(
+      "SELECT IS_CITTADINO FROM UTENTE WHERE ID_UTENTE = ?",
+      [userId],
+    );
+    if (userCheck.length === 0 || !userCheck[0].IS_CITTADINO) {
+      return res.status(403).json({
+        message: "Solo i cittadini possono seguire le iniziative.",
+      });
+    }
+
     const query = `
       INSERT IGNORE INTO INIZIATIVA_SALVATA (ID_UTENTE, ID_INIZIATIVA)
       VALUES (?, ?)
@@ -795,6 +806,17 @@ exports.unfollowInitiative = async (req, res) => {
   try {
     const initiativeId = req.params.id;
     const userId = req.user.id;
+
+    // --- CHECK CITTADINANZA ---
+    const [userCheck] = await db.execute(
+      "SELECT IS_CITTADINO FROM UTENTE WHERE ID_UTENTE = ?",
+      [userId],
+    );
+    if (userCheck.length === 0 || !userCheck[0].IS_CITTADINO) {
+      return res.status(403).json({
+        message: "Solo i cittadini possono gestire i seguiti.",
+      });
+    }
 
     const query = `
             DELETE FROM INIZIATIVA_SALVATA 

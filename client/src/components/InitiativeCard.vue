@@ -46,6 +46,7 @@ const handleStarClick = async (event) => {
     router.push({ path: '/login', query: { redirect: route.fullPath } });
     return;
   }
+  if (!userStore.isCitizen) return; // Solo i cittadini possono seguire
   await initiativeStore.toggleFollow(props.item.id, props.item.title);
 }
 
@@ -71,7 +72,7 @@ const goToDetail = () => {
           {{ item.status }}
         </div>
 
-        <button v-if="item.status && item.status.toLowerCase() === 'in corso'" class="follow-btn-wrapper"
+        <button v-if="item.status && item.status.toLowerCase() === 'in corso' && (!userStore.isAuthenticated || userStore.isCitizen)" class="follow-btn-wrapper"
           @click.prevent="handleStarClick" title="Segui questa iniziativa">
           <span v-if="initiativeStore.isFollowed(item.id)" class="followed-badge">★ Segui già</span>
           <span v-else class="unfollowed-badge">☆ Segui aggiornamenti</span>
