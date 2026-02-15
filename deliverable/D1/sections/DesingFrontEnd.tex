@@ -11,7 +11,7 @@ Tutte questi mockup rispecchiano il requisito non funzionale di \textbf{Usabilit
     \caption{Header di un cittadino amministratore autenticato}
     \label{fig:header}
 \end{figure}
-Nella Figura \ref{fig:header} è riportato un mockup dell'header delle varie pagine dell'applicazione. Poiché viene riportato in tutte le figure successive, è rilevante specificare che il suo aspetto può variare in base all'utente: in questo esempio, infatti, assumiamo che l'utente sia autenticato e abbia sia i privilegi di cittadino che quelli da amministratore. Nella maggioranza dei successivi esempi manterremo questa ipotesi.Negli altri casi:
+Nella Figura \ref{fig:header} è riportato un mockup dell'header delle varie pagine dell'applicazione. Poiché viene riportato in tutte le figure successive, è rilevante specificare che il suo aspetto può variare in base all'utente: in questo esempio, infatti, assumiamo che l'utente sia autenticato e abbia sia i privilegi di cittadino che quelli da amministratore. Nella maggioranza dei successivi esempi manterremo questa ipotesi. Negli altri casi:
 \begin{itemize}
     \item Se l'utente non è autenticato, visualizza solo le sezioni "Home" e "Iniziative" nella barra in alto. Inoltre, al posto dell'icona del suo profilo, del suo nome e del pulsante di logout visualizza un pulsante con la scritta "Accedi".
     \item Se l'utente autenticato non è amministratore, non visualizza la sezione "Area Admin".
@@ -30,10 +30,10 @@ Nella Figura \ref{fig:home} è riportato un mockup di quella che sarà la pagina
 
 \begin{itemize}
     \item \textbf{RF\ref{rf:login}: Login -} Quando l'utente non è autenticato, in alto a destra è presente il pulsante per fare il login, che porta alla schermata di login mostrata in Figura \ref{fig:schermata_login}.
-    \item \textbf{RF\ref{rf:consultazione_iniziative}: Consultazione della lista di iniziative -} Nella Home sono visibili delle iniziative di tendenza, ossia quelle in corso e con il maggior numero di firme. La lista completa di iniziative è visibile nella pagina dedicata (Figura \ref{fig:schermata_iniziative}). 
+    \item \textbf{RF\ref{rf:consultazione_iniziative}: Consultazione della lista di iniziative -} Nella Home sono visibili delle iniziative di tendenza, ossia quelle in corso e con il maggior numero di firme. La lista completa di iniziative è visibile nella pagina dedicata (Figura \ref{fig:schermata_iniziative}). Le iniziative presenti in home page hanno le stesse caratteristiche visive (dati riportati e pulsanti) di quelle nella sezione dedicata. 
     \item \textbf{RF\ref{rf:logout}: Logout -} Quando l'utente è autenticato, in alto a destra è presente il pulsante per fare il logout.
-    \item \textbf{RF\ref{rf:creazione_iniziativa}: Creazione di una iniziativa -} All'interno della pagina è presente un pulsante che conduce il cittadino autenticato alla compilazione dei campi per creare una nuova iniziativa (Figura \ref{fig:schermata_creaz_iniz}). Se l'utente non è autenticato o non ha privilegi da cittadino, il tentativo di creare un'iniziativa lo conduce alla schermata di login (Figura \ref{fig:schermata_login}).
-    \item \textbf{RF\ref{rf:voto}: Votazione del bilancio partecipativo -} All'interno della pagina è visibile il bilancio partecipativo attualmente in corso, con tanto di data di scadenza e opzioni. Il cittadino autenticato sarà in grado di interagire con esso selezionando una delle opzioni votabili. Se l'utente non è autenticato o non ha privilegi da cittadino, il tentativo di votare lo conduce alla schermata di login (Figura \ref{fig:schermata_login}).
+    \item \textbf{RF\ref{rf:creazione_iniziativa}: Creazione di una iniziativa -} All'interno della pagina è presente un pulsante che conduce il cittadino autenticato alla compilazione dei campi per creare una nuova iniziativa (Figura \ref{fig:schermata_creaz_iniz}). Se l'utente non è autenticato, il tentativo di creare un'iniziativa lo conduce alla schermata di login (Figura \ref{fig:schermata_login}). Se l'utente è autenticato ma non ha i privilegi da cittadino il pulsante è disabilitato.
+    \item \textbf{RF\ref{rf:voto}: Votazione del bilancio partecipativo -} All'interno della pagina è visibile il bilancio partecipativo attualmente in corso, con tanto di data di scadenza e opzioni. Il cittadino autenticato sarà in grado di interagire con esso selezionando una delle opzioni votabili. Se l'utente non è autenticato o non ha privilegi da cittadino, i pulsanti per selezionare le opzioni sono disabilitati.
 \end{itemize}
 
 \subsection{Schermata di login}
@@ -57,7 +57,7 @@ Nella Figura \ref{fig:schermata_login} è riportato un mockup della schermata di
     \caption{Schermata di creazione di un nuovo profilo}
     \label{fig:schermataprofilo}
 \end{figure}
-La Figura \ref{fig:schermataprofilo} mostra le due fasi di creazione di un nuovo profilo (\textbf{RF\ref{rf:creazione_profilo}: Creazione profilo al primo accesso}). Una volta autenticato tramite SPID/CIE, all'utente non resta che inserire e confermare il suo recapito mail.
+La Figura \ref{fig:schermataprofilo} mostra le due fasi di creazione di un nuovo profilo (\textbf{RF\ref{rf:creazione_profilo}: Creazione profilo al primo accesso}). Una volta autenticato tramite SPID/CIE, all'utente non resta che inserire il suo recapito mail e confermarlo tramite codice OTP.
 
 \subsection{Schermata di creazione di una nuova iniziativa}
 \begin{figure}[H]
@@ -78,11 +78,11 @@ Nella Figura \ref{fig:schermata_creaz_iniz} è riportato un mockup della scherma
 Nella Figura \ref{fig:schermata_iniziative} viene riportato un mockup della pagina di consultazione e ricerca delle iniziative.
 \begin{itemize}
     \item \textbf{RF\ref{rf:consultazione_iniziative}: Consultazione della lista di iniziative -} Da questa pagina ogni utente può visualizzare la lista completa di iniziative presenti nell'applicazione, riportanti delle informazioni base quali titolo, stato, numero di firme, ecc. A sinistra sono presenti le varie opzioni di filtraggio e ordinamento e in alto, nell'header, è presente una barra di ricerca per la ricerca di iniziative tramite parole chiave.
-    \item \textbf{RF\ref{rf:tracciamento_stato}: Tracciamento stato -} Ogni iniziativa riporta un pulsante che permette all'utente di seguirla, ossia di aggiungerla alla propria dashboard personale per tracciarne lo stato. Se l'utente non è autenticato o non ha i privilegi da cittadino, il tentativo di seguire un'iniziativa lo conduce alla schermata di login (Figura \ref{fig:schermata_login}). 
+    \item \textbf{RF\ref{rf:tracciamento_stato}: Tracciamento stato -} Ogni iniziativa riporta un pulsante che permette all'utente di seguirla, ossia di aggiungerla alla propria dashboard personale per tracciarne lo stato. Se l'utente non è autenticato, il tentativo di seguire un'iniziativa lo conduce alla schermata di login (Figura \ref{fig:schermata_login}). Se l'utente è autenticato ma non ha i privilegi da cittadino il pulsante è assente.
     \item \textbf{RF\ref{rf:import_dati_esterni}: Importazione dati esterni -} Le iniziative importate da fonti esterne presentano una label che ne indica esplicitamente la piattaforma di provenienza.    
     \item \textbf{RF\ref{rf:ciclo_vita_stati}: Ciclo di vita degli stati -} Ogni iniziativa riporta una label che ne indica lo stato attuale ("In corso", "Respinta", "Approvata" o "Scaduta"). I possibili valori dello stato sono anche criteri di ricerca nei filtri. 
 \end{itemize}
-Selezionando una delle iniziative, l'utente viene condotto alla schermata in Figura \ref{fig:schermata_iniziativasingola}.
+Selezionando una delle iniziative, l'utente viene condotto alla relativa pagina di dettaglio (Figura \ref{fig:schermata_iniziativasingola}).
 
 
 \subsection{Schermata di visualizzazione della singola iniziativa}
@@ -95,7 +95,7 @@ Selezionando una delle iniziative, l'utente viene condotto alla schermata in Fig
 Nella Figura \ref{fig:schermata_iniziativasingola} è riportato un mockup della pagina che si apre quando un utente seleziona un'iniziativa. Oltre ai requisiti funzionali di \textbf{Tracciamento stato (RF\ref{rf:tracciamento_stato}), Importazione dati esterni (RF\ref{rf:import_dati_esterni}) e Ciclo di vita degli stati (RF\ref{rf:ciclo_vita_stati})}, già discussi parlando della schermata di visualizzazione della lista di iniziative in Figura \ref{fig:schermata_iniziative}, questa schermata si riferisce anche ai seguenti:
 \begin{itemize}
     \item \textbf{RF\ref{rf:consultazione_singola_iniz}: Consultazione di una singola iniziativa -} La schermata rappresenta la pagina di dettaglio descritta nel requisito funzionale. Vengono riportati i vari dati generali, le informazioni sullo stato e le eventuali risposte (Figura \ref{fig:risposta_pubblicata}).
-    \item \textbf{RF\ref{rf:firma}: Firma -} L'utente può firmare l'iniziativa visualizzata premendo un apposito pulsante. Nel caso l'iniziativa sia stata importata da un'altra piattaforma, il pulsante per firmare ha l'effetto di reindirizzare l'utente alla piattaforma di provenienza (Figura \ref{fig:schermata_inizsingola_esterna}). Se l'utente non è autenticato o non ha i privilegi da cittadino, il tentativo di firmare un'iniziativa lo conduce alla schermata di login (Figura \ref{fig:schermata_login}).
+    \item \textbf{RF\ref{rf:firma}: Firma -} L'utente può firmare l'iniziativa visualizzata premendo un apposito pulsante. Nel caso l'iniziativa sia stata importata da un'altra piattaforma, il pulsante per firmare ha l'effetto di reindirizzare l'utente alla piattaforma di provenienza (Figura \ref{fig:schermata_inizsingola_esterna}). Se l'utente non è autenticato, il tentativo di firmare un'iniziativa lo conduce alla schermata di login (Figura \ref{fig:schermata_login}). Se l'utente è autenticato ma non ha i privilegi da cittadino oppure ha già firmato, il pulsante viene disabilitato (almeno che non si tratti di un'iniziativa esterna).
 \end{itemize}
 \begin{figure}[H]
     \centering
@@ -121,7 +121,7 @@ Nella Figura \ref{fig:schermata_dashboard} vengono riportati dei mockup della da
 \begin{figure}[H]
     \centering    
     \includegraphics[width=0.9\linewidth]{img/SchermataAreaAdmin.png}
-    \caption{Area admin}
+    \caption{Area Admin}
     \label{fig:area_admin}
 \end{figure}
 Nella Figura \ref{fig:area_admin} è riportato un mockup dell'area admin di un utente amministratore, ossia un pannello di controllo dal quale egli può scegliere che attività svolgere. Selezionando una tra le quattro aree l'utente sarà ricondotto alla pagina dedicata a quell'attività. Le pagine in questione sono descritte di seguito (Figure \ref{fig:monitoraggio_scadenze}, \ref{fig:creabilancio}, \ref{fig:schermata_lista_admin} e \ref{fig:archivioBP}).
@@ -133,7 +133,7 @@ Nella Figura \ref{fig:area_admin} è riportato un mockup dell'area admin di un u
     \caption{Schermata di monitoraggio delle iniziative}
     \label{fig:monitoraggio_scadenze}
 \end{figure}
-Nella Figura \ref{fig:monitoraggio_scadenze} è riportato un mockup della schermata di monitoraggio delle iniziative, ossia una schermata dalla quale l'utente amministratore può visualizzare le iniziative in corso in attesa di risposta (\textbf{RF\ref{rf:gestione_iniziative}: Gestione iniziative}). Per ogni iniziativa, l'utente dispone di un pulsante per prorogarne la data di scadenza e un tasto per visualizzarla e allegare una risposta (Figura \ref{fig:schermata_risposta}).
+Nella Figura \ref{fig:monitoraggio_scadenze} è riportato un mockup della schermata di monitoraggio delle iniziative, ossia una schermata dalla quale l'utente amministratore può visualizzare le iniziative in corso in attesa di risposta (\textbf{RF\ref{rf:gestione_iniziative}: Gestione iniziative}). Per ogni iniziativa, l'utente dispone di un pulsante per prorogarne la data di scadenza e un tasto per visualizzarla e allegare una risposta (Figura \ref{fig:schermata_risposta}). Ogni iniziativa riporta il tempo restante prima della scadenza.
 
 \subsection{Schermata di compilazione di una risposta del Comune}
 \begin{figure}[H]
@@ -142,7 +142,7 @@ Nella Figura \ref{fig:monitoraggio_scadenze} è riportato un mockup della scherm
     \caption{Schermata di compilazione di una risposta del Comune}
     \label{fig:schermata_risposta}
 \end{figure}
-Nella Figura \ref{fig:schermata_risposta} è riportato un mockup del box che l'utente amministratore visualizza sotto le informazioni di un iniziativa quando preme il pulsante "Rispondi". L'amministratore può decidere se respingere o approvare l'iniziativa, allegando eventuali documenti e riportando una motivazione scritta. Dopo la pubblicazione della riposta, questa viene riportata nella pagina di dettaglio dell'iniziativa:
+Nella Figura \ref{fig:schermata_risposta} è riportato un mockup del box che l'utente amministratore visualizza sotto le informazioni di un'iniziativa quando preme il pulsante "Rispondi". L'amministratore può decidere se respingere o approvare l'iniziativa, allegando eventuali documenti e riportando una motivazione scritta. Dopo la pubblicazione della riposta, questa viene riportata nella pagina di dettaglio dell'iniziativa:
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\linewidth]{img/SchermataInizConRisposta.png}
@@ -166,7 +166,7 @@ Nella Figura \ref{fig:creabilancio} è riportato il mockup dell'interfaccia di c
     \caption{Schermata di gestione del personale}
     \label{fig:schermata_lista_admin}
 \end{figure}
-Nella Figura \ref{fig:schermata_lista_admin} è riportato il mockup della pagina dalla quale un utente amministratore può visualizzare la lista completa degli utenti amministratori (\textbf{RF\ref{rf:ruoli_amministrativi}: Gestione ruoli amministrativi}). Per ogni utente nella lista (escluso l'utente stesso) è presente un pulsante per revocargli i privilegi da amministratore (\textbf{RF\ref{subRf:revoca_previlegi}}), e tramite un apposito tasto (\textbf{"+"} in figura) l'utente può digitare il codice fiscale di un utente da rendere amministratore (\textbf{RF\ref{subRf:assegnazione_privilegi}}).
+Nella Figura \ref{fig:schermata_lista_admin} è riportato il mockup della pagina dalla quale un utente amministratore può visualizzare la lista completa degli utenti amministratori (\textbf{RF\ref{rf:ruoli_amministrativi}: Gestione ruoli amministrativi}). Per ogni utente nella lista (escluso l'utente stesso) è presente un pulsante per revocargli i privilegi da amministratore (\textbf{RF\ref{subRf:revoca_previlegi}}), e tramite un apposito tasto (\textbf{"+"} in figura) l'utente può digitare il codice fiscale di un utente da rendere amministratore (\textbf{RF\ref{subRf:assegnazione_privilegi}}). Se l'utente ricercato non è presente nel database appare un box per confermarne la pre-autorizzazione.
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\linewidth]{img/SchermataRicercaCF.png}
@@ -179,9 +179,10 @@ Nella Figura \ref{fig:schermata_lista_admin} è riportato il mockup della pagina
     \caption{Archivio dei bilanci partecipativi}
     \label{fig:archivioBP}
 \end{figure}
-Nella Figura \ref{fig:archivioBP} è riportato un mockup dell'archivio dei bilanci partecipativi passati, visualizzabile dagli utenti amministratori (\textbf{RF\ref{rf:consultazione_archivio_bilancio_partecipativo}: Consultazione archivio bilanci partecipativi}). L'amministratore può visualizzarne i titoli, la data in cui si sono conclusi, le opzioni e i risultati, premendo gli appositi pulsanti.
+Nella Figura \ref{fig:archivioBP} è riportato un mockup dell'archivio dei bilanci partecipativi passati, visualizzabile dagli utenti amministratori (\textbf{RF\ref{rf:consultazione_archivio_bilancio_partecipativo}: Consultazione archivio bilanci partecipativi}). L'amministratore può visualizzarne i titoli, la data in cui si sono conclusi, le opzioni e i risultati (Figura \ref{fig:risultatibp}), premendo gli appositi pulsanti.
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.7\linewidth]{img/SchermataRisultatiBP.png}
     \caption{Risultati di un bilancio partecipativo concluso}
+    \label{fig:risultatibp}
 \end{figure}

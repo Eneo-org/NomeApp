@@ -12,22 +12,47 @@ Per la parte di Frontend, lo sviluppo è stato realizzato con il framework Vue.j
 
 %   ----    repo organizations --- 
 \subsection{Organizzazione delle repositories}
-
-\textbf{path di esempio, bisogna riempirlo con il nostro}
 \dirtree{%
 .1 / .
-.2 .github .
-.3 workflows \DTcomment{GitHub Actions per CI/CD}.
-.2 src .
-.3 controllers \DTcomment{Logica di gestione delle richieste}.
-.3 models \DTcomment{Schemi Mongoose per il database}.
-.3 routes \DTcomment{Definizione degli endpoint API}.
-.3 utils \DTcomment{Funzioni di utilità e helper}.
-.3 app.ts \DTcomment{Configurazione dell'applicazione Express}.
-.3 server.ts \DTcomment{Entry point del server}.
-.2 package.json \DTcomment{Gestione dipendenze npm}.
-.2 tsconfig.json \DTcomment{Configurazione TypeScript}.
-.2 .env \DTcomment{Variabili d'ambiente}.
+.2 .github/ \DTcomment{Configurazioni specifiche di GitHub}.
+.3 workflows/ \DTcomment{Automazioni e pipeline (GitHub Actions)}.
+.4 cicd.yml \DTcomment{Pipeline CI/CD per test e deploy automatico su Render}.
+.2 client/ \DTcomment{Frontend Application (Vue.js + Vite)}.
+.3 src/.
+.4 assets/ \DTcomment{Immagini e stili compilati}.
+.4 components/ \DTcomment{Componenti UI riutilizzabili (Cards, Toasts)}.
+.4 composables/ \DTcomment{Logica riutilizzabile (Hooks custom)}.
+.4 router/ \DTcomment{Configurazione delle rotte Vue Router}.
+.4 stores/ \DTcomment{State Management (Pinia stores)}.
+.4 utils/ \DTcomment{Funzioni di utilità (es. dateUtils)}.
+.4 views/ \DTcomment{Pagine principali (Admin e User views)}.
+.4 App.vue \DTcomment{Componente Root}.
+.4 main.js \DTcomment{Entry point frontend}.
+.3 vite.config.js \DTcomment{Configurazione bundler Vite}.
+.3 package.json \DTcomment{Dipendenze Frontend}.
+.2 deliverable/ \DTcomment{Documentazione}.
+.3 D*/ \DTcomment{Deliverable numero * (main .tex, pdf, sections e immagini)}.
+.2 server/ \DTcomment{Backend Application}.
+.3 APIsDocumentazione/ \DTcomment{Specifiche API (OpenAPI/Swagger)}.
+.3 DatabaseRelazionale/ \DTcomment{Contiene lo script SQL per la creazion del DB}.
+.3 backend/ \DTcomment{Server Node.js}.
+.4 \_\_tests\_\_/ \DTcomment{Test di integrazione e unità}.
+.4 data/ \DTcomment{Dati statici esterni}.
+.4 src/.
+.5 config/ \DTcomment{Configurazione DB e costanti}.
+.5 controllers/ \DTcomment{Logica di business e gestione richieste}.
+.5 middleware/ \DTcomment{Auth, upload e gestione errori}.
+.5 routes/ \DTcomment{Definizione endpoint API}.
+.5 services/ \DTcomment{Logica complessa (es. importService)}.
+.5 utils/ \DTcomment{Utility backend}.
+.5 validators/ \DTcomment{Validazione schemi dati}.
+.5 app.js \DTcomment{Configurazione applicazione Express}.
+.5 server.js \DTcomment{Entry point server}.
+.4 uploads/ \DTcomment{File caricati dagli utenti}.
+.5 initiatives/ \DTcomment{Allegati iniziative}.
+.5 replies/ \DTcomment{Allegati risposte}.
+.4 package.json \DTcomment{Dipendenze Backend}.
+.2 README.md \DTcomment{Documentazione generale}.
 }
 
 
@@ -47,7 +72,7 @@ Sebbene il lavoro sia confluito tecnicamente sullo stesso branch, lo sviluppo è
 \begin{description}
     \item[Enea D'Angiò]: Si è occupato principalmente dell'architettura Backend (configurazione Express, gestione e creazione del database MySQL) e della progettazione e integrazione delle API. Inoltre ha contribuito parzialmente al Frontend attraverso bugfix, refactoring e implementazioni di piccole feature. 
     \item[Ivan Nedeljkovic]: Ha curato lo sviluppo dei componenti Frontend in Vue.js creando l'intera infrastruttura lato client e gestendo ui e ux. 
-    \item[Alessandro Mattarolo]: Ha seguito lo sviluppo con la scrittura della documentazione e organizzando al meglio i file LaTeX e con la progettazione del Frontend. 
+    \item[Alessandro Mattarolo]: Ha seguito lo sviluppo con la scrittura della documentazione, l'organizzazione dei file LaTeX e la progettazione del Frontend. 
 \end{description}
 L'analisi dei contributi (visibile nella sezione Insights > Contributors della repository) mostra un totale di XX commit, distribuiti tra i membri in modo proporzionale ai task assegnati. Eventuali sbilanciamenti nel numero di commit sono attribuibili alla diversa granularità delle operazioni.
 
@@ -235,6 +260,11 @@ La tabella \texttt{ALLEGATO} gestisce i file multimediali associati alle entità
 % ----  testing
 
 \subsection{Testing}
+Le api e il relativo codice presentano una test-suite che consente di verificarne il corretto funzionamento. I test sono utilizzati all’interno della configurazione di CI/CD.
+
+L’implementazione dei test è organizzata in file .test.js implementati nella cartella \_\_test\_\_. Sono divisi in 4 file, organizzati per argomento.  
+
+Abbiamo implementato tutti i test definiti, per un totale di 94 test. 
 
 
 % Font piccolo per far stare tutto

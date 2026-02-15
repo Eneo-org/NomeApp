@@ -33,21 +33,22 @@ Gli utenti devono avere a disposizione strumenti di filtro e ordinamento (in bas
 \label{rf:consultazione_singola_iniz}
 Il sistema deve permettere a tutti gli utenti, inclusi i non registrati, di accedere alla pagina di dettaglio di una singola iniziativa (cliccando su di essa dalla lista definita in RF\ref{rf:consultazione_iniziative}, o dalla Home). 
 
-Nel caso in cui si tratti di un iniziativa della nostra piattaforma, la pagina di dettaglio deve mostrare tutte le informazioni associate all'iniziativa, organizzate in modo chiaro. In particolare:
+La pagina di dettaglio deve mostrare tutte le informazioni associate all'iniziativa, organizzate in modo chiaro. In particolare:
 
 \begin{itemize}
     \item \textbf{Dati della proposta:}
     \textbf{titolo},
     \textbf{descrizione} completa,
-    \textbf{autore},
+    \textbf{autore} (se l'iniziativa è creata in piattaforma),
     \textbf{categoria} di appartenenza (es. "ambiente", "mobilità"),
-    \textbf{luogo},
+    \textbf{luogo} (se specificato),
     eventuali \textbf{allegati} (immagini o PDF) resi disponibili dall'autore.
 
     \item \textbf{Dati sullo stato e avanzamento:}
      \textbf{stato attuale} del ciclo di vita (RF\ref{rf:ciclo_vita_stati}),
-    \textbf{numero totale di firme raccolte},
-     \textbf{data di scadenza}.
+    \textbf{numero totale di firme raccolte} (aggiornato in tempo reale se l'iniziativa è interna),
+     \textbf{data di scadenza} (per le iniziative non importate nello stato "In corso"),,
+     \textbf{piattaforma di provenienza} (se l'iniziativa è importata).
     
     \item \textbf{Dati di risposta (se presenti):}
      eventuali \textbf{note ufficiali} o documenti di risposta pubblicati dall'amministrazione.
@@ -62,8 +63,6 @@ L'utente che ha fatto l'accesso al proprio account deve potersi anche disconnett
 
 \subsection{Requisiti funzionali per l’amministrazione}
 \label{sec:RF_amministrazione}
-\RF{Analisi delle richieste.}   \label{rf:analisi_richieste} %ancora da discutere
-Il sistema deve fornire agli amministratori strumenti di analisi sui dati raccolti. Le richieste devono essere aggregate per categoria, quartiere di provenienza, tempo medio di presa in carico. Tali informazioni devono essere visualizzabili tramite tabelle e grafici interattivi. L’obiettivo è supportare decisioni basate su evidenze, permettendo all’amministrazione di individuare priorità e temi emergenti.
 
 \RF{Gestione iniziative.}  \label{rf:gestione_iniziative}
 L'amministratore deve poter aggiornare lo stato delle richieste e aggiungere note ufficiali o documenti di risposta. Ad esempio, un’iniziativa può passare dallo stato “in corso” ad “approvata” o “respinta” (con relativa motivazione visibile ai cittadini). 

@@ -1,6 +1,8 @@
 \section{FrontEnd}
-Di seguito viene illustrata la parte FrontEnd del progetto.
-\textbf{Premessa: } le immagini riportate mostrano l'applicazione con il tema "dark", ma è disponibile anche una versione "light", ottenibile premendo l'icona del sole raffigurata nella parte più a destra dell'header.
+Di seguito viene illustrata la parte FrontEnd del progetto. 
+\newline
+\newline
+\textbf{Premessa:} le immagini riportate mostrano l'applicazione con il tema "dark", ma è disponibile anche una versione "light", ottenibile premendo l'icona del sole raffigurata nella parte più a destra dell'header. Quando si sta utilizzando la versione "light", l'icona raffigura una luna e premendola si ritorna in versione "dark".
 
 \subsection{Dettaglio dell'header}
 \begin{figure}[H]
@@ -11,7 +13,7 @@ Di seguito viene illustrata la parte FrontEnd del progetto.
 \end{figure}
 Nella Figura \ref{fig:screen_header} è riportato l'header presente nelle varie pagine dell'applicazione. Come già specificato nel Desing del FrontEnd (si veda il documento D1), il suo aspetto varia in funzione della tipologia d'utente. Nell'esempio riportato, ad esempio, assumiamo che l'utente sia autenticato e che abbia sia i privilegi da cittadino sia quelli da amministratore. Le altre varianti dell'header sono:
 \begin{itemize}
-    \item Se l’utente non `e autenticato, visualizza solo le sezioni ”Home” e ”Iniziative” nella barra in alto. Inoltre, al posto della campanella delle notifiche, dell’icona del suo profilo, del suo nome e del pulsante di logout visualizza un pulsante con la scritta ”Accedi”.
+    \item Se l’utente non è autenticato, visualizza solo le sezioni ”Home” e ”Iniziative” nella barra in alto. Inoltre, al posto della campanella delle notifiche, dell’icona del suo profilo, del suo nome e del pulsante di logout visualizza un pulsante con la scritta ”Accedi”.
     \item Se l'utente autenticato non ha il ruolo di amministratore, non visualizza la sezione "Area Admin".
     \item Se l'utente non è un cittadino, non visualizza la sezione "Dashboard" e la campanella delle notifiche.
 \end{itemize}
@@ -20,15 +22,14 @@ Cliccando su una delle sezioni, l'utente viene reindirizzato alla pagina dedicat
 \subsection{Home Page}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\linewidth]{images/1home.jpeg}
+    \includegraphics[width=0.9\linewidth]{images/1home.png}
     \caption{Home Page di Trento Partecipa}
     \label{fig:screen_home}
 \end{figure}
 La Figura \ref{fig:screen_home} raffigura la home page di \textbf{\texttt{"TRENTO PARTECIPA"}}. Osserviamo che nell'header, oltre alla lista di sezioni in cui l'utente può navigare, c'è pure il logo e il nome dell'applicazione e una barra di ricerca il cui scopo è quello di permettere la ricerca di iniziative tramite parole chiave. \\Nella home sono inoltre presenti il bilancio partecipativo attualmente in corso, il pulsante per creare una nuova iniziativa e una preview della lista di iniziative, ridotta alle iniziative in corso con più firme raccolte.
-\newpage
 \begin{itemize}
     \item \textbf{Bilancio partecipativo -} Come da specifiche, il bilancio partecipativo riporta la sua data di scadenza, le varie opzioni votabili, il numero di voti totale (in basso) e per opzione (a lato di ogni opzione), associati alla percentuale sul totale. I pulsanti per votare sono disabilitati per gli utenti che non sono cittadini autenticati. 
-    \item \textbf{Pulsante per creare un'iniziativa -} Cliccando il tasto, l'utente cittadino viene condotto alla schermata in Figura \ref{fig:screen_nuova_iniziativa}. Qualora un utente senza quel ruolo provi a votare, viene condotto alla schermata di login (Figura \ref{fig:screen_login}).
+    \item \textbf{Pulsante per creare un'iniziativa -} Cliccando il tasto, l'utente cittadino viene condotto alla schermata in Figura \ref{fig:screen_nuova_iniziativa}. Se un utente non autenticato clicca il pulsante, viene condotto alla schermata di login (Figura \ref{fig:screen_login}). Il pulsante è disabilitato per gli utenti autenticati senza i privilegi da cittadino.
     \item \textbf{Iniziative più popolari -} Rispecchiano le caratteristiche generali di tutte le iniziative, discusse successivamente in relazione alla Figura \ref{fig:screen_iniziative}.
 \end{itemize}
 
@@ -40,7 +41,7 @@ La Figura \ref{fig:screen_home} raffigura la home page di \textbf{\texttt{"TRENT
     \caption{Schermata di login}
     \label{fig:screen_login}
 \end{figure}
-Nella Figura \ref{fig:screen_login} è raffigurata la schermata di login dell'applicazione, a cui l'utente viene condotto quando clicca sul tasto "Accedi" presente nell'header o, in alcuni casi, quando tenta di compiere delle azioni che possono essere compiute solo da utenti autenticati (ad esempio creare una nuova iniziativa). Date le complicanze introdotte dall'integrazione di SPID/CIE nel sistema, ci siamo limitati a implementare l'accesso tramite Google. Se l'utente sta eseguendo il suo primo accesso, veiene condotto alla schermata di creazione di un nuovo profilo (Figura \ref{fig:screen_nuovo_profilo}), altrimenti viene ricondotto alla home ma con i privilegi aggiornati in base al suo ruolo.
+Nella Figura \ref{fig:screen_login} è raffigurata la schermata di login dell'applicazione, a cui l'utente viene condotto quando clicca sul tasto "Accedi" presente nell'header o, in alcuni casi, quando tenta di compiere delle azioni che possono essere compiute solo da utenti autenticati (ad esempio creare una nuova iniziativa). Date le complicanze introdotte dall'integrazione di SPID/CIE nel sistema, ci siamo limitati a implementare l'accesso tramite Google. Se l'utente sta eseguendo il suo primo accesso, viene condotto alla schermata di creazione di un nuovo profilo (Figura \ref{fig:screen_nuovo_profilo}), altrimenti viene ricondotto alla home ma con i privilegi aggiornati in base al suo ruolo.
 
 \newpage
 \subsection{Schermata di creazione di un nuovo profilo}
@@ -74,7 +75,7 @@ In Figura \ref{fig:screen_nuova_iniziativa} è raffigurata la schermata da cui l
     \caption{Schermata di visualizzazione delle iniziative}
     \label{fig:screen_iniziative}
 \end{figure}
-In Figura \ref{fig:screen_iniziative} è raffigurata la pagina sotto la voce "Iniziative", accessibile da qualsiasi utente. In essa sono presenti le preview delle varie iniziative presenti in piattaforma e un box dove l'utente può applicare dei parametri di ricerca per visualizzare distintamente un certo sottoinsieme di iniziative.
+In Figura \ref{fig:screen_iniziative} è raffigurata la pagina sotto la voce "Iniziative", accessibile da qualsiasi utente. In essa sono presenti le preview delle varie iniziative presenti in piattaforma e un box dove l'utente può applicare dei parametri di ricerca per visualizzare distintamente un certo sottoinsieme di iniziative. Se la quantità di iniziative da mostrare è maggiore di 10, queste vengono distribuite in diverse pagine numerate e navigabili, ognuna contenente al massimo 10 preview. 
 
 \newpage
 \subsubsection*{Dettaglio preview di un'iniziativa}
@@ -89,7 +90,7 @@ Ogni preview di iniziativa riporta un titolo, la categoria, la data di pubblicaz
     \centering
     \includegraphics[width=0.3\linewidth]{images/5.1dettaglio_filtri.jpeg}
 \end{figure}
-Oltre alla ricerca per parole chiave, possibile grazie alla barra di ricerca nell'header, l'utente può applicare anche dei criteri di ricerca tramite l'interfaccia in figura: è possibile filtrare le iniziative per stato, piattaforma, categoria, intervallo temporale (riferito alla data di creazione delle iniziative) e ordinarle in base al valore di certi parametri. I filtri possono essere rimossi manualmente o con un apposito pulsante "Azzera filtri".
+Oltre alla ricerca per parole chiave, possibile grazie alla barra di ricerca nell'header, l'utente può applicare anche dei criteri di ricerca tramite l'interfaccia in figura: è possibile filtrare le iniziative per stato, piattaforma, categoria, intervallo temporale (riferito alla data di creazione delle iniziative) e ordinarle in base alla data di creazione o al numero di firme. I filtri possono essere rimossi manualmente o con un apposito pulsante "Azzera filtri".
 
 \subsection{Schermata di visualizzazione della singola iniziativa}
 \begin{figure}[H]
@@ -98,7 +99,7 @@ Oltre alla ricerca per parole chiave, possibile grazie alla barra di ricerca nel
     \caption{Schermata di visualizzazione di una singola iniziativa}
     \label{fig:screen_dettaglio_iniziativa}
 \end{figure}
-In Figura \ref{fig:screen_dettaglio_iniziativa} è raffigurata la pagina di dettaglio di un'iniziativa. Come da specifiche riporta titolo, stato, categoria, eventuale luogo, data di creazione e di scadenza, autore, descrizione, numero di firme, eventuali immagini ed allegati e, sotto la descrizione, la risposta del Comune, se presente (Figura \ref{fig:screen_risposta_pubblicata}). Sono poi presenti un tasto per copiare il link dell'iniziativa, in caso l'utente volesse condividerla, e il pulsante per firmarla. Se un utente non cittadino tenta di firmare, viene condotto alla schermata di login (Figura \ref{fig:screen_login}). Per tornare alla lista di preview, l'utente può cliccare su "Torna Indietro", in alto a sinistra. Se l'iniziativa è stata importata da una piattaforma esterna, il pulsante per firmare conduce l'utente alla piattaforma di provenienza, ed ha il seguente aspetto:
+In Figura \ref{fig:screen_dettaglio_iniziativa} è raffigurata la pagina di dettaglio di un'iniziativa, che riporta titolo, stato, categoria, eventuale luogo, data di creazione e di scadenza, autore, descrizione, numero di firme, eventuali immagini ed allegati e, sotto la descrizione, la risposta del Comune, se presente (Figura \ref{fig:screen_risposta_pubblicata}). Sono poi presenti un tasto per copiare il link dell'iniziativa, in caso l'utente volesse condividerla, e il pulsante per firmarla (disabilitato se già premuto o se l'utente non è un cittadino). Se un utente non autenticato tenta di firmare, viene condotto alla schermata di login (Figura \ref{fig:screen_login}). Per tornare alla lista di preview, l'utente può cliccare su "Torna Indietro", in alto a sinistra. Se l'iniziativa è stata importata da una piattaforma esterna, il pulsante per firmare conduce l'utente alla piattaforma di provenienza, ed ha il seguente aspetto:
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.2\linewidth]{images/6.2singola_iniz_esterna.jpeg}
@@ -169,7 +170,7 @@ In Figura \ref{fig:screen_creaBP} è raffigurata la schermata da cui l'utente am
     \caption{Schermata di gestione del personale}
     \label{fig:screen_gestione_personale}
 \end{figure}
-In Figura \ref{fig:screen_gestione_personale} è raffigurata la schermata dalla quale l'utente amministratore può visualizzare la lista completa degli utenti amministratori con le loro informazioni (cognome, nome, codice fiscale, email). Una barra di ricerca permette di digitare un codice fiscale per verificarne la presenza nell'elenco. Per ogni utente nella lista, ad esclusione dell'utente stesso, è presente un pulsante "Rimuovi" che serve per revocare i privilegi da amministratore ad un certo utente. Per aggiungere un nuovo amministratore (promuovendo un cittadino o creando una pre-autorizzazione), l'utente può cliccare il pulsante raffigurante il \textbf{"+}, in alto a destra: così facendo apparirà un box (come nella figura sotto) dove l'utente potrà digitare il codice fiscale dell'utente che intende promuovere.
+In Figura \ref{fig:screen_gestione_personale} è raffigurata la schermata dalla quale l'utente amministratore può visualizzare la lista completa degli utenti amministratori con le loro informazioni (cognome, nome, codice fiscale, email). Una barra di ricerca permette di digitare un codice fiscale per verificarne la presenza nell'elenco. Per ogni utente nella lista, ad esclusione dell'utente stesso, è presente un pulsante "Rimuovi" che serve per revocare i privilegi da amministratore ad un certo utente. Per aggiungere un nuovo amministratore (promuovendo un cittadino o creando una pre-autorizzazione), l'utente può cliccare il pulsante raffigurante il \textbf{"+"}, in alto a destra: così facendo apparirà un box (come nella figura sotto) dove l'utente potrà digitare il codice fiscale dell'utente che intende promuovere. Se l'utente ricercato non è presente nel database appare un box per confermarne la pre-autorizzazione.
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.5\linewidth]{images/12.2ricerca_cf.jpeg}
@@ -189,4 +190,4 @@ In Figura \ref{fig:screen_archivioBP} è raffigurata la schermata da cui l'utent
     \caption{Risultati di un bilancio partecipativo concluso}
     \label{fig:screen_risultati}
 \end{figure}
-In Figura \ref{fig:screen_risultati} sono raffigurati i risultati di un bilancio partecipativo concluso: vengono riportati il titolo del sondaggio, la data di scadenza, il numero totale dei voti e le opzioni. A fianco ad ogni opzione sono riportati il numero di voti e la percentuale sul totale, rispecchiata dalla barra verde sotto l'opzione. Per tornare all'archivio, l'utente può cliccare sul pulsante in basso a sinistra.
+In Figura \ref{fig:screen_risultati} sono raffigurati i risultati di un bilancio partecipativo concluso: vengono riportati il titolo del sondaggio, la data di scadenza, il numero totale dei voti e le opzioni. A fianco ad ogni opzione sono riportati il numero di voti e la percentuale sul totale, rispecchiata dalla barra verde sotto l'opzione. Per tornare all'archivio, l'utente può cliccare sul pulsante in basso a destra.

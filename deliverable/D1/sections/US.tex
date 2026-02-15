@@ -7,13 +7,13 @@ Come \textit{utente già registrato} (cittadino o operatore del Comune) voglio p
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
     \item L'utente può visualizzare le opzioni d'accesso permesse e scegliere quale utilizzare dopo aver premuto sull'apposito pulsante.
-    \item L'utente viene reindirizzato alla schermata di login anche quando prova a compiere un'azione da utente registrato (ad esempio votare al bilancio partecipativo).
+    \item L'utente viene reindirizzato alla schermata di login anche quando prova a compiere un'azione da utente registrato come firmare, creare o seguire un'iniziativa.
     \item Selezionando un'opzione, il sistema reindirizza l'utente al provider scelto.
     \item Autenticandosi con la modalità scelta, vengono restituiti al sistema i dati identificativi dell'utente.
     \item Il sistema verifica l'esistenza dell'utente nel database. 
     \item Dopo un login riuscito, il sistema reindirizza l'utente alla home page.
     \item Se loggato, l'utente è abilitato a tutte le funzionalità a lui permesse.
-    \item Se l'utente non risulta presente nel database del sistema, viene guidato al flusso di creazione del profilo.
+    \item Se l'utente non risulta presente nel database del sistema, gli viene mostrato un messaggio informativo e viene guidato al flusso di creazione del profilo.
     \item In caso di errore di autenticazione viene mostrato un messaggio d'errore.
 \end{itemize}
 \paragraph{Tasks:}
@@ -24,7 +24,7 @@ Come \textit{utente già registrato} (cittadino o operatore del Comune) voglio p
     \item Testare l'accesso per gli utenti registrati (partendo ad esempio dal "super-utente" - RF\ref{subRf:bootstrapping_amministratore}), per assicurarsi che dopo l'autenticazione vengano reindirizzati alla home modificata in base ai loro privilegi.
     \item Testare inoltre che dopo il login gli utenti possano svolgere le attività che caratterizzano il loro ruolo.
     \item Testare il reindirizzamento alla fase di creazione del profilo in caso di account inesistente.
-    \item Implementare e verificare il messaggio d'errore in caso di errore di autenticazione.
+    \item Implementare e verificare i messaggi d'errore e informativi nei casi descritti.
 \end{itemize}
 
 \US{Creazione profilo al primo accesso}
@@ -38,8 +38,7 @@ Come \textit{utente non ancora registrato} (cittadino o operatore del Comune) vo
     \item A ogni nuovo accesso, il profilo dell'utente risulta presente nel database.
     \item Se la verifica di residenza o pre-autorizzazione non va a buon fine viene mostrato un messaggio d'errore.
     \item Se il codice OTP inserito non è corretto viene mostrato un messaggio d'errore.
-    \item Se il codice OTP non viene inserito entro lo scadere del timer, viene mostrato un messaggio informativo e un pulsante per inviare un nuovo codice.
-    \item Se l'utente digita il codice OTP dopo lo scadere del timer viene mostrato un messaggio d'errore.
+    \item Se il codice OTP non viene inserito entro lo scadere del timer, vengono mostrati un messaggio d'errore e un pulsante per inviare un nuovo codice. L'utente non può digitare il codice dopo lo scadere del timer.
     \item L'utente può ritornare alla schermata di inserimento della mail e inserirne una nuova, in caso si fosse sbagliato in precedenza.
 \end{itemize}
 \paragraph{Tasks:}
@@ -50,7 +49,7 @@ Come \textit{utente non ancora registrato} (cittadino o operatore del Comune) vo
     \item Aggiungere un timer di validità del codice OTP.
     \item Fare in modo che i dati forniti in fase di autenticazione e la mail costituiscano una nuova tupla nel database.
     \item Verificare che il profilo risulti esistente nei successivi accessi dell'utente.
-    \item Implementare e verificare i messaggi informativi e d'errore nelle varie casistiche descritte.
+    \item Implementare e verificare i messaggi d'errore nelle casistiche descritte.
     \item Aggiungere un pulsante per mandare un nuovo codice OTP.
     \item Aggiungere un pulsante per tornare alla schermata per inserire una nuova e-mail.
 \end{itemize}
@@ -77,8 +76,8 @@ Come \textit{utente} voglio poter cercare un'iniziativa inserendo delle parole c
 \paragraph{Tasks:}
 \begin{itemize}
     \item Aggiungere una barra di ricerca.
-    \item Implementare un algoritmo che selezioni le iniziative da mostrare sulla base delle parole chiave.
-    \item Verificare che dopo aver inserito le parole e premuto il pulsante di ricerca venga aggiornata la pagina e vengano mostrate le iniziative selezionate dall'algoritmo.
+    \item Implementare la selezione delle iniziative da mostrare sulla base delle parole chiave.
+    \item Verificare che dopo aver inserito le parole e premuto il pulsante di ricerca venga aggiornata la pagina e vengano mostrate le iniziative selezionate.
     \item Implementare e verificare il messaggio informativo in caso di mancanza di corrispondenze nella ricerca.
 \end{itemize}
 
@@ -135,14 +134,12 @@ Come \textit{operatore del Comune} devo poter prorogare la data di scadenza di u
 \paragraph{Criteri di accettazione}
 \begin{itemize}
     \item L'operatore, premendo un pulsante sulla sua interfaccia di visualizzazione di un'iniziativa, può prorogarne la data di scadenza di 60 giorni. 
-    \item Se l'operatore tenta di prorogare la data di scadenza di un'iniziativa più di una volta gli viene mostrato un messaggio d'errore.
     \item Una volta premuto un pulsante di conferma, le modifiche apportate si riflettono sul database.
     \item Dopo le modifiche, gli utenti visualizzano una nuova data di scadenza per quell'iniziativa.
 \end{itemize}
 \paragraph{Tasks:}
 \begin{itemize}
     \item Aggiungere all'interfaccia di visualizzazione dell'iniziativa lato operatore un pulsante per prorogarne la data di scadenza.
-    \item Implementare il controllo del vincolo che l'operatore non possa prorogare la data di scadenza più di una volta. Implementare e verificare il relativo messaggio d'errore.
     \item Implementare l'aggiornamento del database dopo la conferma delle modifiche.
     \item Testare che gli utenti visualizzino la nuova data di scadenza dopo l'aggiornamento.
 \end{itemize}
@@ -182,7 +179,7 @@ Come \textit{operatore del Comune} devo poter visualizzare un elenco completo de
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
     \item L'operatore può visualizzare un elenco degli utenti con ruolo "Amministratore" nella sua interfaccia utente.
-    \item L'operatore può cercare un preciso utente inserendo il suo codice fiscale.
+    \item L'operatore può cercare un preciso utente inserendo il suo codice fiscale in una barra di ricerca.
     \item Se l'utente cercato è presente vengono mostrati i suoi dati, altrimenti viene mostrato un messaggio informativo.
 \end{itemize}
 \paragraph{Tasks:}
@@ -231,11 +228,11 @@ Come \textit{operatore del Comune} devo poter selezionare un utente "Amministrat
 Come \textit{cittadino del Comune di Trento} voglio poter firmare un'iniziativa, in modo da supportare la causa. \\ (Riferito a RF\ref{rf:firma})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
-    \item Nel caso di iniziative interne alla piattaforma, ovviamente in corso, l'utente "Cittadino" deve poter firmare l'iniziativa cliccando un apposito pulsante.
+    \item Nel caso di iniziative interne alla piattaforma, ovviamente in corso, l'utente "Cittadino" deve poter firmare l'iniziativa cliccando un apposito pulsante (disabilitato per gli utenti autenticati non cittadini).
     \item Le informazioni relative alla nuova firma devono essere aggiunte al database.
     \item Nel caso di iniziative interne alla piattaforma, il numero totale di adesioni si deve aggiornare in tempo reale dopo una firma.
     \item Nel caso di iniziative interne alla piattaforma, quando un utente "Cittadino" firma un'iniziativa questa viene spostata nella sezione apposita della sua dashboard personale.
-    \item Nel caso di iniziative interne alla piattaforma, dopo che il cittadino ha firmato, il tasto per firmare viene disabilitato in modo da impedirgli di apportare più adesioni alla stessa iniziativa.
+    \item Nel caso di iniziative interne alla piattaforma, dopo che il cittadino ha firmato, il tasto per firmare viene disabilitato in modo da impedirgli di apportare più adesioni alla stessa iniziativa. Gli viene inoltre mostrato un messaggio informativo.
     \item Nel caso di iniziative esterne alla piattaforma, un link permette il reindirizzamento del cittadino alla piattaforma di provenienza.
 \end{itemize}
 \paragraph{Tasks:}
@@ -244,7 +241,7 @@ Come \textit{cittadino del Comune di Trento} voglio poter firmare un'iniziativa,
     \item Implementare l'aggiornamento dei dati nel database.
     \item Implementare lo spostamento dell'iniziativa nella dashboard del cittadino.
     \item Verificare che il cittadino firmatario visualizzi l'iniziativa firmata nella propria dashboard.
-    \item Disabilitare il pulsante per firmare nell'interfaccia del cittadino firmatario dopo che ha firmato.
+    \item Disabilitare il pulsante per firmare nell'interfaccia del cittadino firmatario dopo che ha firmato. Implementare e verificare il relativo messaggio informativo.
     \item Implementare il reindirizzamento a piattaforme esterne.
     \item Testare che gli utenti visualizzino dati aggiornati dopo una firma.
 \end{itemize}
@@ -260,12 +257,11 @@ Come \textit{cittadino del Comune di Trento} voglio avere una dashboard personal
     \item Aggiungere la dashboard alla UI del cittadino.
 \end{itemize}
 
-\US{Creazione di una iniziativa}
+\US{Creazione di un'iniziativa}
 Come \textit{cittadino del Comune di Trento} voglio poter creare un'iniziativa per proporre un cambiamento nella mia città. Vorrei inoltre che quando provo a pubblicare un'iniziativa mi venga notificato se ne esistono già di molto simili, perché se ci fossero troppe iniziative uguali i voti si dividerebbero sulle varie iniziative invece di concentrarsi su una sola. \\ Come \textit{operatore del Comune} voglio che non ci siano più iniziative troppo simili tra loro, perché questo complicherebbe l'analisi dei dati e sovraccaricherebbe il database. \\ (Riferito a RF\ref{rf:creazione_iniziativa} e RF\ref{rf:controllo_duplicati})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
-    \item L'utente con ruolo di cittadino può creare un'iniziativa, inserendo i dati elencati in RF\ref{rf:creazione_iniziativa} su un'interfaccia visualizzata dopo aver premuto un apposito pulsante.
-    \item Il cittadino visualizza un'anteprima prima di confermare la sottomissione.
+    \item L'utente con ruolo di cittadino può creare un'iniziativa, inserendo i dati elencati in RF\ref{rf:creazione_iniziativa} su un'interfaccia visualizzata dopo aver premuto un apposito pulsante (disabilitato per gli utenti autenticati non cittadini).
     \item Se il cittadino conferma la pubblicazione senza aver compilato i campi obbligatori, viene mostrato un messaggio d'errore.
     \item Se il cittadino tenta di creare una nuova iniziativa prima che finisca il periodo di cool-down di 14 giorni gli viene mostrato un messaggio d'errore.
     \item Dopo la pubblicazione, la data di scadenza viene impostata automaticamente a 60 giorni dal giorno di pubblicazione e lo stato viene impostato a "In corso".
@@ -288,7 +284,7 @@ Come \textit{cittadino del Comune di Trento} voglio poter creare un'iniziativa p
 Come \textit{cittadino del Comune di Trento} voglio seguire lo stato d'avanzamento delle iniziative che mi interessano, in modo da sapere se vengono respinte o accettate. \\ (Riferito a RF\ref{rf:tracciamento_stato})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
-    \item Il cittadino può salvare un'iniziativa nella propria dashboard cliccando su un apposito pulsante.
+    \item Il cittadino può salvare un'iniziativa nella propria dashboard cliccando su un apposito pulsante  (assente per gli utenti autenticati non cittadini).
     \item Premendo sul tasto una seconda volta, l'iniziativa viene rimossa dalla dashboard.
 \end{itemize}
 \paragraph{Tasks:}
