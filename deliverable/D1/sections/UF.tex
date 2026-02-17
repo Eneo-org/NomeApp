@@ -1,0 +1,61 @@
+\section{User Flows}
+In questa sezione vengono riportati gli User Flows relativi ai principali comportamenti degli utenti all'interno dell'applicazione. Riportiamo nella seguente figura la legenda dei simboli utilizzati:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{img/UF_legenda.png}
+\end{figure}
+
+\UF{Login dell'utente e creazione del profilo al primo accesso}
+Associato alle user stories US\ref{us:login} e US\ref{us:profilo} e ai requisiti funzionali RF\ref{rf:login} e RF\ref{rf:creazione_profilo}. La Figura \ref{figuf:login_profilo} mostra lo user flow relativo al login di un utente nell'applicazione. L'utente sceglie l'identity provider e poi il sistema controlla se il suo profilo esiste già: se la risposta è affermativa viene reindirizzato alla home, altrimenti vieni condotto al flusso di creazione di un nuovo profilo, dove l'utente dovrò inserire e verificare la sua mail dopo i controlli effettuati dal sistema.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{img/UF_login.png}
+    \caption{Login e creazione del profilo}
+    \label{figuf:login_profilo}
+\end{figure}
+
+\UF{Visualizzazione e interazione con le iniziative pubblicate} \label{uf:iniziative}
+Associato alle user stories US\ref{us:listainiz}, US\ref{us:ricerca}, US\ref{us:filtri}, US\ref{us:iniziativa}, US\ref{us:firma} e US\ref{us:tracciamento} e ai requisiti funzionali RF\ref{rf:consultazione_iniziative}, RF\ref{rf:consultazione_singola_iniz}, RF\ref{rf:firma} e RF\ref{rf:tracciamento_stato}. La Figura \ref{figuf:iniziative} mostra lo user flow relativo alle interazioni che un \textbf{utente "Cittadino"} può avere con le iniziative presenti nell'applicazione, ossia l'applicazione di criteri di ricerca (permessa anche agli altri utenti), la firma e l'aggiunta alle iniziative seguite.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{img/UF_iniziative.png}
+    \caption{Interazione di un cittadino con le iniziative}
+    \label{figuf:iniziative}
+\end{figure}
+
+\UF{Altre attività del cittadino autenticato}
+Associato alle user story US\ref{us:dashboard}, US\ref{us:creainiz} e US\ref{us:voto} e ai requisiti funzionali RF\ref{rf:dashboard_personale}, RF\ref{rf:creazione_iniziativa}, RF\ref{rf:voto} e RF\ref{rf:controllo_duplicati}. La Figura \ref{figuf:dashboard} mostra lo user flow relativo alle altra attività che un \textbf{utente "Cittadino"} può svolgere nell'applicazione oltre alle interazioni con le iniziative descritte in UF\ref{uf:iniziative}, ossia la consultazione della dashboard personale, la creazione di una nuova iniziativa e la votazione al bilancio partecipativo in corso.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{img/UF_attivitacittadino.png}
+    \caption{Altre attività del cittadino autenticato}
+    \label{figuf:dashboard}
+\end{figure}
+
+\UF{Gestione delle iniziative da parte dell'amministrazione}
+Associato alle user story US\ref{us:risposta} e US\ref{us:proroga} e al requisito funzionale RF\ref{rf:gestione_iniziative}. La Figura \ref{figuf:gestione_iniziative} mostra lo user flow relativo all'attività di gestione iniziative svolta dagli \textbf{utenti "Amministratore"}. Questi possono selezionare un'iniziativa per prorogarne la data di scadenza oppure pubblicare una risposta. 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{img/UF_gestioneiniz.png}
+    \caption{Gestione delle iniziative da parte dell'amministrazione}
+    \label{figuf:gestione_iniziative}
+\end{figure}
+
+\UF{Creazione BP e consultazione archivio BP}
+Associato alle user story US\ref{us:creabp} e US\ref{us:archiviobp} e ai requisiti funzionali RF\ref{rf:creazione_bilancio_partecipativo} e RF\ref{rf:consultazione_archivio_bilancio_partecipativo}. La Figura \ref{figuf:creabp_archiviobp} mostra lo user flow relativo alle attività di creazione di un bilancio partecipativo e di consultazione dell'archivio dei bilanci partecipati conclusi da parte di un \textbf{utente "Amministratore"}.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{img/UF_creabp_archiviobp.png}
+    \caption{Creazione BP e consultazione archivio BP}
+    \label{figuf:creabp_archiviobp}
+\end{figure}
+
+\UF{Gestione del personale}
+Associato alle user story US\ref{us:cercautente}, US\ref{us:promozione} e US\ref{us:revoca} e al requisito funzionale RF\ref{rf:ruoli_amministrativi}. La Figura \ref{figuf:personale} mostra lo user flow relativo alla gestione del personale amministrativo da parte di un \textbf{utente "Amministratore"}. Le attività che l'utente può svolgere in questo contesto sono la ricerca di un utente nella lista degli amministratori, la promozione / pre-autorizzazione di un utente e la revoca dei privilegi ad un utente amministratore.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{img/UF_personale.png}
+    \caption{Gestione del personale}
+    \label{figuf:personale}
+\end{figure}

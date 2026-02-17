@@ -20,6 +20,7 @@ Il componente si occupa di gestire l'accesso degli utenti al sistema e di verifi
     \item \textbf{Reindirizzamento post-logout:} reindirizzamento alla visualizzazione default dell'applicativo dopo che l'utente ha eseguito il logout.
 \end{itemize}
 
+\newpage
 \CMP{Gestione creazione profilo}\label{cmp:creazione_profilo}
 Il componente si occupa di gestire la creazione di un nuovo profilo da parte di un utente non registrato.
 \paragraph{Interfacce richieste:}
@@ -47,6 +48,7 @@ Il componente si occupa di gestire la visualizzazione da parte dell'utente delle
     \item \textbf{Visualizzazione lista di iniziative:} visualizzazione grafica della lista di iniziative all'utente.
 \end{itemize}
 
+\newpage
 \CMP{Gestione creazione iniziative}\label{cmp:creazione_iniz}
 Il componente si occupa di gestire la creazione di nuove iniziative da parte degli utenti autorizzati, inserendo i nuovi dati nel database.
 \paragraph{Interfacce richieste:}
@@ -70,10 +72,9 @@ Il componente funge da intermediario tra il database e il componente "Gestione c
 \paragraph{Interfacce fornite:}
 \begin{itemize}
     \item \textbf{Nuova iniziativa:} inserimento di una nuova iniziativa nel database dopo il superamento del controllo.
-    \item \textbf{Controllo non superato:} invio dei dati relativi all'iniziativa al componente "Gestione notifiche" (CMP\ref{cmp:notifiche}) dopo il non superamento del controllo.
 \end{itemize}
 
-
+\newpage
 \CMP{Gestione firma iniziative} \label{cmp:firma}
 Il componente si occupa di gestire la firma delle iniziative, aggiornando opportunamente il database.
 \paragraph{Interfacce richieste:}
@@ -203,7 +204,6 @@ Il componente si occupa della visualizzazione delle iniziative d'interesse per l
 Il componente si occupa di gestire l'invio di notifiche sulla dashboard personale dell'utente e via e-mail nei casi specificati nei requisiti funzionali.
 \paragraph{Interfacce richieste:}
 \begin{itemize}
-    \item \textbf{Controllo non superato:} dati relativi a un'iniziativa che non ha superato il controllo duplicati, inviati dal componente "Gestione controllo duplicati" (CMP\ref{cmp:controllo_duplicati}).
     \item \textbf{Cambiamento di stato:} dati relativi a un'iniziativa rilevante per l'utente che ha subito un cambiamento di stato, inviati dal componente "Gestione database" (CMP\ref{cmp:gestione_database}).
     \item \textbf{Bilancio concluso:} dati relativi a un bilancio partecipativo concluso votato dall'utente, inviati dal componente "Gestione database" (CMP\ref{cmp:gestione_database}).
     \item \textbf{Recapito mail per notifica:} recapito mail dell'utente, inviati dal componente "Gestione database" (CMP\ref{cmp:gestione_database}).

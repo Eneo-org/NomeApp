@@ -2,7 +2,7 @@
 
 \textbf{Premessa:} in fase di implementazione alcune funzioni potrebbero venire semplificate. Queste semplificazioni, e in generale eventuali differenze tra progettazione e implementazione, verranno chiarite nel documento in cui tratteremo l'implementazione (D2).
 
-\US{Accesso utente (Login)}
+\US{Accesso utente (Login)} \label{us:login}
 Come \textit{utente già registrato} (cittadino o operatore del Comune) voglio poter accedere al mio profilo in modo da usufruire delle funzionalità a me riservate. \\ (Riferito a RF\ref{rf:login})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
@@ -27,7 +27,7 @@ Come \textit{utente già registrato} (cittadino o operatore del Comune) voglio p
     \item Implementare e verificare i messaggi d'errore e informativi nei casi descritti.
 \end{itemize}
 
-\US{Creazione profilo al primo accesso}
+\US{Creazione profilo al primo accesso} \label{us:profilo}
 Come \textit{utente non ancora registrato} (cittadino o operatore del Comune) voglio poter creare un profilo per usufruire dei servizi dell'applicazione e svolgere il mio ruolo. \\ (Riferito a RF\ref{rf:creazione_profilo})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
@@ -54,7 +54,7 @@ Come \textit{utente non ancora registrato} (cittadino o operatore del Comune) vo
     \item Aggiungere un pulsante per tornare alla schermata per inserire una nuova e-mail.
 \end{itemize}
 
-\US{Visualizzazione della lista di iniziative}
+\US{Visualizzazione della lista di iniziative} \label{us:listainiz}
 Come \textit{utente} voglio poter visualizzare le varie iniziative presenti sull'applicazione, per farmi un'idea sulle problematiche del Comune di Trento. \\ (Riferito a RF\ref{rf:consultazione_iniziative})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
@@ -65,7 +65,7 @@ Come \textit{utente} voglio poter visualizzare le varie iniziative presenti sull
     \item Aggiungere una pagina nella UI in cui siano visibili le varie iniziative con i relativi dati.
 \end{itemize}
 
-\US{Ricerca di iniziative}
+\US{Ricerca di iniziative} \label{us:ricerca}
 Come \textit{utente} voglio poter cercare un'iniziativa inserendo delle parole chiave in una barra di ricerca, in modo da trovarla più facilmente. \\ (Riferito a RF\ref{rf:consultazione_iniziative})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
@@ -81,7 +81,7 @@ Come \textit{utente} voglio poter cercare un'iniziativa inserendo delle parole c
     \item Implementare e verificare il messaggio informativo in caso di mancanza di corrispondenze nella ricerca.
 \end{itemize}
 
-\US{Filtraggio di iniziative}
+\US{Filtraggio di iniziative} \label{us:filtri}
 Come \textit{utente} voglio applicare dei filtri alla mia ricerca di iniziative per affinarne i risultati. \\ (Riferito a RF\ref{rf:consultazione_iniziative})
 \paragraph{Criteri di accettazione}
 \begin{itemize}
@@ -99,7 +99,7 @@ Come \textit{utente} voglio applicare dei filtri alla mia ricerca di iniziative 
     \item Implementare e verificare il messaggio informativo in caso di mancanza di corrispondenze nella ricerca.
 \end{itemize}
 
-\US{Consultazione di una singola iniziativa}
+\US{Consultazione di una singola iniziativa} \label{us:iniziativa}
 Come \textit{utente} voglio poter visualizzare tutti i dettagli relativi a una specifica iniziativa. \\ (Riferito a RF\ref{rf:consultazione_singola_iniz})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
@@ -110,13 +110,14 @@ Come \textit{utente} voglio poter visualizzare tutti i dettagli relativi a una s
     \item Creare la pagina di dettaglio dell'iniziativa e implementarne il reindirizzamento quando l'utente clicca sulla preview dell'iniziativa nella lista.
 \end{itemize}
 
-\US{Aggiornamento dello stato di un'iniziativa (Risposta)}
+\US{Aggiornamento dello stato di un'iniziativa (Risposta)} \label{us:risposta}
 Come \textit{operatore del Comune} devo poter aggiornare lo stato di un'iniziativa, in modo da far vedere ai cittadini se il Comune l'ha esplicitamente respinta o accettata. \\ Inoltre, devo poter motivare la scelta allegando note e documenti di risposta, in modo che le motivazioni del Comune siano trasparenti ai cittadini. \\ (Riferito a RF\ref{rf:gestione_iniziative})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
     \item L'operatore, cliccando su un pulsante nella sua interfaccia di visualizzazione delle iniziative, deve poter compilare una risposta ad un'iniziativa, decidendo se approvarla o respingerla.
     \item Quando cambia lo stato ad un'iniziativa, l'operatore deve inserire delle note e allegare eventualmente dei documenti.
     \item Una volta premuto un pulsante di conferma, le modifiche apportate si riflettono sul database.
+    \item Se l'amministratore conferma la pubblicazione senza aver compilato i campi obbligatori, viene mostrato un messaggio d'errore.
     \item Dopo le modifiche, tutti gli utenti possono vedere il nuovo stato dell'iniziativa e visualizzare le note / gli allegati che l'operatore ha caricato. 
     \item Dopo la risposta, gli utenti non possono firmare / seguire l'iniziativa.
 \end{itemize}
@@ -125,11 +126,12 @@ Come \textit{operatore del Comune} devo poter aggiornare lo stato di un'iniziati
     \item Aggiungere all'interfaccia dell'operatore un pulsante per rispondere a un'iniziativa che conduca a un box dove possa selezionarne il nuovo stato, digitare una nota di risposta e allegare documenti.
     \item Aggiungere un pulsante di conferma per applicare la modifica.
     \item Implementare l'aggiornamento del database.
+    \item Implementare il messaggio d'errore.
     \item Testare che gli utenti visualizzino il cambiamento di stato e i caricamenti dell'operatore.
     \item Verificare che le nuove interazioni con l'iniziativa siano coerenti con il nuovo stato.
 \end{itemize}
 
-\US{Proroga data di scadenza}
+\US{Proroga data di scadenza} \label{us:proroga}
 Come \textit{operatore del Comune} devo poter prorogare la data di scadenza di un'iniziativa in corso, nel caso il Comune necessiti di più tempo per decidere se accettarla o respingerla. \\ (Riferito a RF\ref{rf:gestione_iniziative})
 \paragraph{Criteri di accettazione}
 \begin{itemize}
@@ -144,7 +146,7 @@ Come \textit{operatore del Comune} devo poter prorogare la data di scadenza di u
     \item Testare che gli utenti visualizzino la nuova data di scadenza dopo l'aggiornamento.
 \end{itemize}
 
-\US{Creazione bilancio partecipativo}
+\US{Creazione bilancio partecipativo} \label{us:creabp}
 Come \textit{operatore del Comune} devo poter creare un sondaggio per il bilancio partecipativo per conto del Comune, in modo da coinvolgere direttamente i cittadini nelle scelte del Comune. \\ (Riferito a RF\ref{rf:creazione_bilancio_partecipativo})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
@@ -162,7 +164,7 @@ Come \textit{operatore del Comune} devo poter creare un sondaggio per il bilanci
     \item Testare che il sondaggio sia visibile agli utenti dopo la pubblicazione.
 \end{itemize}
 
-\US{Consultazione Archivio Bilanci Partecipativi}
+\US{Consultazione Archivio Bilanci Partecipativi} \label{us:archiviobp}
 Come \textit{operatore del Comune} voglio poter consultare i bilanci partecipativi conclusi, in modo da poter analizzare le scelte che sono state fatte in passato. \\ (Riferito a RF\ref{rf:consultazione_archivio_bilancio_partecipativo})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
@@ -174,7 +176,7 @@ Come \textit{operatore del Comune} voglio poter consultare i bilanci partecipati
     \item Aggiungere alla UI dell'operatore una sezione per la consultazione dell'archivio storico dei bilanci partecipativi con i relativi dati.
 \end{itemize}
 
-\US{Visualizzazione e Ricerca Utenti}
+\US{Visualizzazione e Ricerca Utenti} \label{us:cercautente}
 Come \textit{operatore del Comune} devo poter visualizzare un elenco completo degli utenti con ruolo "Amministratore", in modo da poter verificare l'esistenza del profilo di un operatore.\\ (Riferito a RF\ref{subRf:ricerca_utenti})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
@@ -190,7 +192,7 @@ Come \textit{operatore del Comune} devo poter visualizzare un elenco completo de
     \item Implementare e verificare il messaggio informativo in caso di utente non trovato.
 \end{itemize}
 
-\US{Promozione utente e Pre-autorizzazione}
+\US{Promozione utente e Pre-autorizzazione} \label{us:promozione}
 Come \textit{operatore del Comune} devo poter promuovere un utente da "Cittadino" ad "Amministratore", in modo che questo possa svolgere anche il suo ruolo da operatore nella piattaforma.\\ Inoltre, devo poter pre-autorizzare un utente, in modo da poter rendere un utente "Amministratore" anche se non è cittadino del Comune di Trento. \\(Riferito a RF\ref{subRf:assegnazione_privilegi}) 
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
@@ -208,7 +210,7 @@ Come \textit{operatore del Comune} devo poter promuovere un utente da "Cittadino
     \item Verificare che l'utente promosso (o l’utente pre-autorizzato dopo il primo accesso) abbia effettivamente acquisito i privilegi da "Amministratore".
 \end{itemize}
 
-\US{Revoca privilegi}
+\US{Revoca privilegi} \label{us:revoca}
 Come \textit{operatore del Comune} devo poter selezionare un utente "Amministratore" e revocargli i privilegi, in modo che una volta terminato il suo impiego in Comune non possa continuare ad agire sulla piattaforma come "Amministratore" (oppure per rimediare ad aggiunte errate nella lista degli amministratori). \\ (Riferito a RF\ref{subRf:revoca_previlegi})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
@@ -224,7 +226,7 @@ Come \textit{operatore del Comune} devo poter selezionare un utente "Amministrat
     \item Verificare che l'utente rimosso dalla lista non possa più svolgere il ruolo di operatore e che mantenga eventualmente i privilegi da cittadino.
 \end{itemize}
 
-\US{Firma}
+\US{Firma} \label{us:firma}
 Come \textit{cittadino del Comune di Trento} voglio poter firmare un'iniziativa, in modo da supportare la causa. \\ (Riferito a RF\ref{rf:firma})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
@@ -246,7 +248,7 @@ Come \textit{cittadino del Comune di Trento} voglio poter firmare un'iniziativa,
     \item Testare che gli utenti visualizzino dati aggiornati dopo una firma.
 \end{itemize}
 
-\US{Dashboard personale}
+\US{Dashboard personale} \label{us:dashboard}
 Come \textit{cittadino del Comune di Trento} voglio avere una dashboard personale per vedere le mie attività e ricevere aggiornamenti. \\ (Riferito a RF\ref{rf:dashboard_personale})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
@@ -257,7 +259,7 @@ Come \textit{cittadino del Comune di Trento} voglio avere una dashboard personal
     \item Aggiungere la dashboard alla UI del cittadino.
 \end{itemize}
 
-\US{Creazione di un'iniziativa}
+\US{Creazione di un'iniziativa} \label{us:creainiz}
 Come \textit{cittadino del Comune di Trento} voglio poter creare un'iniziativa per proporre un cambiamento nella mia città. Vorrei inoltre che quando provo a pubblicare un'iniziativa mi venga notificato se ne esistono già di molto simili, perché se ci fossero troppe iniziative uguali i voti si dividerebbero sulle varie iniziative invece di concentrarsi su una sola. \\ Come \textit{operatore del Comune} voglio che non ci siano più iniziative troppo simili tra loro, perché questo complicherebbe l'analisi dei dati e sovraccaricherebbe il database. \\ (Riferito a RF\ref{rf:creazione_iniziativa} e RF\ref{rf:controllo_duplicati})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
@@ -268,6 +270,7 @@ Come \textit{cittadino del Comune di Trento} voglio poter creare un'iniziativa p
     \item Prima della pubblicazione definitiva, l'iniziativa viene sottoposta a un controllo duplicati effettuato dal sistema.
     \item Se non viene superato il controllo viene mostrato un messaggio informativo.
     \item La nuova iniziativa viene resa visibile a tutti gli utenti.
+    \item L'iniziativa viene aggiunta all'apposita sezione della dashboard dell'utente.
 \end{itemize}
 \paragraph{Tasks:}
 \begin{itemize}
@@ -277,10 +280,11 @@ Come \textit{cittadino del Comune di Trento} voglio poter creare un'iniziativa p
     \item Implementare l'algoritmo di controllo duplicati.
     \item Implementare e verificare i messaggi informativi e d'errore nelle casistiche presentate.
     \item Aggiornare il database inserendo i dati relativi alla nuova iniziativa.
-    \item Testare che la nuova iniziativa, una volta superati i controlli e pubblicata, sia visibile a tutti gli utenti.    
+    \item Testare che la nuova iniziativa, una volta superati i controlli e pubblicata, sia visibile a tutti gli utenti.  
+    \item Verificare che il cittadino firmatario visualizzi l'iniziativa creata nella propria dashboard.
 \end{itemize}
 
-\US{Tracciamento stato}
+\US{Tracciamento stato} \label{us:tracciamento}
 Come \textit{cittadino del Comune di Trento} voglio seguire lo stato d'avanzamento delle iniziative che mi interessano, in modo da sapere se vengono respinte o accettate. \\ (Riferito a RF\ref{rf:tracciamento_stato})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
@@ -295,12 +299,13 @@ Come \textit{cittadino del Comune di Trento} voglio seguire lo stato d'avanzamen
     \item Testare che i cambiamenti si riflettano nella dashboard del cittadino.
 \end{itemize}
 
-\US{Votazione al bilancio partecipativo}
+\US{Votazione al bilancio partecipativo} \label{us:voto}
 Come \textit{cittadino del Comune di Trento} voglio poter votare ai sondaggi di bilancio partecipativo proposti dal Comune per far valere la mia opinione di cittadino. \\ (Riferito a RF\ref{rf:voto})
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
     \item L'utente visualizza il bilancio partecipativo in atto, e se è un cittadino autenticato può votare una delle opzioni cliccando su di essa (altrimenti, i pulsanti sono disabilitati).
     \item Una volta votata, il sistema aumenta il numero di voti dell'opzione votata.
+    \item Dopo aver votato, l'utente non può cambiare scelta.
 \end{itemize}
 \paragraph{Tasks:}
 \begin{itemize}
@@ -308,7 +313,7 @@ Come \textit{cittadino del Comune di Trento} voglio poter votare ai sondaggi di 
     \item Aggiornare il database dopo un voto.
 \end{itemize}
 
-\US{Importazione dati esterni}
+\US{Importazione dati esterni} 
 Come \textit{utente} voglio poter visualizzare iniziative relative al Comune di Trento anche se non sono state create sulla piattaforma, per poter consultare e firmare anche quelle. \\ (Riferito a RF\ref{rf:import_dati_esterni}) 
 \paragraph{Criteri di accettazione:}
 \begin{itemize}
