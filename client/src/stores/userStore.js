@@ -246,6 +246,19 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  const revokePreAuthorized = async (fiscalCode) => {
+    try {
+      const storedId = localStorage.getItem('tp_mock_id')
+      await axios.delete(`${API_URL}/users/admin/pre-authorize/${fiscalCode}`, {
+        headers: { 'X-Mock-User-Id': storedId },
+      })
+      return true
+    } catch (err) {
+      console.error('Errore revoca pre-autorizzazione:', err)
+      return false
+    }
+  }
+
   return {
     // State
     user,
@@ -273,5 +286,6 @@ export const useUserStore = defineStore('user', () => {
     promoteToAdmin,
     revokeAdminRole,
     preAuthorizeAdmin,
+    revokePreAuthorized,
   }
 })

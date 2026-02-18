@@ -153,7 +153,6 @@ exports.getUser = async (req, res) => {
   }
 };
 
-
 // ... (imports e getUser già presenti)
 
 exports.initiativesDashboard = async (req, res) => {
@@ -450,7 +449,7 @@ exports.showAdminUsers = async (req, res) => {
     // 2. Controllo Permessi Admin
     const [requesters] = await db.query(
       "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
-      [requesterId]
+      [requesterId],
     );
     if (requesters.length === 0 || !requesters[0].IS_ADMIN) {
       return res
@@ -460,7 +459,7 @@ exports.showAdminUsers = async (req, res) => {
 
     // 3. Parametri Query
     const { fiscalCode, isAdmin, currentPage, objectsPerPage } = req.query;
-    
+
     // Caso 1: Ricerca utente specifico per fiscalCode (senza paginazione)
     if (fiscalCode && !isAdmin) {
       const query = `
@@ -488,38 +487,46 @@ exports.showAdminUsers = async (req, res) => {
     }
 
     // Caso 2: Lista admin (con paginazione)
-    if (isAdmin === 'true') {
+    // Include sia gli admin dalla tabella UTENTE che i pre-autorizzati dalla tabella PRE_AUTORIZZATO
+    if (isAdmin === "true") {
       const page = parseInt(currentPage) || 1;
       const limit = parseInt(objectsPerPage) || 10;
       const offset = (page - 1) * limit;
 
-      let queryBase = `SELECT ID_UTENTE, NOME, COGNOME, CODICE_FISCALE, EMAIL FROM UTENTE WHERE IS_ADMIN = 1`;
-      let queryCount = `SELECT COUNT(*) as total FROM UTENTE WHERE IS_ADMIN = 1`;
-      const queryParams = [];
+      const fiscalLike = fiscalCode ? `%${fiscalCode}%` : null;
 
-      // Filtro Opzionale Codice Fiscale
-      if (fiscalCode) {
-        queryBase += ` AND CODICE_FISCALE LIKE ?`;
-        queryCount += ` AND CODICE_FISCALE LIKE ?`;
-        queryParams.push(`%${fiscalCode}%`);
-      }
+      // Query UNION: admin registrati + pre-autorizzati non ancora registrati
+      const unionQuery = `
+        (SELECT ID_UTENTE AS id, NOME AS firstName, COGNOME AS lastName, CODICE_FISCALE AS fiscalCode, EMAIL AS email, 'admin' AS source
+         FROM UTENTE WHERE IS_ADMIN = 1 ${fiscalLike ? "AND CODICE_FISCALE LIKE ?" : ""})
+        UNION ALL
+        (SELECT NULL AS id, NULL AS firstName, NULL AS lastName, PA.CODICE_FISCALE AS fiscalCode, NULL AS email, 'pre_authorized' AS source
+         FROM PRE_AUTORIZZATO PA
+         WHERE PA.CODICE_FISCALE NOT IN (SELECT CODICE_FISCALE FROM UTENTE)
+         ${fiscalLike ? "AND PA.CODICE_FISCALE LIKE ?" : ""})
+      `;
 
-      // Ordinamento e Paginazione
-      queryBase += ` ORDER BY COGNOME ASC, NOME ASC LIMIT ? OFFSET ?`;
-      const dataParams = [...queryParams, limit, offset];
+      const baseParams = [];
+      if (fiscalLike) baseParams.push(fiscalLike);
+      if (fiscalLike) baseParams.push(fiscalLike);
 
-      // Esecuzione
-      const [rows] = await db.query(queryBase, dataParams);
-      const [countRows] = await db.query(queryCount, queryParams);
+      // Conteggio totale
+      const countQuery = `SELECT COUNT(*) AS total FROM (${unionQuery}) AS combined`;
+      const [countRows] = await db.query(countQuery, baseParams);
+
+      // Dati con paginazione e ordinamento
+      const dataQuery = `SELECT * FROM (${unionQuery}) AS combined ORDER BY COALESCE(lastName, 'ZZZ') ASC, COALESCE(firstName, 'ZZZ') ASC LIMIT ? OFFSET ?`;
+      const [rows] = await db.query(dataQuery, [...baseParams, limit, offset]);
 
       return res.status(200).json({
         data: rows.map((u) => ({
-          id: u.ID_UTENTE,
-          firstName: u.NOME,
-          lastName: u.COGNOME,
-          fiscalCode: u.CODICE_FISCALE,
-          email: u.EMAIL,
+          id: u.id,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          fiscalCode: u.fiscalCode,
+          email: u.email,
           isAdmin: true,
+          isPreAuthorized: u.source === "pre_authorized",
         })),
         meta: {
           currentPage: page,
@@ -531,10 +538,10 @@ exports.showAdminUsers = async (req, res) => {
     }
 
     // Caso 3: Nessun parametro valido
-    return res.status(400).json({ 
-      message: "Parametri mancanti: specificare 'isAdmin=true' o 'fiscalCode=...'" 
+    return res.status(400).json({
+      message:
+        "Parametri mancanti: specificare 'isAdmin=true' o 'fiscalCode=...'",
     });
-
   } catch (err) {
     console.error("Errore showAdminUsers:", err);
     res.status(500).json({ message: "Errore server" });
@@ -590,7 +597,8 @@ exports.changePrivileges = async (req, res) => {
 
     // 6. Aggiornamento Privilegi (RF 10.2 e RF 10.3)
     // Quando un utente diventa admin, non è più cittadino e viceversa
-    const updateQuery = "UPDATE UTENTE SET IS_ADMIN = ?, IS_CITTADINO = ? WHERE ID_UTENTE = ?";
+    const updateQuery =
+      "UPDATE UTENTE SET IS_ADMIN = ?, IS_CITTADINO = ? WHERE ID_UTENTE = ?";
     // Converto il booleano true/false in 1/0 per il DB
     const newIsAdmin = isAdmin ? 1 : 0;
     const newIsCitizen = isAdmin ? 0 : 1; // Se diventa admin, non è più cittadino
@@ -622,12 +630,14 @@ exports.searchUserByFiscalCode = async (req, res) => {
     // Controllo che il richiedente sia un admin
     const [requesters] = await db.query(
       "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
-      [requesterId]
+      [requesterId],
     );
     if (requesters.length === 0 || !requesters[0].IS_ADMIN) {
       return res
         .status(403)
-        .json({ message: "Accesso negato: solo gli admin possono cercare utenti." });
+        .json({
+          message: "Accesso negato: solo gli admin possono cercare utenti.",
+        });
     }
 
     const { fiscalCode } = req.query;
@@ -675,16 +685,20 @@ exports.preAuthorizeAdmin = async (req, res) => {
     // Controllo Permessi Admin
     const [requesters] = await db.query(
       "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
-      [requesterId]
+      [requesterId],
     );
     if (requesters.length === 0 || !requesters[0].IS_ADMIN) {
       return res
         .status(403)
-        .json({ message: "Accesso negato: solo gli admin possono pre-autorizzare." });
+        .json({
+          message: "Accesso negato: solo gli admin possono pre-autorizzare.",
+        });
     }
 
     // Assicuriamo che il CF sia maiuscolo anche lato server
-    const fiscalCode = req.body.fiscalCode ? req.body.fiscalCode.toUpperCase() : null;
+    const fiscalCode = req.body.fiscalCode
+      ? req.body.fiscalCode.toUpperCase()
+      : null;
 
     if (!fiscalCode) {
       return res.status(400).json({ message: "Codice fiscale mancante" });
@@ -693,21 +707,23 @@ exports.preAuthorizeAdmin = async (req, res) => {
     // Controllo se l'utente esiste già
     const [existingUser] = await db.query(
       "SELECT * FROM UTENTE WHERE CODICE_FISCALE = ?",
-      [fiscalCode]
+      [fiscalCode],
     );
 
     if (existingUser.length > 0) {
-        return res.status(409).json({ message: "Utente già esistente." });
+      return res.status(409).json({ message: "Utente già esistente." });
     }
-    
+
     // Controllo se il codice fiscale è già pre-autorizzato
     const [existingPreAuth] = await db.query(
       "SELECT * FROM PRE_AUTORIZZATO WHERE CODICE_FISCALE = ?",
-      [fiscalCode]
+      [fiscalCode],
     );
 
     if (existingPreAuth.length > 0) {
-      return res.status(409).json({ message: "Codice fiscale già pre-autorizzato." });
+      return res
+        .status(409)
+        .json({ message: "Codice fiscale già pre-autorizzato." });
     }
 
     // Inseriamo il codice fiscale nella tabella PRE_AUTORIZZATO
@@ -724,14 +740,57 @@ exports.preAuthorizeAdmin = async (req, res) => {
   } catch (err) {
     console.error("Errore preAuthorizeAdmin:", err);
     // Usiamo un controllo più granulare per l'errore di duplicazione
-    if (err.code === 'ER_DUP_ENTRY') {
-        return res.status(409).json({ message: "Codice fiscale già pre-autorizzato." });
+    if (err.code === "ER_DUP_ENTRY") {
+      return res
+        .status(409)
+        .json({ message: "Codice fiscale già pre-autorizzato." });
     }
+    res.status(500).json({
+      message: "Errore server durante pre-autorizzazione",
+      details: err.message,
+    });
+  }
+};
+
+exports.revokePreAuthorized = async (req, res) => {
+  try {
+    const requesterId = req.user.id;
+
+    // Controllo Permessi Admin
+    const [requesters] = await db.query(
+      "SELECT IS_ADMIN FROM UTENTE WHERE ID_UTENTE = ?",
+      [requesterId],
+    );
+    if (requesters.length === 0 || !requesters[0].IS_ADMIN) {
+      return res
+        .status(403)
+        .json({ message: "Accesso negato: solo gli admin." });
+    }
+
+    const fiscalCode = req.params.fiscalCode
+      ? req.params.fiscalCode.toUpperCase()
+      : null;
+
+    if (!fiscalCode) {
+      return res.status(400).json({ message: "Codice fiscale mancante" });
+    }
+
+    const [result] = await db.query(
+      "DELETE FROM PRE_AUTORIZZATO WHERE CODICE_FISCALE = ?",
+      [fiscalCode],
+    );
+
+    if (result.affectedRows === 0) {
+      return res
+        .status(404)
+        .json({ message: "Codice fiscale pre-autorizzato non trovato." });
+    }
+
     res
-      .status(500)
-      .json({
-        message: "Errore server durante pre-autorizzazione",
-        details: err.message,
-      });
+      .status(200)
+      .json({ message: "Pre-autorizzazione revocata con successo." });
+  } catch (err) {
+    console.error("Errore revokePreAuthorized:", err);
+    res.status(500).json({ message: "Errore server" });
   }
 };

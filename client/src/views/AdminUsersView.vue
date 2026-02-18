@@ -60,8 +60,12 @@ const handleRevoke = async (user) => {
   if (!confirm(`Vuoi davvero togliere il ruolo di admin a ${user.firstName || 'questo utente'}?`)) return;
 
   loading.value = true;
-  const success = await userStore.revokeAdminRole(user.id);
-  // Ricarichiamo la lista per vedere le modifiche
+  let success;
+  if (user.isPreAuthorized) {
+    success = await userStore.revokePreAuthorized(user.fiscalCode);
+  } else {
+    success = await userStore.revokeAdminRole(user.id);
+  }
   if (success) await loadAdmins(meta.value.currentPage);
   loading.value = false;
 };
@@ -80,7 +84,7 @@ const closeModal = () => {
 
 const searchCandidate = async () => {
   if (!candidateFiscal.value) return;
-  
+
   // Assicuriamo che il CF sia maiuscolo per coerenza
   candidateFiscal.value = candidateFiscal.value.toUpperCase();
 
@@ -148,17 +152,22 @@ onMounted(() => loadAdmins());
         </tr>
       </thead>
       <tbody>
-        <tr v-for="user in sortedAdmins" :key="user.id" class="admin-row"
-          :class="{ 'is-me': user.id === userStore.user?.id }">
+        <tr v-for="user in sortedAdmins" :key="user.fiscalCode" class="admin-row"
+          :class="{ 'is-me': user.id && user.id === userStore.user?.id, 'is-preauth': user.isPreAuthorized }">
           <td>
-            <span v-if="user.lastName">{{ user.lastName }} {{ user.firstName }}</span>
+            <span v-if="user.isPreAuthorized" class="null-text">NULL</span>
+            <span v-else-if="user.lastName">{{ user.lastName }} {{ user.firstName }}</span>
             <span v-else class="waiting-text">(In attesa di registrazione)</span>
-            <span v-if="user.id === userStore.user?.id" class="me-tag">(Tu)</span>
+            <span v-if="user.id && user.id === userStore.user?.id" class="me-tag">(Tu)</span>
+            <span v-if="user.isPreAuthorized" class="preauth-tag">(Pre-autorizzato)</span>
           </td>
           <td>{{ user.fiscalCode }}</td>
-          <td>{{ user.email || '-' }}</td>
           <td>
-            <button v-if="user.id !== userStore.user?.id" class="revoke-btn" @click="handleRevoke(user)">
+            <span v-if="user.isPreAuthorized" class="null-text">NULL</span>
+            <span v-else>{{ user.email || '-' }}</span>
+          </td>
+          <td>
+            <button v-if="!user.id || user.id !== userStore.user?.id" class="revoke-btn" @click="handleRevoke(user)">
               Rimuovi
             </button>
           </td>
@@ -430,5 +439,22 @@ onMounted(() => loadAdmins());
   font-size: 0.8rem;
   font-style: italic;
   margin-top: 5px;
+}
+
+.is-preauth {
+  background-color: rgba(230, 126, 34, 0.1);
+}
+
+.null-text {
+  font-style: italic;
+  color: var(--secondary-text);
+  opacity: 0.7;
+}
+
+.preauth-tag {
+  font-size: 0.7rem;
+  color: #e67e22;
+  font-weight: bold;
+  margin-left: 5px;
 }
 </style>

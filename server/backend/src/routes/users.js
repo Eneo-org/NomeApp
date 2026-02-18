@@ -6,18 +6,39 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 // --- 1. Rotte relative all'utente corrente (/me) ---
 router.get("/me", authMiddleware, userController.getUser);
-router.get("/me/initiatives", authMiddleware, userController.initiativesDashboard);
-router.get("/me/notifications", authMiddleware, notificationController.getUserNotifications);
+router.get(
+  "/me/initiatives",
+  authMiddleware,
+  userController.initiativesDashboard,
+);
+router.get(
+  "/me/notifications",
+  authMiddleware,
+  notificationController.getUserNotifications,
+);
 router.patch(
   "/me/notifications/mark-all-as-read",
   authMiddleware,
-  notificationController.markAllAsRead
+  notificationController.markAllAsRead,
 );
-router.patch("/me/notifications/:id", authMiddleware, notificationController.markAsRead);
+router.patch(
+  "/me/notifications/:id",
+  authMiddleware,
+  notificationController.markAsRead,
+);
 
 // --- 2. Rotte generali e specifiche (/users) ---
 
-router.post("/admin/pre-authorize", authMiddleware, userController.preAuthorizeAdmin);
+router.post(
+  "/admin/pre-authorize",
+  authMiddleware,
+  userController.preAuthorizeAdmin,
+);
+router.delete(
+  "/admin/pre-authorize/:fiscalCode",
+  authMiddleware,
+  userController.revokePreAuthorized,
+);
 
 router.post("/", userController.userRegistration);
 
