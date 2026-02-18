@@ -66,7 +66,17 @@
 \newpage
 
 \section{Introduzione}
-Il seguente documento riporta le informazioni necessarie all'\textbf{implementazione} del progetto \textbf{\texttt{"TRENTO PARTECIPA"}}. 
+Il seguente documento riporta le informazioni relative all'\textbf{implementazione} del progetto \textbf{\texttt{"TRENTO PARTECIPA"}}. 
+\newline
+\newline
+È importante premettere che alcune funzionalità descritte nel documento D1 non sono state completamente implementate per vari motivi, principalmente legati a fattori di semplicità e tempistiche. In particolare:
+\begin{itemize}
+    \item Sebbene i requisiti funzionali prevedano l'utilizzo di SPID o CIE per il login, in questa fase di sviluppo abbiamo optato per sostituirli con l'accesso tramite Google. Tale scelta è motivata principalmente da vincoli di natura burocratica: l'integrazione in ambiente di produzione di SPID/CIE richiede infatti che l'ente gestore dell'applicazione ottenga la qualifica formale di Service Provider accreditato presso l'AgID o il Ministero dell'Interno. Questo iter comporta oneri economici, tempistiche burocratiche e requisiti legali non gestibili dal nostro gruppo. Abbiamo quindi deciso di usare l'accesso tramite Google, per simulare comunque l'accesso tramite un identity provider esterno, mentre l'integrazione con SPID/CIE potrà eventualmente essere realizzata in futuro. La conseguenza di questa scelta, in termini di funzionalità, è il fatto che non è più possibile verificare la residenza di un utente durante l'atto di creazione di un profilo. Dunque, a meno di operazioni hard-coded e cambiamenti manuali nel database, qualunque utente non pre-autorizzato che fa il primo accesso all'applicativo ottiene il ruolo di "Cittadino".
+    \item Non è stato implementato l'algoritmo di controllo duplicati nella fase di creazione di un'iniziativa.
+    \item dati esterni
+    \item rnf
+\end{itemize}
+
 
 \include{sections/API}
 \include{sections/Implementation}
