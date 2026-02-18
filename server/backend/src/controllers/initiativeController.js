@@ -5,6 +5,7 @@ const { initiativeSchema } = require("../validators/initiativeSchema");
 const { changeExpirationSchema } = require("../validators/initiativeSchema");
 const { administrationReplySchema } = require("../validators/initiativeSchema");
 const { INITIATIVE_SORT_MAP } = require("../config/constants");
+const { sendNotificationEmailsBatch } = require("../services/emailService");
 
 /**
  * Funzione Helper per cancellare i file caricati se la procedura fallisce
@@ -631,6 +632,16 @@ exports.createReply = async (req, res) => {
     }
 
     // Invio Notifiche
+    let notificationRecipientIds = [];
+    let notificationPayload = null;
+
+    // Recupera le firme dell'iniziativa per includerle nella notifica
+    const [initiativeData] = await connection.query(
+      "SELECT NUM_FIRME FROM INIZIATIVA WHERE ID_INIZIATIVA = ?",
+      [initiativeId],
+    );
+    const signaturesCount = initiativeData[0]?.NUM_FIRME || 0;
+
     const queryRecipients = `
             SELECT ID_AUTORE AS ID_UTENTE FROM INIZIATIVA WHERE ID_INIZIATIVA = ? AND ID_AUTORE IS NOT NULL
             UNION
@@ -657,9 +668,35 @@ exports.createReply = async (req, res) => {
         ]),
       );
       await Promise.all(notificationPromises);
+
+      notificationRecipientIds = recipients.map((user) => user.ID_UTENTE);
+      notificationPayload = {
+        subject: `Iniziativa ${status}: ${initiativeTitle}`,
+        title:
+          status === "Approvata"
+            ? "✅ Iniziativa Approvata!"
+            : status === "Respinta"
+              ? "❌ Iniziativa Respinta"
+              : "📋 Aggiornamento Iniziativa",
+        message: `L'amministrazione ha esaminato l'iniziativa e ha deciso di ${status === "Approvata" ? "approvarla" : status === "Respinta" ? "respingerla" : "aggiornarla"}.`,
+        link: linkRef,
+        ctaText: "Visualizza dettagli",
+        initiativeTitle,
+        status,
+        signatures: signaturesCount,
+      };
     }
 
     await connection.commit();
+
+    if (notificationRecipientIds.length > 0 && notificationPayload) {
+      try {
+        const emails = await fetchEmailsByUserIds(notificationRecipientIds);
+        await sendNotificationEmailsBatch(emails, notificationPayload);
+      } catch (emailError) {
+        console.error("Errore invio email notifiche:", emailError);
+      }
+    }
 
     res.status(201).json({
       id: newReplyId,
@@ -715,24 +752,12 @@ exports.signInitiative = async (req, res) => {
 
     // 4. Recupero dati aggiornati
     const [rows] = await connection.execute(
-      "SELECT TITOLO, NUM_FIRME FROM INIZIATIVA WHERE ID_INIZIATIVA = ?",
+      "SELECT NUM_FIRME FROM INIZIATIVA WHERE ID_INIZIATIVA = ?",
       [initiativeId],
     );
     const newCount = rows[0].NUM_FIRME;
-    const title = rows[0].TITOLO;
 
     await connection.commit();
-
-    // 5. 🔔 NOTIFICHE MILESTONE
-    if (newCount === 50 || newCount === 100 || newCount % 500 === 0) {
-      const msg = `🚀 L'iniziativa "${title}" ha appena raggiunto ${newCount} firme!`;
-      const link = `/initiative/${initiativeId}`;
-
-      notifyFollowers(initiativeId, msg, link);
-      console.log(
-        `[NOTIFICA] Milestone ${newCount} raggiunta per iniziativa ${initiativeId}`,
-      );
-    }
 
     res.status(201).json({
       message: "Firma registrata con successo",
@@ -902,9 +927,25 @@ async function _getDetailedInitiativeData(id) {
   };
 }
 
-const notifyFollowers = async (initiativeId, message, link) => {
+const fetchEmailsByUserIds = async (userIds) => {
+  if (!userIds || userIds.length === 0) return [];
+
+  const [rows] = await db.query(
+    "SELECT DISTINCT EMAIL FROM UTENTE WHERE ID_UTENTE IN (?) AND EMAIL IS NOT NULL",
+    [userIds],
+  );
+
+  return rows.map((row) => row.EMAIL).filter(Boolean);
+};
+
+const notifyFollowers = async (initiativeId, message, link, options = {}) => {
   try {
-    const queryFollowers = `SELECT ID_UTENTE FROM INIZIATIVA_SALVATA WHERE ID_INIZIATIVA = ?`;
+    const queryFollowers = `
+      SELECT s.ID_UTENTE, u.EMAIL
+      FROM INIZIATIVA_SALVATA s
+      JOIN UTENTE u ON u.ID_UTENTE = s.ID_UTENTE
+      WHERE s.ID_INIZIATIVA = ?
+    `;
     const [followers] = await db.query(queryFollowers, [initiativeId]);
 
     if (followers.length === 0) return;
@@ -913,6 +954,19 @@ const notifyFollowers = async (initiativeId, message, link) => {
     const values = followers.map((f) => [f.ID_UTENTE, message, link, 0]);
 
     await db.query(queryInsert, [values]);
+
+    const emails = followers.map((f) => f.EMAIL).filter(Boolean);
+    await sendNotificationEmailsBatch(emails, {
+      subject: options.subject || "Aggiornamento iniziativa",
+      title: options.title || "Aggiornamento iniziativa",
+      message: options.emailMessage || message,
+      link,
+      ctaText: options.ctaText || "Apri iniziativa",
+      initiativeTitle: options.initiativeTitle,
+      status: options.status,
+      signatures: options.signatures,
+      extraInfo: options.extraInfo,
+    });
     console.log(
       `[NOTIFICHE] Inviate ${followers.length} notifiche per l'iniziativa ${initiativeId}`,
     );
@@ -925,6 +979,14 @@ const notifySingleUser = async (userId, message, link) => {
   try {
     const query = `INSERT INTO NOTIFICA (ID_UTENTE, TESTO, LINK_RIF, LETTA) VALUES (?, ?, ?, 0)`;
     await db.query(query, [userId, message, link]);
+    const emails = await fetchEmailsByUserIds([userId]);
+    await sendNotificationEmailsBatch(emails, {
+      subject: "Aggiornamento iniziativa",
+      title: "Aggiornamento iniziativa",
+      message,
+      link,
+      ctaText: "Apri iniziativa",
+    });
     console.log(`[NOTIFICA SINGOLA] Inviata a User ${userId}`);
   } catch (err) {
     console.error("Errore notifica singola:", err);
