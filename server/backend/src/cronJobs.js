@@ -78,7 +78,7 @@ const startScheduler = () => {
 
         for (const initiative of expiredInitiatives) {
           const message = `L'iniziativa "${initiative.TITOLO}" e' scaduta.`;
-          const link = `/initiatives/${initiative.ID_INIZIATIVA}`;
+          const link = `/initiative/${initiative.ID_INIZIATIVA}`;
           await notifyFollowers(
             connection,
             initiative.ID_INIZIATIVA,

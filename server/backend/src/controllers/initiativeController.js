@@ -671,7 +671,7 @@ exports.createReply = async (req, res) => {
 
     if (recipients.length > 0) {
       const notificationText = `L'iniziativa "${initiativeTitle}" ha ricevuto una risposta ufficiale ed è passata allo stato: ${status}`;
-      const linkRef = `/initiatives/${initiativeId}`;
+      const linkRef = `/initiative/${initiativeId}`;
       const queryInsertNotifica = `INSERT INTO NOTIFICA (ID_UTENTE, TESTO, LINK_RIF) VALUES (?, ?, ?)`;
 
       const notificationPromises = recipients.map((user) =>
