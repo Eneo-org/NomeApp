@@ -91,9 +91,8 @@ exports.getAllInitiatives = async (req, res) => {
         whereConditions.push("i.STATO = ?");
         queryParams.push(status);
       }
-    } else {
-      whereConditions.push("i.STATO = 'In corso'");
     }
+    // Rimosso il default "In corso" - ora senza filtri si vedono tutte le iniziative
 
     // Filtro: Not Status (Escludi stato)
     if (not_status) {
@@ -204,6 +203,21 @@ exports.createInitiative = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    // --- 🛑 CHECK CITTADINANZA 🛑 ---
+    const [userCheck] = await db.execute(
+      "SELECT IS_CITTADINO FROM UTENTE WHERE ID_UTENTE = ?",
+      [userId],
+    );
+
+    if (userCheck.length === 0 || !userCheck[0].IS_CITTADINO) {
+      if (files) cleanupFiles(files);
+      return res.status(403).json({
+        message:
+          "Azione non consentita: Solo i cittadini residenti possono creare iniziative.",
+      });
+    }
+    // --- ✅ FINE CHECK CITTADINANZA ---
+
     // --- 🛑 CHECK COOLDOWN 🛑 ---
     const [cooldownCheck] = await db.execute(
       "SELECT ID_INIZIATIVA FROM INIZIATIVA WHERE ID_AUTORE = ? AND DATA_CREAZIONE > NOW() - INTERVAL 14 DAY",
@@ -274,14 +288,14 @@ exports.createInitiative = async (req, res) => {
             `;
 
       for (const file of files) {
-        // --- MODIFICA CLOUDINARY ---
+        // --- MODIFICA CLOUDINARY (con supporto test locale) ---
         // Con Cloudinary, file.path è l'URL completo (https://res.cloudinary.com/...)
-        // Non usiamo più path.join per costruire un percorso locale.
+        // In test mode con storage locale, file.path è il percorso relativo
         const filePath = file.path;
 
         const [resAtt] = await connection.execute(queryAllegato, [
           file.originalname,
-          filePath, // Salviamo l'URL completo
+          filePath, // Salviamo l'URL o il path locale
           file.mimetype,
           newInitiativeId,
         ]);
@@ -783,6 +797,17 @@ exports.followInitiative = async (req, res) => {
     const initiativeId = req.params.id;
     const userId = req.user.id;
 
+    // --- CHECK CITTADINANZA ---
+    const [userCheck] = await db.execute(
+      "SELECT IS_CITTADINO FROM UTENTE WHERE ID_UTENTE = ?",
+      [userId],
+    );
+    if (userCheck.length === 0 || !userCheck[0].IS_CITTADINO) {
+      return res.status(403).json({
+        message: "Solo i cittadini possono seguire le iniziative.",
+      });
+    }
+
     const query = `
       INSERT IGNORE INTO INIZIATIVA_SALVATA (ID_UTENTE, ID_INIZIATIVA)
       VALUES (?, ?)
@@ -806,6 +831,17 @@ exports.unfollowInitiative = async (req, res) => {
   try {
     const initiativeId = req.params.id;
     const userId = req.user.id;
+
+    // --- CHECK CITTADINANZA ---
+    const [userCheck] = await db.execute(
+      "SELECT IS_CITTADINO FROM UTENTE WHERE ID_UTENTE = ?",
+      [userId],
+    );
+    if (userCheck.length === 0 || !userCheck[0].IS_CITTADINO) {
+      return res.status(403).json({
+        message: "Solo i cittadini possono gestire i seguiti.",
+      });
+    }
 
     const query = `
             DELETE FROM INIZIATIVA_SALVATA 

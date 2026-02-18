@@ -160,6 +160,17 @@ exports.initiativesDashboard = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    // --- CHECK CITTADINANZA ---
+    const [userCheck] = await db.execute(
+      "SELECT IS_CITTADINO FROM UTENTE WHERE ID_UTENTE = ?",
+      [userId],
+    );
+    if (userCheck.length === 0 || !userCheck[0].IS_CITTADINO) {
+      return res.status(403).json({
+        message: "Solo i cittadini possono accedere alla dashboard.",
+      });
+    }
+
     // 2. Lettura Parametri Query
     const relation = req.query.relation; // 'created', 'signed', 'followed'
     const currentPage = parseInt(req.query.currentPage) || 1;

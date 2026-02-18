@@ -155,7 +155,7 @@ onUnmounted(() => {
           </div>
 
           <div class="card-footer">
-            <div class="signatures"><strong>🔥 {{ item.signatures }} Firme</strong></div>
+            <div class="signatures"><strong> {{ item.signatures }} Firme</strong></div>
 
             <div class="actions-group">
               <button class="action-btn extend" :class="{ 'disabled': item.alreadyExtended }"

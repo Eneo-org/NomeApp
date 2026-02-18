@@ -62,7 +62,7 @@ const router = createRouter({
       path: '/dashboard',
       name: 'dashboard',
       component: UserDashboard,
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, requiresCitizen: true },
     },
     {
       path: '/admin/create-budget',
@@ -108,6 +108,8 @@ router.beforeEach(async (to, from, next) => {
 
   if (to.meta.requiresAuth && !userStore.isAuthenticated) {
     next({ path: '/login', query: { redirect: to.fullPath } })
+  } else if (to.meta.requiresCitizen && !userStore.isCitizen) {
+    next({ path: '/' })
   } else {
     next()
   }
