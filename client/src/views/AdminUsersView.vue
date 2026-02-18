@@ -1,8 +1,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useUserStore } from '../stores/userStore';
+import { useToastStore } from '../stores/toastStore';
 
 const userStore = useUserStore();
+const toastStore = useToastStore();
 const admins = ref([]);
 const meta = ref({});
 const searchFiscal = ref('');
@@ -82,8 +84,16 @@ const closeModal = () => {
   showModal.value = false;
 };
 
+const isValidFiscalCode = (cf) => /^[A-Za-z0-9]{16}$/.test(cf);
+
 const searchCandidate = async () => {
   if (!candidateFiscal.value) return;
+
+  // Validazione formato CF: 16 caratteri alfanumerici
+  if (!isValidFiscalCode(candidateFiscal.value)) {
+    toastStore.showToast('Il codice fiscale inserito non è valido. Deve essere una sequenza alfanumerica di 16 caratteri.', 'error');
+    return;
+  }
 
   // Assicuriamo che il CF sia maiuscolo per coerenza
   candidateFiscal.value = candidateFiscal.value.toUpperCase();
@@ -199,7 +209,16 @@ onMounted(() => loadAdmins());
             <button @click="searchCandidate" :disabled="processing || !candidateFiscal">🔍 Cerca</button>
           </div>
 
-          <div v-if="candidateResult" class="result-box found">
+          <div v-if="candidateResult && candidateResult.isAdmin" class="result-box already-admin">
+            <p>ℹ️ <strong>Questo utente è già amministratore</strong></p>
+            <p>{{ candidateResult.firstName }} {{ candidateResult.lastName }}</p>
+            <p class="small">{{ candidateResult.email }}</p>
+            <button class="action-btn confirm" @click="closeModal">
+              Conferma
+            </button>
+          </div>
+
+          <div v-else-if="candidateResult" class="result-box found">
             <p>✅ <strong>Utente Trovato</strong></p>
             <p>{{ candidateResult.firstName }} {{ candidateResult.lastName }}</p>
             <p class="small">{{ candidateResult.email }}</p>
@@ -411,6 +430,11 @@ onMounted(() => loadAdmins());
   border: 1px solid #e74c3c;
 }
 
+.result-box.already-admin {
+  background: rgba(52, 152, 219, 0.1);
+  border: 1px solid #3498db;
+}
+
 .action-btn {
   margin-top: 10px;
   padding: 10px 15px;
@@ -428,6 +452,10 @@ onMounted(() => loadAdmins());
 
 .action-btn.preauth {
   background: #e67e22;
+}
+
+.action-btn.confirm {
+  background: #3498db;
 }
 
 .small {
