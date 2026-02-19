@@ -1,7 +1,21 @@
 \section{Deployment}
 Un'istanza del backend è ospitata sulla piattaforma render.com ed è disponibile al link \url{https://trentopartecipa.onrender.com}. Il database relazionale invece è attualmente ospitato sulla piattaforma DigitalOcean che grazie all'account education di github abbiamo potuto utilizzare gratuitamente. Il frontend invece è deployato separatamente al link \url{trentopartecipa.me}.
-Visto che da qualche mese l'applicativo render.com impedisce l'utilizzo del protocollo SMTP per la versione gratuita, abbiamo risolto il problema in questo modo: 
-%da aggiungere
+
+L'utilizzo del piano gratuito (Free Tier) su Render comporta una limitazione prestazionale intrinseca nota come \textbf{Cold Start}: in caso di inattività prolungata (superiore ai 15 minuti), la piattaforma sospende l'istanza per risparmiare risorse. Di conseguenza, la prima richiesta successiva a un periodo di pausa potrebbe richiedere circa 50-60 secondi per il riavvio del servizio; le richieste successive avverranno invece con latenza standard.
+
+Per superare invece le restrizioni funzionali (rete e storage) imposte dalla piattaforma, sono state adottate le seguenti soluzioni architetturali:
+
+\begin{itemize}
+    \item \textbf{Migrazione da SMTP a API HTTP (Resend):}
+    Poiché Render blocca le porte SMTP in uscita, abbiamo sostituito l'invio tradizionale delle email con la libreria \textbf{Resend}. Questo servizio permette di inviare i codici OTP per il login tramite chiamate API HTTP (REST), aggirando le restrizioni di rete.
+
+    \item \textbf{Verifica del Dominio e Configurazione DNS:}
+    Per superare il blocco di sicurezza di Resend (che impedisce l'invio a indirizzi terzi senza verifica), abbiamo registrato il dominio \texttt{trentopartecipa.me} tramite \textit{Namecheap}. 
+    Abbiamo quindi configurato i record DNS \textbf{SPF} e \textbf{DKIM} per autorizzare l'invio delle email e i record \textbf{A} per puntare agli indirizzi IP di GitHub Pages, servendo così anche il frontend dal dominio personalizzato.
+
+    \item \textbf{Persistenza dei Media (Cloudinary):}
+    Dato che il filesystem di Render è effimero (i file locali vengono persi allo spegnimento dell'istanza), le immagini caricate dagli utenti vengono salvate sul cloud di \textbf{Cloudinary}, memorizzando nel database solo l'URL remoto sicuro.
+\end{itemize}
 
 \paragraph{Configurazione CI/CD}
 La configurazione CI/CD basata sulle GitHub Actions esegue il deploy del banch main solo quando vengono superati tutti i test con successo. 

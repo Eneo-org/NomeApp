@@ -18,7 +18,7 @@
 
 % User Stories
 \def\toclevel@US{2}
-
+\def\toclevel@UF{2}
 
 % --- Section format ---
 \titleformat{\section}
@@ -102,7 +102,23 @@
   \subsection*{User story \arabic{userStories}: #1}%
 }
 
+% ---------------------------
+% User Flow (UF)
+% ---------------------------
 
+\newcounter{userFlows}
+
+% Livelli personalizzati per TOC (identici a RF)
+\makeatletter
+\newcommand{\l@UF}{\@dottedtocline{2}{1.5em}{2.3em}}
+
+\makeatother
+
+\newcommand{\UF}[1]{%
+  \refstepcounter{userFlows}%
+  \addcontentsline{toc}{UF}{UF \arabic{userFlows}: #1}%
+  \subsection*{User flow \arabic{userFlows}: #1}%
+}
 
 \title{\Huge TRENTO PARTECIPA - D1}
 \author{\LARGE D'Angiò Enea, Mattarolo Alessandro, Nedeljkovic Ivan}
@@ -122,5 +138,6 @@
 \include{sections/US}
 \include{sections/DesingFrontEnd}
 \include{sections/UF}
+\include{sections/ScelteTecnologiche}
 
 \end{document}

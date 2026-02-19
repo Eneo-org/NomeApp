@@ -1,0 +1,14 @@
+\section{Scelte tecnologiche}
+
+\subsection{Database}
+La decisione di utilizzare un database relazionale rispetto a soluzioni NoSQL (come MongoDB) è stata guidata dall'analisi dei requisiti funzionali e dalla natura dei dati trattati. In particolare, il dominio applicativo di \textbf{\texttt{"TRENTO PARTECIPA"}} presenta pochi elementi dinamici o non strutturati: le entità principali (Cittadini, Iniziative, Bilanci) possiedono uno schema stabile e prevedibile, che non richiede la flessibilità "schema-less" di un database a documenti.
+
+Inoltre, la scelta di MySQL garantisce:
+\begin{enumerate}
+    \item \textbf{Struttura Rigida e Validazione}: Essendo una piattaforma istituzionale, è necessario che ogni record rispetti vincoli precisi (es. un'iniziativa deve avere un autore, un voto deve essere collegato a un bilancio esistente).
+    \item \textbf{Integrità Referenziale}: Le relazioni tra le entità sono forti. Ad esempio, la cancellazione di un utente o di un'iniziativa deve essere gestita con regole precise (es. ON DELETE CASCADE o SET NULL) per evitare incoerenze nei dati delle firme o delle risposte ufficiali.
+    \item \textbf{Supporto per Query Complesse}: Le funzionalità di reportistica e filtraggio (es. "visualizzare tutte le iniziative attive di una certa categoria ordinate per numero di firme") beneficiano dell'efficienza delle JOIN SQL.
+\end{enumerate}
+
+\subsection{Deployment}
+Il database relazionale è attualmente ospitato sulla piattaforma DigitalOcean che grazie all'account education di github abbiamo potuto utilizzare gratuitamente. Il database hostato su DigitalOcean con 1 GB RAM e 10 GiB Disk permette ampiamente di soddisfare le richieste necessarie. 

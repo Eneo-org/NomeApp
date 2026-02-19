@@ -70,11 +70,11 @@ A differenza di strategie complesse come GitFlow (spesso sovrabbondanti per team
 \subsubsection{Suddivisione Logica del Lavoro}
 Sebbene il lavoro sia confluito tecnicamente sullo stesso branch, lo sviluppo è stato logicamente parallelizzato assegnando a ciascun membro la responsabilità esclusiva di specifiche aree funzionali, riducendo al minimo le sovrapposizioni:
 \begin{description}
-    \item[Enea D'Angiò]: Si è occupato principalmente dell'architettura Backend (configurazione Express, gestione e creazione del database MySQL) e della progettazione e integrazione delle API. Inoltre ha contribuito parzialmente al Frontend attraverso bugfix, refactoring e implementazioni di piccole feature. 
-    \item[Ivan Nedeljkovic]: Ha curato lo sviluppo dei componenti Frontend in Vue.js creando l'intera infrastruttura lato client e gestendo ui e ux. 
-    \item[Alessandro Mattarolo]: Ha seguito lo sviluppo con la scrittura della documentazione, l'organizzazione dei file LaTeX e la progettazione del Frontend. 
+    \item[Enea D'Angiò]: Si è occupato principalmente dell'architettura Backend (configurazione Express, gestione e creazione del database MySQL) e della progettazione e integrazione delle API. Ha contribuito parzialmente al Frontend attraverso bugfix, refactoring e implementazioni di piccole feature. Ha inoltre lavorato al deployment.
+    \item[Ivan Nedeljkovic]: Ha curato lo sviluppo dei componenti Frontend in Vue.js creando l'intera infrastruttura lato client e gestendo ui e ux. Ha inoltre collaborato al deployment.
+    \item[Alessandro Mattarolo]: Ha seguito lo sviluppo con la scrittura della documentazione, l'organizzazione dei file LaTeX e la progettazione del Frontend.
 \end{description}
-L'analisi dei contributi (visibile nella sezione Insights > Contributors della repository) mostra un totale di XX commit, distribuiti tra i membri in modo proporzionale ai task assegnati. Eventuali sbilanciamenti nel numero di commit sono attribuibili alla diversa granularità delle operazioni.
+L'analisi dei contributi (visibile nella sezione Insights > Contributors della repository) mostra un totale di 102 commit, distribuiti tra i membri in modo proporzionale ai task assegnati. Lo sbilanciamento fra la quantità di commit eseguiti da Enea D'Angiò e Ivan Nedeljkovic e quelli eseguiti da Alessandro Mattarolo è dovuto al fatto che quest'ultimo ha lavorato principalmente alla documentazione.
 
 %   ---- dependencies ---
 \subsection{Dipendenze}
@@ -116,16 +116,10 @@ Per lo sviluppo dell'interfaccia utente con Vue.js sono state utilizzate le segu
 %----   Database ---
 
 \subsection{Database}
-La decisione di utilizzare un database relazionale rispetto a soluzioni NoSQL (come MongoDB) è stata guidata dall'analisi dei requisiti funzionali (descritti nel documento D1) e dalla natura dei dati trattati. In particolare, il dominio applicativo di \textbf{\texttt{"TRENTO PARTECIPA"}} presenta pochi elementi dinamici o non strutturati: le entità principali (Cittadini, Iniziative, Bilanci) possiedono uno schema stabile e prevedibile, che non richiede la flessibilità "schema-less" di un database a documenti.
 
-Inoltre, la scelta di MySQL garantisce:
-\begin{enumerate}
-    \item \textbf{Struttura Rigida e Validazione}: Essendo una piattaforma istituzionale, è necessario che ogni record rispetti vincoli precisi (es. un'iniziativa deve avere un autore, un voto deve essere collegato a un bilancio esistente).
-    \item \textbf{Integrità Referenziale}: Le relazioni tra le entità sono forti. Ad esempio, la cancellazione di un utente o di un'iniziativa deve essere gestita con regole precise (es. ON DELETE CASCADE o SET NULL) per evitare incoerenze nei dati delle firme o delle risposte ufficiali.
-    \item \textbf{Supporto per Query Complesse}: Le funzionalità di reportistica e filtraggio (es. "visualizzare tutte le iniziative attive di una certa categoria ordinate per numero di firme") beneficiano dell'efficienza delle JOIN SQL.
-\end{enumerate}
 
-Il database è stato strutturato nelle seguenti tabelle principali:
+Il database MySQL è stato strutturato nelle seguenti tabelle principali:
+
 \subsubsection{Categoria}
 La tabella \texttt{CATEGORIA} gestisce la classificazione tematica delle iniziative presenti sulla piattaforma.
 \begin{itemize}
